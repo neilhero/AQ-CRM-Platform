@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>安泉CRM - 管理后台</title>
+<script src="/static/react.min.js"></script>
+<script src="/static/react-dom.min.js"></script>
+<script src="/static/dayjs.min.js"></script>
+<script src="/static/antd.min.js"></script>
+<script src="/static/antd-icons.min.js"></script>
+<script src="/static/axios.min.js"></script>
+<link rel="stylesheet" href="/static/antd.min.css">
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#f0f2f5}
+.login-page{display:flex;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg,#0f172a,#1e293b,#312e81)}
+.login-box{width:400px;padding:40px;background:rgba(255,255,255,.03);border-radius:16px;border:1px solid rgba(255,255,255,.08)}
+.login-box h2{color:#fff;text-align:center;margin:0 0 8px;font-size:22px}
+.login-box .sub{color:#94a3b8;text-align:center;margin-bottom:32px;font-size:14px}
+.header{background:#001529;color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.header h2{margin:0;font-size:18px}
+.content{padding:24px;max-width:1200px;margin:0 auto}
+</style>
+</head>
+<body><div id="root"></div>
+<script>
+var e=React.createElement;
+var {useState,useEffect}=React;
+var {Button,Input,Form,Table,Modal,Select,Popconfirm,Space,Tag,message,Card,Row,Col}=antd;
+var {UserOutlined,LockOutlined,PlusOutlined,KeyOutlined}=antdIcons;
+
+var api=axios.create({baseURL:'/api'});
+api.interceptors.request.use(c=>{var t=localStorage.getItem('aq2_token');if(t)c.headers.Authorization='Bearer '+t;return c});
+api.interceptors.response.use(r=>r,err=>{if(err.response&&err.response.status===401){localStorage.clear();window.location.reload()}return Promise.reject(err)});
+
+function Login({onLogin}){
+  var [loading,setLoading]=useState(false),form=Form.useForm()[0];
+  function submit(v){setLoading(true);axios.post('/api/auth/login',v).then(r=>{var u=r.data.user;if(u.role!=='admin'){message.error('仅管理员可访问');setLoading(false);return}localStorage.setItem('aq2_token',r.data.access_token);localStorage.setItem('aq2_user',JSON.stringify(u));onLogin(u)}).catch(()=>{message.error('登录失败')}).finally(()=>setLoading(false))}
+  return e('div',{className:'login-page'},e('div',{className:'login-box'},e('h2',null,'安泉CRM 管理后台'),e('div',{className:'sub'},'用户与系统管理'),e(Form,{form,onFinish:submit,layout:'vertical'},e(Form.Item,{name:'username',rules:[{required:true,message:'请输入用户名'}]},e(Input,{prefix:e(UserOutlined),placeholder:'用户名',size:'large'})),e(Form.Item,{name:'password',rules:[{required:true,message:'请输入密码'}]},e(Input.Password,{prefix:e(LockOutlined),placeholder:'密码',size:'large'})),e(Form.Item,null,e(Button,{type:'primary',htmlType:'submit',loading,block:true,size:'large'},'登 录')))))
+}
+
+function UsersPage({user,fetchUsers,users}){
+  var [modalOpen,setModalOpen]=useState(false),[editing,setEditing]=useState(null),form=Form.useForm()[0];
+  var [pwdOpen,setPwdOpen]=useState(false),pwdForm=Form.useForm()[0],[pwdUser,setPwdUser]=useState(null);
+
+  function save(v){var p=editing?api.put('/api/users/'+editing.id,v):api.post('/api/users',v);p.then(()=>{message.success(editing?'已更新':'已创建');setModalOpen(false);form.resetFields();setEditing(null);fetchUsers()}).catch(err=>message.error(err.response?.data?.detail||'失败'))}
+  function del(u){api.delete('/api/users/'+u.id).then(()=>{message.success('已删除');fetchUsers()}).catch(err=>message.error(err.response.data.detail))}
+  function resetPwd(v){api.put('/api/users/'+pwdUser.id+'/reset-password',v).then(()=>{message.success('密码已重置');setPwdOpen(false);pwdForm.resetFields()}).catch(err=>message.error(err.response.data.detail))}
+
+  var cols=[{title:'ID',dataIndex:'id',width:60},{title:'用户名',dataIndex:'username',render:t=>e('strong',null,t)},{title:'姓名',dataIndex:'real_name'},{title:'角色',dataIndex:'role',render:v=>{var m={admin:{color:'red',label:'管理员'},manager:{color:'blue',label:'渠道经理'},sales:{color:'green',label:'销售'}};return e(Tag,{color:(m[v]||{}).color||'default'},(m[v]||{}).label||v)}},{title:'状态',dataIndex:'is_active',render:v=>e(Tag,{color:v?'green':'default'},v?'启用':'禁用')},{title:'操作',key:'act',width:220,render:(_,r)=>e(Space,{size:'small'},e(Button,{size:'small',onClick:()=>{setEditing(r);form.setFieldsValue(r);setModalOpen(true)}},'编辑'),e(Button,{size:'small',icon:e(KeyOutlined),onClick:()=>{setPwdUser(r);setPwdOpen(true)}},'密码'),e(Popconfirm,{title:'确认删除 '+r.real_name+'?',onConfirm:()=>del(r)},e(Button,{size:'small',danger:true},'删除')))}];
+
+  var total=users.length,admins=users.filter(u=>u.role==='admin').length,managers=users.filter(u=>u.role==='manager').length,sales=users.filter(u=>u.role==='sales').length;
+
+  return e('div',null,
+    e('div',{className:'header'},e('h2',null,'⚙ 安泉CRM 管理后台'),e(Space,null,e('span',{style:{color:'#94a3b8',fontSize:13}},user.real_name,' · 管理员'),e(Button,{type:'text',style:{color:'#fff'},onClick:()=>{localStorage.clear();window.location.reload()}},'退出'),e(Button,{type:'text',style:{color:'#fff'},onClick:()=>window.location.href='/'},'← 返回CRM'))),
+    e('div',{className:'content'},
+      e('h1',{style:{fontSize:22,margin:'0 0 4px'}},'用户管理'),e('p',{style:{color:'#64748b',margin:'0 0 24px'}},'管理系统管理员、渠道经理和销售账号'),
+      e(Row,{gutter:16,style:{marginBottom:24}},e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#1677ff'}},total),e('div',{style:{color:'#64748b',fontSize:13}},'总用户数'))),e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#ef4444'}},admins),e('div',{style:{color:'#64748b',fontSize:13}},'管理员'))),e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#3b82f6'}},managers),e('div',{style:{color:'#64748b',fontSize:13}},'渠道经理'))),e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#22c55e'}},sales),e('div',{style:{color:'#64748b',fontSize:13}},'销售')))),
+      e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},e('h3',{style:{margin:0}},'用户列表'),e(Button,{type:'primary',icon:e(PlusOutlined),onClick:()=>{setEditing(null);form.resetFields();setModalOpen(true)}},'新建用户')),
+      e(Table,{rowKey:'id',columns:cols,dataSource:users,pagination:false}),
+      e(Modal,{title:editing?'编辑用户':'新建用户',open:modalOpen,onCancel:()=>setModalOpen(false),onOk:()=>form.submit(),width:480},
+        e(Form,{form,layout:'vertical',onFinish:save},
+          e(Form.Item,{name:'username',label:'用户名',rules:[{required:true}]},e(Input,{placeholder:'登录用户名'})),
+          e(Form.Item,{name:'real_name',label:'姓名',rules:[{required:true}]},e(Input,{placeholder:'真实姓名'})),
+          e(Form.Item,{name:'role',label:'角色',rules:[{required:true}]},e(Select,null,e(Select.Option,{value:'admin'},'管理员'),e(Select.Option,{value:'manager'},'渠道经理'),e(Select.Option,{value:'sales'},'销售'))),
+          !editing&&e(Form.Item,{name:'password',label:'密码',rules:[{required:true,min:6,message:'至少6位'}]},e(Input.Password,{placeholder:'至少6位'}))
+        )
+      ),
+      e(Modal,{title:'重置密码 - '+(pwdUser?pwdUser.real_name:''),open:pwdOpen,onCancel:()=>setPwdOpen(false),onOk:()=>pwdForm.submit()},
+        e(Form,{form:pwdForm,layout:'vertical',onFinish:resetPwd},
+          e(Form.Item,{name:'new_password',label:'新密码',rules:[{required:true,min:6,message:'至少6位'}]},e(Input.Password,{placeholder:'输入新密码'}))
+        )
+      )
+    )
+  );
+}
+
+function App(){
+  var [user,setUser]=useState(null),[users,setUsers]=useState([]);
+  useEffect(()=>{var u=localStorage.getItem('aq2_user');if(u){var p=JSON.parse(u);if(p.role==='admin'){setUser(p);api.get('/api/users').then(r=>setUsers(r.data))}}},[]);
+  function fetchUsers(){api.get('/api/users').then(r=>setUsers(r.data))}
+  if(!user)return e(Login,{onLogin:u=>{setUser(u);api.get('/api/users').then(r=>setUsers(r.data))}});
+  return e(UsersPage,{user,users,fetchUsers});
+}
+ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+</script></body></html>

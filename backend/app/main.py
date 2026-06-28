@@ -51,9 +51,9 @@ def seed():
             db.commit()
         if db.query(ChannelPartner).count() == 0:
             chs = [
-                ChannelPartner(name="北京网安科技", contact_person="王雷", contact_phone="13800001111", level="金牌", region="华北"),
-                ChannelPartner(name="上海安信网络", contact_person="陈明", contact_phone="13800002222", level="银牌", region="华东"),
-                ChannelPartner(name="深圳锐安信安", contact_person="李强", contact_phone="13800003333", level="铜牌", region="华南"),
+                ChannelPartner(name="北京网安科技", contact_person="王雷", contact_phone="【手机号已脱敏】", level="金牌", region="华北"),
+                ChannelPartner(name="上海安信网络", contact_person="陈明", contact_phone="【手机号已脱敏】", level="银牌", region="华东"),
+                ChannelPartner(name="深圳锐安信安", contact_person="李强", contact_phone="【手机号已脱敏】", level="铜牌", region="华南"),
             ]
             for ch in chs: db.add(ch)
             db.commit()
@@ -68,7 +68,7 @@ def seed():
     finally:
         db.close()
 
-from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard
+from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(customers.router, prefix="/api/customers", tags=["Customers"])
@@ -81,3 +81,4 @@ app.include_router(leads.router, prefix="/api/leads", tags=["Leads"])
 app.include_router(bidding.router, prefix="/api/bidding", tags=["Bidding"])
 app.include_router(import_data.router, prefix="/api/import", tags=["Import"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+app.include_router(users.router, prefix="/api/users", tags=["Users"])

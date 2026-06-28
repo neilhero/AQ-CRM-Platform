@@ -244,7 +244,8 @@ function AppLayout(props) {
       { key: '/partners', label: '伙伴档案' },
       { key: '/partners/performance', label: '伙伴绩效' },
       { key: '/partners/commission', label: '返点管理' }
-    ] }
+    ] },
+    { key: '/admin', icon: IC('SettingOutlined'), label: '系统管理' }
   ];
 
   var selKey = hash;
@@ -264,7 +265,7 @@ function AppLayout(props) {
         e('span', { className: 'logo-text' }, '安泉CRM')
       ),
       e('div', { className: 'sidebar-menu' },
-        e(Menu, { mode: 'inline', selectedKeys: [selKey], defaultOpenKeys: openKeys, items: menuItems, inlineIndent: 16, onClick: function(info) { nav(info.key); } })
+        e(Menu, { mode: 'inline', selectedKeys: [selKey], defaultOpenKeys: openKeys, items: menuItems, inlineIndent: 16, onClick: function(info) { if (info.key === '/admin') { window.open('/admin', '_blank'); return; } nav(info.key); } })
       )
     ),
     e('div', { className: 'header' },
