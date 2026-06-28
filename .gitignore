@@ -1,0 +1,22 @@
+# CDN dependencies (not in repo, download with setup script)
+frontend/static/*.js
+frontend/static/*.css
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

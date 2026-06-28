@@ -1,0 +1,62 @@
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import date, datetime, timezone, timedelta
+from app.database import get_db
+from app.models import Opportunity, Customer, Lead, User
+from app.routers.utils import require_user
+
+CST = timezone(timedelta(hours=8))
+router = APIRouter()
+
+@router.get("/stats")
+def dashboard_stats(db: Session=Depends(get_db), user=Depends(require_user)):
+    total_opps = db.query(Opportunity).count()
+    total_amount = db.query(func.sum(Opportunity.amount)).scalar() or 0
+    stage_dist = {}
+    for o in db.query(Opportunity).filter_by(is_closed=False).all():
+        s = str(o.stage.value if o.stage else "1")
+        stage_dist[s] = stage_dist.get(s, 0) + 1
+    today = date.today()
+    weekly_new = db.query(Opportunity).filter(Opportunity.created_at >= today - timedelta(days=7)).count()
+    weekly_updated = db.query(Opportunity).filter(Opportunity.updated_at >= today).count()
+    return {
+        "total_opportunities": total_opps,
+        "total_amount": round(total_amount, 1),
+        "stage_distribution": stage_dist,
+        "industry_distribution": {},
+        "probability_distribution": {},
+        "weekly_new": weekly_new,
+        "weekly_updated": weekly_updated,
+        "customer_count": db.query(Customer).count(),
+        "lead_count": db.query(Lead).count(),
+        "overdue_reminders": [],
+        "upcoming_reminders": [],
+        "recent_follow_ups": []
+    }
+
+@router.get("/sales-performance")
+def sales_performance(period: str=Query("month"), db: Session=Depends(get_db), user=Depends(require_user)):
+    users = db.query(User).filter_by(is_active=True).all()
+    today = date.today()
+    ndays = 30
+    if period == "quarter": ndays = 90
+    elif period == "year": ndays = 365
+    start = today - timedelta(days=ndays)
+    result = []
+    for u in users:
+        opps = db.query(Opportunity).filter_by(sales_rep_id=u.id).filter(Opportunity.created_at >= start).all()
+        won = [o for o in opps if o.stage and str(o.stage.value) == "5"]
+        opp_count = len(opps)
+        won_count = len(won)
+        total_amt = round(sum(o.amount or 0 for o in opps), 1)
+        result.append({
+            "sales_rep_id": u.id,
+            "sales_rep_name": u.real_name,
+            "opp_count": opp_count,
+            "won_count": won_count,
+            "total_amount": total_amt,
+            "conversion_rate": round(won_count / opp_count * 100, 1) if opp_count > 0 else 0,
+            "avg_deal_size": round(total_amt / won_count, 1) if won_count > 0 else 0
+        })
+    return result
