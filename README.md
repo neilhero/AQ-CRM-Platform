@@ -60,13 +60,9 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8097
 - 管理后台: `http://localhost:8097/admin`
 - API 文档: `http://localhost:8097/docs`
 
-## 默认账号
+## 首次启动
 
-| 用户名 | 密码 | 角色 |
-|--------|------|------|
-| admin | admin@aq123 | 管理员 |
-| channel001 | channel123 | 渠道经理 |
-| sales001 | sales123 | 销售 |
+系统首次启动时自动创建种子数据（3个用户、8个客户、5个产品、3个渠道伙伴、12个菜单项）。默认账号密码由种子脚本定义，详见 `backend/app/main.py` 中 `seed()` 函数。**生产环境请立即修改默认密码。**
 
 ## API 端点
 
