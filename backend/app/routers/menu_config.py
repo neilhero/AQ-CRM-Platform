@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import MenuConfig
@@ -15,9 +15,10 @@ def get_menu_config(db: Session = Depends(get_db), _user=Depends(require_user)):
 
 
 @router.put("")
-def update_menu_config(items: list[dict], db: Session = Depends(get_db), user=Depends(require_user)):
+async def update_menu_config(request: Request, db: Session = Depends(get_db), user=Depends(require_user)):
     if user.role != "admin":
         raise HTTPException(403, "仅管理员可操作")
+    items = await request.json()
     for item in items:
         m = db.query(MenuConfig).filter_by(menu_key=item["menu_key"]).first()
         if m:
