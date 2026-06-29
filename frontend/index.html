@@ -223,14 +223,16 @@ function AppLayout(props) {
   var _s = useState(false), collapsed = _s[0], setCollapsed = _s[1];
   var user = JSON.parse(localStorage.getItem('aq2_user') || '{}');
   var hash = window.location.hash.slice(1) || '/dashboard';
+  var _mc = useState([]), menuConfig = _mc[0], setMenuConfig = _mc[1];
+
+  useEffect(function() { api('GET','/menu-config').then(function(d){setMenuConfig(d||[]);}).catch(function(){}); }, []);
 
   function nav(p) { window.location.hash = '#' + p; }
-  function logout() {
-    localStorage.clear();
-    window.location.replace('/');
-  }
+  function logout() { localStorage.clear(); window.location.replace('/'); }
 
-  var menuItems = [
+  var vis = {}; menuConfig.forEach(function(m) { vis[m.menu_key] = m.is_visible; });
+
+  var allItems = [
     { key: '/dashboard', icon: IC('DashboardOutlined'), label: '仪表盘' },
     { key: '/follow-ups', icon: IC('ClockCircleOutlined'), label: '今日待跟进' },
     { key: '/customers', icon: IC('TeamOutlined'), label: '客户管理' },
@@ -246,6 +248,20 @@ function AppLayout(props) {
       { key: '/partners/commission', label: '返点管理' }
     ] }
   ];
+
+  var menuItems = [];
+  allItems.forEach(function(item) {
+    var key = item.key;
+    if (vis[key] === false) return;
+    if (item.children) {
+      var visibleChildren = item.children.filter(function(c) { return vis[c.key] !== false; });
+      if (visibleChildren.length === 0) return;
+      var clone = { key: item.key, icon: item.icon, label: item.label, children: visibleChildren };
+      menuItems.push(clone);
+    } else {
+      menuItems.push(item);
+    }
+  });
 
   var selKey = hash;
   var openKeys = [];

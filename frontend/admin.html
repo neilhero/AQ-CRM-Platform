@@ -19,13 +19,20 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Micros
 .header{background:#001529;color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between}
 .header h2{margin:0;font-size:18px}
 .content{padding:24px;max-width:1200px;margin:0 auto}
+.tab-nav{display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:24px}
+.tab-nav .tab{padding:10px 24px;cursor:pointer;font-size:15px;font-weight:500;color:#64748b;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab-nav .tab.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.tab-nav .tab:hover{color:#4f46e5}
+.menu-row{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#fff;border-radius:8px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.menu-row .menu-label{flex:1;font-size:14px}
+.menu-row.child{padding-left:48px;background:#fafbfc}
 </style>
 </head>
 <body><div id="root"></div>
 <script>
 var e=React.createElement;
 var {useState,useEffect}=React;
-var {Button,Input,Form,Table,Modal,Select,Popconfirm,Space,Tag,message,Card,Row,Col}=antd;
+var {Button,Input,Form,Table,Modal,Select,Popconfirm,Space,Tag,message,Card,Row,Col,Switch}=antd;
 var ICONS=typeof antdIcons!=="undefined"?antdIcons:typeof icons!=="undefined"?icons:{},UserOutlined=ICONS.UserOutlined,LockOutlined=ICONS.LockOutlined,PlusOutlined=ICONS.PlusOutlined,KeyOutlined=ICONS.KeyOutlined;
 
 var api=axios.create({baseURL:'/api'});
@@ -51,35 +58,75 @@ function UsersPage({user,fetchUsers,users}){
   var total=users.length,admins=users.filter(u=>u.role==='admin').length,managers=users.filter(u=>u.role==='manager').length,sales=users.filter(u=>u.role==='sales').length;
 
   return e('div',null,
-    e('div',{className:'header'},e('h2',null,'⚙ 安泉CRM 管理后台'),e(Space,null,e('span',{style:{color:'#94a3b8',fontSize:13}},user.real_name,' · 管理员'),e(Button,{type:'text',style:{color:'#fff'},onClick:()=>{localStorage.clear();window.location.reload()}},'退出'),e(Button,{type:'text',style:{color:'#fff'},onClick:()=>window.location.href='/'},'← 返回CRM'))),
-    e('div',{className:'content'},
-      e('h1',{style:{fontSize:22,margin:'0 0 4px'}},'用户管理'),e('p',{style:{color:'#64748b',margin:'0 0 24px'}},'管理系统管理员、渠道经理和销售账号'),
-      e(Row,{gutter:16,style:{marginBottom:24}},e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#1677ff'}},total),e('div',{style:{color:'#64748b',fontSize:13}},'总用户数'))),e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#ef4444'}},admins),e('div',{style:{color:'#64748b',fontSize:13}},'管理员'))),e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#3b82f6'}},managers),e('div',{style:{color:'#64748b',fontSize:13}},'渠道经理'))),e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#22c55e'}},sales),e('div',{style:{color:'#64748b',fontSize:13}},'销售')))),
-      e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},e('h3',{style:{margin:0}},'用户列表'),e(Button,{type:'primary',icon:e(PlusOutlined),onClick:()=>{setEditing(null);form.resetFields();setModalOpen(true)}},'新建用户')),
-      e(Table,{rowKey:'id',columns:cols,dataSource:users,pagination:false}),
-      e(Modal,{title:editing?'编辑用户':'新建用户',open:modalOpen,onCancel:()=>setModalOpen(false),onOk:()=>form.submit(),width:480},
-        e(Form,{form,layout:'vertical',onFinish:save},
-          e(Form.Item,{name:'username',label:'用户名',rules:[{required:true}]},e(Input,{placeholder:'登录用户名'})),
-          e(Form.Item,{name:'real_name',label:'姓名',rules:[{required:true}]},e(Input,{placeholder:'真实姓名'})),
-          e(Form.Item,{name:'role',label:'角色',rules:[{required:true}]},e(Select,null,e(Select.Option,{value:'admin'},'管理员'),e(Select.Option,{value:'manager'},'渠道经理'),e(Select.Option,{value:'sales'},'销售'))),
-          !editing&&e(Form.Item,{name:'password',label:'密码',rules:[{required:true,min:6,message:'至少6位'}]},e(Input.Password,{placeholder:'至少6位'}))
-        )
-      ),
-      e(Modal,{title:'重置密码 - '+(pwdUser?pwdUser.real_name:''),open:pwdOpen,onCancel:()=>setPwdOpen(false),onOk:()=>pwdForm.submit()},
-        e(Form,{form:pwdForm,layout:'vertical',onFinish:resetPwd},
-          e(Form.Item,{name:'new_password',label:'新密码',rules:[{required:true,min:6,message:'至少6位'}]},e(Input.Password,{placeholder:'输入新密码'}))
-        )
+    e('h1',{style:{fontSize:22,margin:'0 0 4px'}},'用户管理'),e('p',{style:{color:'#64748b',margin:'0 0 24px'}},'管理系统管理员、渠道经理和销售账号'),
+    e(Row,{gutter:16,style:{marginBottom:24}},e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#1677ff'}},total),e('div',{style:{color:'#64748b',fontSize:13}},'总用户数'))),e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#ef4444'}},admins),e('div',{style:{color:'#64748b',fontSize:13}},'管理员'))),e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#3b82f6'}},managers),e('div',{style:{color:'#64748b',fontSize:13}},'渠道经理'))),e(Col,{span:6},e(Card,{style:{textAlign:'center'}},e('div',{style:{fontSize:32,fontWeight:700,color:'#22c55e'}},sales),e('div',{style:{color:'#64748b',fontSize:13}},'销售')))),
+    e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},e('h3',{style:{margin:0}},'用户列表'),e(Button,{type:'primary',icon:e(PlusOutlined),onClick:()=>{setEditing(null);form.resetFields();setModalOpen(true)}},'新建用户')),
+    e(Table,{rowKey:'id',columns:cols,dataSource:users,pagination:false}),
+    e(Modal,{title:editing?'编辑用户':'新建用户',open:modalOpen,onCancel:()=>setModalOpen(false),onOk:()=>form.submit(),width:480},
+      e(Form,{form,layout:'vertical',onFinish:save},
+        e(Form.Item,{name:'username',label:'用户名',rules:[{required:true}]},e(Input,{placeholder:'登录用户名'})),
+        e(Form.Item,{name:'real_name',label:'姓名',rules:[{required:true}]},e(Input,{placeholder:'真实姓名'})),
+        e(Form.Item,{name:'role',label:'角色',rules:[{required:true}]},e(Select,null,e(Select.Option,{value:'admin'},'管理员'),e(Select.Option,{value:'manager'},'渠道经理'),e(Select.Option,{value:'sales'},'销售'))),
+        !editing&&e(Form.Item,{name:'password',label:'密码',rules:[{required:true,min:6,message:'至少6位'}]},e(Input.Password,{placeholder:'至少6位'}))
+      )
+    ),
+    e(Modal,{title:'重置密码 - '+(pwdUser?pwdUser.real_name:''),open:pwdOpen,onCancel:()=>setPwdOpen(false),onOk:()=>pwdForm.submit()},
+      e(Form,{form:pwdForm,layout:'vertical',onFinish:resetPwd},
+        e(Form.Item,{name:'new_password',label:'新密码',rules:[{required:true,min:6,message:'至少6位'}]},e(Input.Password,{placeholder:'输入新密码'}))
       )
     )
   );
 }
 
+function MenuConfigPage(){
+  var [menus,setMenus]=useState([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
+
+  function fetch(){setLoading(true);api.get('/menu-config').then(r=>{setMenus(r.data||[])}).catch(()=>{}).finally(()=>setLoading(false))}
+  useEffect(fetch,[]);
+
+  function toggle(key){setMenus(prev=>prev.map(m=>m.menu_key===key?{...m,is_visible:!m.is_visible}:m))}
+
+  function saveAll(){
+    setSaving(true);
+    var items=menus.map(m=>({menu_key:m.menu_key,is_visible:m.is_visible}));
+    api.put('/menu-config',items).then(()=>{message.success('已保存，刷新CRM页面生效')}).catch(err=>message.error(err.response?.data?.detail||'保存失败')).finally(()=>setSaving(false));
+  }
+
+  var parents=menus.filter(m=>!m.parent_key).sort((a,b)=>a.sort_order-b.sort_order);
+
+  return e('div',null,
+    e('h1',{style:{fontSize:22,margin:'0 0 4px'}},'菜单管理'),e('p',{style:{color:'#64748b',margin:'0 0 24px'}},'控制CRM侧栏菜单项的显示与隐藏'),
+    e(Card,{style:{marginBottom:16}},
+      e('div',{style:{marginBottom:8,color:'#64748b',fontSize:13}},'关闭某个菜单后，CRM侧栏将不再显示该入口（刷新后生效）'),
+      parents.map(p=>{
+        var children=menus.filter(m=>m.parent_key===p.menu_key).sort((a,b)=>a.sort_order-b.sort_order);
+        return e('div',{key:p.menu_key},
+          e('div',{className:'menu-row'},e('span',{className:'menu-label'},'📁 ',p.label),e(Switch,{checked:p.is_visible,onChange:()=>toggle(p.menu_key)})),
+          children.map(c=>e('div',{key:c.menu_key,className:'menu-row child'},e('span',{className:'menu-label'},'└ ',c.label),e(Switch,{checked:c.is_visible,onChange:()=>toggle(c.menu_key)})))
+        );
+      })
+    ),
+    e(Button,{type:'primary',loading:saving,onClick:saveAll},'💾 保存设置')
+  );
+}
+
 function App(){
   var [user,setUser]=useState(null),[users,setUsers]=useState([]);
+  var [tab,setTab]=useState('users');
   useEffect(()=>{var u=localStorage.getItem('aq2_user');if(u){var p=JSON.parse(u);if(p.role==='admin'){setUser(p);api.get('/users').then(r=>setUsers(r.data))}}},[]);
   function fetchUsers(){api.get('/users').then(r=>setUsers(r.data))}
   if(!user)return e(Login,{onLogin:u=>{setUser(u);api.get('/users').then(r=>setUsers(r.data))}});
-  return e(UsersPage,{user,users,fetchUsers});
+
+  return e('div',null,
+    e('div',{className:'header'},e('h2',null,'⚙ 安泉CRM 管理后台'),e(Space,null,e('span',{style:{color:'#94a3b8',fontSize:13}},user.real_name,' · 管理员'),e(Button,{type:'text',style:{color:'#fff'},onClick:()=>{localStorage.clear();window.location.reload()}},'退出'),e(Button,{type:'text',style:{color:'#fff'},onClick:()=>window.location.href='/'},'← 返回CRM'))),
+    e('div',{className:'content'},
+      e('div',{className:'tab-nav'},
+        e('div',{className:'tab'+(tab==='users'?' active':''),onClick:()=>setTab('users')},'用户管理'),
+        e('div',{className:'tab'+(tab==='menu'?' active':''),onClick:()=>setTab('menu')},'菜单管理')
+      ),
+      tab==='users'?e(UsersPage,{user,users,fetchUsers}):e(MenuConfigPage)
+    )
+  );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(e(App));
 </script></body></html>

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
-from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead
+from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig
 from datetime import date, datetime, timezone, timedelta
 import hashlib, os
 
@@ -65,10 +65,27 @@ def seed():
             ]
             for cr in crs: db.add(cr)
             db.commit()
+        if db.query(MenuConfig).count() == 0:
+            menus = [
+                MenuConfig(menu_key="/dashboard", label="仪表盘", is_visible=True, sort_order=1),
+                MenuConfig(menu_key="/follow-ups", label="今日待跟进", is_visible=True, sort_order=2),
+                MenuConfig(menu_key="/customers", label="客户管理", is_visible=True, sort_order=3),
+                MenuConfig(menu_key="group-opp", label="商机管理", is_visible=True, sort_order=4),
+                MenuConfig(menu_key="/opportunities/direct", label="直销商机", is_visible=True, sort_order=41, parent_key="group-opp"),
+                MenuConfig(menu_key="/opportunities/channel", label="渠道商机", is_visible=True, sort_order=42, parent_key="group-opp"),
+                MenuConfig(menu_key="/leads", label="线索管理", is_visible=True, sort_order=5),
+                MenuConfig(menu_key="/products", label="产品管理", is_visible=True, sort_order=6),
+                MenuConfig(menu_key="group-partner", label="渠道伙伴管理", is_visible=True, sort_order=7),
+                MenuConfig(menu_key="/partners", label="伙伴档案", is_visible=True, sort_order=71, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/performance", label="伙伴绩效", is_visible=True, sort_order=72, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/commission", label="返点管理", is_visible=True, sort_order=73, parent_key="group-partner"),
+            ]
+            for m in menus: db.add(m)
+            db.commit()
     finally:
         db.close()
 
-from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users
+from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(customers.router, prefix="/api/customers", tags=["Customers"])
@@ -82,6 +99,7 @@ app.include_router(bidding.router, prefix="/api/bidding", tags=["Bidding"])
 app.include_router(import_data.router, prefix="/api/import", tags=["Import"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
+app.include_router(menu_config.router, prefix="/api/menu-config", tags=["MenuConfig"])
 
 # ===================== Nested customer contacts =====================
 from app.database import get_db

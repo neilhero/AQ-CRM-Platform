@@ -197,3 +197,11 @@ class Lead(Base):
     opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=True)
     created_at = Column(DateTime, default=now_cst)
     updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
+
+class MenuConfig(Base):
+    __tablename__ = "menu_config"
+    menu_key = Column(String(64), primary_key=True)
+    label = Column(String(64), nullable=False)
+    is_visible = Column(Boolean, default=True, nullable=False)
+    sort_order = Column(Integer, default=0)
+    parent_key = Column(String(64), nullable=True)
