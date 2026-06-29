@@ -557,7 +557,7 @@ function CustomerListPage() {
     setNameValidating(true);
     api('GET', '/utils/validate-company?name=' + encodeURIComponent(nm.trim()))
       .then(function(r) { setNameCheck(r); })
-      .catch(function() { setNameCheck({ valid: false, message: '校验服务不可用' }); })
+      .catch(function() { setNameCheck(null); })
       .finally(function() { setNameValidating(false); });
   }
 
