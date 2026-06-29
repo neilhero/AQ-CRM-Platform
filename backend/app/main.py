@@ -7,7 +7,7 @@ import hashlib, os
 
 CST = timezone(timedelta(hours=8))
 
-app = FastAPI(title="AnQuan CRM v3.2")
+app = FastAPI(title="AnQuan CRM v3.3")
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -82,3 +82,31 @@ app.include_router(bidding.router, prefix="/api/bidding", tags=["Bidding"])
 app.include_router(import_data.router, prefix="/api/import", tags=["Import"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
+
+# ===================== Nested customer contacts =====================
+from app.database import get_db
+from app.schemas import ContactCreate, ContactUpdate
+from sqlalchemy.orm import Session
+from fastapi import Depends, HTTPException
+
+@app.get("/api/customers/{customer_id}/contacts")
+def cust_contacts_list(customer_id: int, db: Session=Depends(get_db)):
+    return db.query(Contact).filter(Contact.customer_id == customer_id).all()
+
+@app.post("/api/customers/{customer_id}/contacts", status_code=201)
+def cust_contacts_create(customer_id: int, data: ContactCreate, db: Session=Depends(get_db)):
+    c = Contact(**{**data.model_dump(), 'customer_id': customer_id})
+    db.add(c); db.commit(); db.refresh(c); return c
+
+@app.put("/api/customers/{customer_id}/contacts/{cid}")
+def cust_contacts_update(customer_id: int, cid: int, data: ContactUpdate, db: Session=Depends(get_db)):
+    c = db.query(Contact).filter_by(id=cid).first()
+    if not c: raise HTTPException(404, "Not found")
+    for k,v in data.model_dump(exclude_unset=True).items(): setattr(c,k,v)
+    db.commit(); db.refresh(c); return c
+
+@app.delete("/api/customers/{customer_id}/contacts/{cid}", status_code=204)
+def cust_contacts_delete(customer_id: int, cid: int, db: Session=Depends(get_db)):
+    c = db.query(Contact).filter_by(id=cid).first()
+    if not c: raise HTTPException(404, "Not found")
+    db.delete(c); db.commit()
