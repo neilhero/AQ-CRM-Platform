@@ -15,27 +15,27 @@ Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def root():
-    return {"message": "AnQuan CRM v3.2 API", "status": "running"}
+    return {"message": "AnQuan CRM v3.3 API", "status": "running"}
 
 @app.on_event("startup")
 def seed():
     db = SessionLocal()
     try:
         if db.query(User).count() == 0:
-            db.add(User(username="admin", password_hash=hashlib.sha256("admin123".encode()).hexdigest(), real_name="系统管理员", role="admin"))
+            db.add(User(username="admin", password_hash=hashlib.sha256("admin@aq123".encode()).hexdigest(), real_name="系统管理员", role="admin"))
             db.add(User(username="channel001", password_hash=hashlib.sha256("channel123".encode()).hexdigest(), real_name="张三", role="manager"))
             db.add(User(username="sales001", password_hash=hashlib.sha256("sales123".encode()).hexdigest(), real_name="李四", role="sales"))
             db.commit()
         if db.query(Customer).count() == 0:
             custs = [
-                Customer(name="浙江省政府云", industry="政数", level="VIP"),
-                Customer(name="上海AI研究院", industry="科研", level="A"),
-                Customer(name="北京智慧城市中心", industry="政数", level="A"),
-                Customer(name="广州数据局", industry="政数", level="B"),
-                Customer(name="深圳科技大学", industry="教育", level="B"),
-                Customer(name="江苏移动", industry="运营商", level="A"),
-                Customer(name="工商银行数据中心", industry="金融", level="VIP"),
-                Customer(name="杭州公安", industry="公安", level="A"),
+                Customer(name="浙江省政府云", industry="政数", level="VIP", owner_id=1),
+                Customer(name="上海AI研究院", industry="科研", level="A", owner_id=1),
+                Customer(name="北京智慧城市中心", industry="政数", level="A", owner_id=1),
+                Customer(name="广州数据局", industry="政数", level="B", owner_id=1),
+                Customer(name="深圳科技大学", industry="教育", level="B", owner_id=1),
+                Customer(name="江苏移动", industry="运营商", level="A", owner_id=1),
+                Customer(name="工商银行数据中心", industry="金融", level="VIP", owner_id=1),
+                Customer(name="杭州公安", industry="公安", level="A", owner_id=1),
             ]
             for c in custs: db.add(c)
             db.commit()
@@ -86,27 +86,39 @@ app.include_router(users.router, prefix="/api/users", tags=["Users"])
 # ===================== Nested customer contacts =====================
 from app.database import get_db
 from app.schemas import ContactCreate, ContactUpdate
+from app.routers.utils import require_user
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException
 
+def _check_cust_owner(customer_id: int, db: Session, user):
+    c = db.query(Customer).filter_by(id=customer_id).first()
+    if not c: raise HTTPException(404, "客户不存在")
+    if user.role != 'admin' and c.owner_id != user.id:
+        raise HTTPException(403, "没有权限访问该客户")
+    return c
+
 @app.get("/api/customers/{customer_id}/contacts")
-def cust_contacts_list(customer_id: int, db: Session=Depends(get_db)):
+def cust_contacts_list(customer_id: int, db: Session=Depends(get_db), user=Depends(require_user)):
+    _check_cust_owner(customer_id, db, user)
     return db.query(Contact).filter(Contact.customer_id == customer_id).all()
 
 @app.post("/api/customers/{customer_id}/contacts", status_code=201)
-def cust_contacts_create(customer_id: int, data: ContactCreate, db: Session=Depends(get_db)):
+def cust_contacts_create(customer_id: int, data: ContactCreate, db: Session=Depends(get_db), user=Depends(require_user)):
+    _check_cust_owner(customer_id, db, user)
     c = Contact(**{**data.model_dump(), 'customer_id': customer_id})
     db.add(c); db.commit(); db.refresh(c); return c
 
 @app.put("/api/customers/{customer_id}/contacts/{cid}")
-def cust_contacts_update(customer_id: int, cid: int, data: ContactUpdate, db: Session=Depends(get_db)):
+def cust_contacts_update(customer_id: int, cid: int, data: ContactUpdate, db: Session=Depends(get_db), user=Depends(require_user)):
+    _check_cust_owner(customer_id, db, user)
     c = db.query(Contact).filter_by(id=cid).first()
     if not c: raise HTTPException(404, "Not found")
     for k,v in data.model_dump(exclude_unset=True).items(): setattr(c,k,v)
     db.commit(); db.refresh(c); return c
 
 @app.delete("/api/customers/{customer_id}/contacts/{cid}", status_code=204)
-def cust_contacts_delete(customer_id: int, cid: int, db: Session=Depends(get_db)):
+def cust_contacts_delete(customer_id: int, cid: int, db: Session=Depends(get_db), user=Depends(require_user)):
+    _check_cust_owner(customer_id, db, user)
     c = db.query(Contact).filter_by(id=cid).first()
     if not c: raise HTTPException(404, "Not found")
     db.delete(c); db.commit()

@@ -83,6 +83,8 @@ class Customer(Base):
     description = Column(Text)
     created_at = Column(DateTime, default=now_cst)
     updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    owner = relationship("User")
     contacts = relationship("Contact", back_populates="customer")
     opportunities = relationship("Opportunity", back_populates="customer")
 
