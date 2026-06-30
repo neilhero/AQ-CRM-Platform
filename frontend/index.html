@@ -4350,7 +4350,7 @@ function DashboardPage() {
 
 
 
-                      dayjs(fu.created_at).format('MM-DD HH:mm') + ' · ' + fu.creator_name + (fu.contact_person ? ' · ' + fu.contact_person : '')
+                      dayjs(fu.created_at).format('MM-DD HH:mm') + ' · ' + fu.creator_name + (function(){ console.log('FU_CONTACT:', fu.contact_person, typeof fu.contact_person, JSON.stringify(fu.contact_person)); return fu.contact_person ? ' · ' + fu.contact_person : ''; })()
 
 
 
