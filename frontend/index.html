@@ -9710,7 +9710,7 @@ function OppDetailPage(props) {
 
 
 
-      .then(function(r) { message.success('已记录'); setFuText(''); setFuContact(''); setFus(function(p) { return [{id: r.follow_up_id, content: fuText, contact_person: fuContact, created_at: new Date().toISOString().slice(0,19)}].concat(p); }); })
+      .then(function(r) { message.success('已记录'); setFuText(''); setFuContact(''); setFus(function(p) { var u=JSON.parse(localStorage.getItem('aq2_user')||'{}'); var now=new Date(); var local=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,19).replace('T',' '); return [{id: r.follow_up_id, content: fuText, contact_person: fuContact||undefined, creator_name: u.real_name||'', created_at: local}].concat(p); }); })
 
 
 
@@ -10622,7 +10622,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Input, { placeholder: '接触人（选填）', value: fuContact, onChange: function(ev) { setFuContact(ev.target.value); }, style: { marginBottom: 12 } }),
+          e(Input, { placeholder: '接触人（选填）', value: fuContact, onChange: function(ev) { setFuContact(typeof ev==='string'?ev:(ev&&ev.target?ev.target.value:'')); }, style: { marginBottom: 12 } }),
 
 
 
