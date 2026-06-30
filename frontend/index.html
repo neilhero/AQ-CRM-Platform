@@ -6814,6 +6814,14 @@ function OppListPage(props) {
 
 
 
+  var _fuContactVal = ''; // module-level contact value
+
+
+
+
+
+
+
   var _skp = useState([{name:'',position:'',phone:'',email:''}]), kpList = _skp[0], setKpList = _skp[1];
 
 
@@ -9702,7 +9710,7 @@ function OppDetailPage(props) {
 
 
 
-    api('POST', '/follow-ups/' + id + '/quick-log', { content: fuText, contact_person: localStorage.getItem('_aq_fu_contact') || undefined })
+    api('POST', '/follow-ups/' + id + '/quick-log', { content: fuText, contact_person: _fuContactVal || undefined })
 
 
 
@@ -9710,7 +9718,7 @@ function OppDetailPage(props) {
 
 
 
-      .then(function(r) { message.success('已记录'); setFuText(''); setFuContact(''); setFus(function(p) { var u=JSON.parse(localStorage.getItem('aq2_user')||'{}'); var now=new Date(); var local=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,19).replace('T',' '); var item={id: r.follow_up_id, content: fuText, contact_person: localStorage.getItem('_aq_fu_contact') || undefined, creator_name: u.real_name||'', created_at: local}; var items=[item].concat(p); try{ localStorage.setItem('aq_fus_'+id, JSON.stringify(items)); localStorage.removeItem('_aq_fu_contact'); }catch(e){} return items; }); })
+      .then(function(r) { message.success('已记录'); setFuText(''); setFuContact(''); setFus(function(p) { var u=JSON.parse(localStorage.getItem('aq2_user')||'{}'); var now=new Date(); var local=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,19).replace('T',' '); var item={id: r.follow_up_id, content: fuText, contact_person: _fuContactVal || undefined, creator_name: u.real_name||'', created_at: local}; var items=[item].concat(p); try{ localStorage.setItem('aq_fus_'+id, JSON.stringify(items)); _fuContactVal=''; }catch(e){} return items; }); })
 
 
 
@@ -10622,7 +10630,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Input, { id: 'aq_fu_contact', placeholder: '接触人（选填）', value: fuContact, onChange: function(ev) { var v=typeof ev==='string'?ev:(ev&&ev.target?ev.target.value:''); try{localStorage.setItem('_aq_fu_contact',v)}catch(e){}; setFuContact(v); }, style: { marginBottom: 12 } }),
+          e(Input, { id: 'aq_fu_contact', placeholder: '接触人（选填）', value: fuContact, onChange: function(ev) { var v=typeof ev==='string'?ev:(ev&&ev.target?ev.target.value:''); _fuContactVal=v; setFuContact(v); }, style: { marginBottom: 12 } }),
 
 
 
