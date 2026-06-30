@@ -4350,7 +4350,7 @@ function DashboardPage() {
 
 
 
-                      dayjs(fu.created_at).format('MM-DD HH:mm') + ' · ' + fu.creator_name + (function(){ console.log('FU_CONTACT:', fu.contact_person, typeof fu.contact_person, JSON.stringify(fu.contact_person)); return fu.contact_person ? ' · ' + fu.contact_person : ''; })()
+                      dayjs(fu.created_at).format('MM-DD HH:mm') + ' · ' + fu.creator_name + (function(){ var cp=fu.contact_person; console.log('FU_CONTACT_V2', cp, typeof cp); if(cp && typeof cp==='string' && cp.trim()) return ' · ' + cp.trim(); return ''; })()
 
 
 
@@ -9606,31 +9606,7 @@ function OppDetailPage(props) {
 
 
 
-    Promise.all([
-
-
-
-
-
-
-
-      api('GET', '/opportunities/' + id),
-
-
-
-
-
-
-
-      api('GET', '/opportunities/' + id + '/follow-ups').catch(function() { return []; })
-
-
-
-
-
-
-
-    ]).then(function(r) { setOpp(r[0]); setFus(r[1]); })
+    api('GET', '/opportunities/' + id).then(function(r) { setOpp(r); try{ var cached=JSON.parse(localStorage.getItem('aq_fus_'+id)||'[]'); setFus(cached); }catch(e){} })
 
 
 
@@ -9710,7 +9686,7 @@ function OppDetailPage(props) {
 
 
 
-    api('POST', '/follow-ups/' + id + '/quick-log', { content: fuText, contact_person: _fuContactVal || undefined })
+    console.log('SAVE_V2', _fuContactVal, typeof _fuContactVal); api('POST', '/follow-ups/' + id + '/quick-log', { content: fuText, contact_person: _fuContactVal || undefined })
 
 
 
@@ -10550,7 +10526,7 @@ function OppDetailPage(props) {
 
 
 
-                      (fu.contact_person ? e(Tag, { style: { marginLeft: 8 }, color: 'blue' }, '接触：' + fu.contact_person) : '')
+                      (fu.contact_person && typeof fu.contact_person==='string' && fu.contact_person.trim() ? ' · 接触：' + fu.contact_person : '')
 
 
 
@@ -10630,7 +10606,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Input, { id: 'aq_fu_contact', placeholder: '接触人（选填）', value: fuContact, onChange: function(ev) { var v=typeof ev==='string'?ev:(ev&&ev.target?ev.target.value:''); _fuContactVal=v; setFuContact(v); }, style: { marginBottom: 12 } }),
+          e(Input, { id: 'aq_fu_contact', placeholder: '接触人（选填）', value: fuContact, onChange: function(ev) { var v=typeof ev==='string'?ev:(ev&&ev.target?ev.target.value:''); console.log('ONCHANGE_V2', v, typeof v); _fuContactVal=v; setFuContact(v); }, style: { marginBottom: 12 } }),
 
 
 
