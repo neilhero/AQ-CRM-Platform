@@ -9710,7 +9710,7 @@ function OppDetailPage(props) {
 
 
 
-      .then(function() { message.success('已记录'); setFuText(''); setFuContact(''); load(); })
+      .then(function(r) { message.success('已记录'); setFuText(''); setFuContact(''); setFus(function(p) { return [{id: r.follow_up_id, content: fuText, contact_person: fuContact, created_at: new Date().toISOString().slice(0,19)}].concat(p); }); })
 
 
 
