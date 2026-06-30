@@ -9702,7 +9702,7 @@ function OppDetailPage(props) {
 
 
 
-    api('POST', '/opportunities/' + id + '/follow-ups', { opportunity_id: Number(id), content: fuText, contact_person: fuContact || undefined })
+    api('POST', '/follow-ups/' + id + '/quick-log', { content: fuText, contact_person: fuContact || undefined })
 
 
 
