@@ -11,11 +11,14 @@ router = APIRouter()
 
 @router.get("")
 def list_customers(keyword: Optional[str]=Query(None), industry: Optional[str]=Query(None),
-                   level: Optional[str]=Query(None), skip: int=Query(0,ge=0), limit: int=Query(100,ge=1,le=500),
+                   level: Optional[str]=Query(None), owner_id: Optional[int]=Query(None),
+                   skip: int=Query(0,ge=0), limit: int=Query(100,ge=1,le=500),
                    db: Session=Depends(get_db), user=Depends(require_user)):
     q = db.query(Customer)
     if user.role != 'admin':
         q = q.filter(Customer.owner_id == user.id)
+    elif owner_id is not None:
+        q = q.filter(Customer.owner_id == owner_id)
     if keyword: q = q.filter(Customer.name.contains(keyword))
     if industry: q = q.filter(Customer.industry == industry)
     if level: q = q.filter(Customer.level == level)
