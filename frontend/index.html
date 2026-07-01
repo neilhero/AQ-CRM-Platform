@@ -4486,7 +4486,7 @@ function CustomerListPage() {
 
 
 
-  var _s_oid = useState(undefined), ownerId = _s_oid[0], setOwnerId = _s_oid[1];
+  var _s_oid = useState(undefined), ownerId = _s_oid[0], setOwnerId = _s_oid[1]
 
 
 
@@ -4758,7 +4758,7 @@ function CustomerListPage() {
 
 
 
-    if (ownerId) p.set('owner_id', ownerId);
+    if (ownerId) p.set("owner_id", ownerId);
 
 
 
@@ -4807,8 +4807,9 @@ function CustomerListPage() {
 
 
   var _s_sales_c = useState([]), salesUsersC = _s_sales_c[0], setSalesUsersC = _s_sales_c[1];
-  function fetchSalesUsersC() { api('GET', '/leads/sales/list').then(function(d) { setSalesUsersC(d || []); }).catch(function(){}); }
-  useEffect(function() { var u = JSON.parse(localStorage.getItem('aq2_user')||'{}'); if (u.role === 'admin') fetchSalesUsersC(); }, []);
+  var curRole = JSON.parse(localStorage.getItem("aq2_user")||"{}").role || "";
+  function fetchSalesUsersC() { api("GET", "/leads/sales/list").then(function(d) { setSalesUsersC(d || []); }).catch(function(){}); }
+  useEffect(function() { if (curRole === "admin") fetchSalesUsersC(); }, []);
 
 
 
@@ -5176,19 +5177,19 @@ function CustomerListPage() {
 
 
 
-          e(Col, null,
+          curRole === 'admin' ? e(Col, null,
 
 
-        (function() { var u = JSON.parse(localStorage.getItem('aq2_user')||'{}'); if (u.role === 'admin') return e(Select, { placeholder: '销售筛选', allowClear: true, style: { width: 100 }, value: ownerId, onChange: setOwnerId },
+          e(Select, { placeholder: '销售筛选', allowClear: true, style: { width: 100 }, value: ownerId, onChange: setOwnerId },
 
 
-          (salesUsersC||[]).map(function(su) { return e(Option, { key: su.id, value: su.id }, su.real_name||su.username); })
+            (salesUsersC||[]).map(function(su) { return e(Option, { key: su.id, value: su.id }, su.real_name||su.username); })
 
 
-        ); return null; })()
+          )
 
 
-      ),
+        ) : null,
 
 
       e(Col, null, e(Select, { placeholder: '行业筛选', allowClear: true, style: { width: 130 }, value: ind, onChange: setInd },
@@ -6999,7 +7000,7 @@ function OppListPage(props) {
 
 
 
-    if (f.sales_rep_id) params.set('sales_rep_id', f.sales_rep_id);
+    if (f.sales_rep_id) params.set("sales_rep_id", f.sales_rep_id);
 
 
 
@@ -7079,7 +7080,7 @@ function OppListPage(props) {
 
 
 
-  useEffect(function() { api("GET", "/customers?limit=200").then(function(d) { var items = d.items || d || []; setCustomers(items.map(function(c) { return { id: c.id, name: c.name }; })); }); }, []);
+  useEffect(function() { api("GET", "/customers?limit=200").then(function(d) { var items = d.items || d || []; setCustomers(items.map(function(c) { return { id: c.id, name: c.name }; })); }); }, []);useEffect(function() { api("GET", "/customers?limit=200").then(function(d) { var items = d.items || d || []; setCustomers(items.map(function(c) { return { id: c.id, name: c.name }; })); }); }, []);
 
 
 
@@ -7088,48 +7089,9 @@ function OppListPage(props) {
 
 
   var _s_sales = useState([]), salesUsers = _s_sales[0], setSalesUsers = _s_sales[1];
-  function fetchSalesUsers() { api('GET', '/leads/sales/list').then(function(d) { setSalesUsers(d || []); }).catch(function(){}); }
-  useEffect(function() { var u = JSON.parse(localStorage.getItem('aq2_user')||'{}'); if (u.role === 'admin') fetchSalesUsers(); }, []);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  function create() {
-
-
-
-
-
-
-
-    form.validateFields().then(function(v) {
-
-
-
-
-
-
-
-      v.opp_type = oppType;
-
-
-
-
-
-
-
-      var u = JSON.parse(localStorage.getItem('aq2_user') || '{}'); if (u.id) v.sales_rep_id = u.id;
+  var curRoleO = JSON.parse(localStorage.getItem("aq2_user")||"{}").role || "";
+  function fetchSalesUsers() { api("GET", "/leads/sales/list").then(function(d) { setSalesUsers(d || []); }).catch(function(){}); }
+  useEffect(function() { if (curRoleO === "admin") fetchSalesUsers(); }, []);); if (u.id) v.sales_rep_id = u.id;
 
 
 
@@ -7449,7 +7411,7 @@ function OppListPage(props) {
 
 
 
-    },
+    }
 
 
 
@@ -7729,11 +7691,21 @@ function OppListPage(props) {
 
 
 
-          e(Col, null,
-        (function() { var u = JSON.parse(localStorage.getItem('aq2_user')||'{}'); if (u.role === 'admin') return e(Select, { placeholder: '销售筛选', allowClear: true, style: { width: 100 }, value: f.sales_rep_id, onChange: function(v) { setF(function(p) { return Object.assign({}, p, { sales_rep_id: v }); }); } },
-          (salesUsers||[]).map(function(su) { return e(Option, { key: su.id, value: su.id }, su.real_name||su.username); })
-        ); return null; })()
-      ),
+          curRoleO === 'admin' ? e(Col, null,
+
+
+          e(Select, { placeholder: '销售筛选', allowClear: true, style: { width: 100 }, value: f.sales_rep_id, onChange: function(v) { setF(function(p) { return Object.assign({}, p, { sales_rep_id: v }); }); } },
+
+
+            (salesUsers||[]).map(function(su) { return e(Option, { key: su.id, value: su.id }, su.real_name||su.username); })
+
+
+          )
+
+
+        ) : null,
+
+
       e(Col, { flex: 'auto' },
 
 
@@ -19870,44 +19842,3 @@ try {
 
 
 
-      e(Col, null,
-
-
-
-
-
-
-
-        (function() { var u = JSON.parse(localStorage.getItem('aq2_user')||'{}'); if (u.role === 'admin') return e(Select, { placeholder: '销售筛选', allowClear: true, style: { width: 100 }, value: ownerId, onChange: setOwnerId },
-
-
-
-
-
-
-
-          (salesUsersC||[]).map(function(su) { return e(Option, { key: su.id, value: su.id }, su.real_name||su.username); })
-
-
-
-
-
-
-
-        ); return null; })()
-
-
-
-
-
-
-
-      ),
-
-
-
-
-
-
-
-      
