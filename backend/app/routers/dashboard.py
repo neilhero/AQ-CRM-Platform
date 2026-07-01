@@ -9,17 +9,23 @@ from app.routers.utils import require_user
 CST = timezone(timedelta(hours=8))
 router = APIRouter()
 
+def _perm_filter(q, user):
+    if user.role == "admin": return q
+    if user.role == "channel_manager": return q.filter(Opportunity.opp_type == "channel")
+    return q.filter(Opportunity.sales_rep_id == user.id)
+
 @router.get("/stats")
 def dashboard_stats(db: Session=Depends(get_db), user=Depends(require_user)):
-    total_opps = db.query(Opportunity).count()
-    total_amount = db.query(func.sum(Opportunity.amount)).scalar() or 0
+    base = _perm_filter(db.query(Opportunity), user)
+    total_opps = base.count()
+    total_amount = base.with_entities(func.sum(Opportunity.amount)).scalar() or 0
     stage_dist = {}
-    for o in db.query(Opportunity).filter_by(is_closed=False).all():
+    for o in base.filter(Opportunity.is_closed == False).all():
         s = str(o.stage.value if o.stage else "1")
         stage_dist[s] = stage_dist.get(s, 0) + 1
     today = date.today()
-    weekly_new = db.query(Opportunity).filter(Opportunity.created_at >= today - timedelta(days=7)).count()
-    weekly_updated = db.query(Opportunity).filter(Opportunity.updated_at >= today).count()
+    weekly_new = base.filter(Opportunity.created_at >= today - timedelta(days=7)).count()
+    weekly_updated = base.filter(Opportunity.updated_at >= today).count()
     return {
         "total_opportunities": total_opps,
         "total_amount": round(total_amount, 1),
@@ -37,7 +43,13 @@ def dashboard_stats(db: Session=Depends(get_db), user=Depends(require_user)):
 
 @router.get("/sales-performance")
 def sales_performance(period: str=Query("month"), db: Session=Depends(get_db), user=Depends(require_user)):
-    users = db.query(User).filter_by(is_active=True).all()
+    # Filter users: admin sees all, sales sees self, channel_manager sees all
+    if user.role == "admin":
+        users = db.query(User).filter_by(is_active=True).all()
+    elif user.role == "channel_manager":
+        users = db.query(User).filter_by(is_active=True).all()
+    else:
+        users = [user]
     today = date.today()
     ndays = 30
     if period == "quarter": ndays = 90
@@ -45,7 +57,9 @@ def sales_performance(period: str=Query("month"), db: Session=Depends(get_db), u
     start = today - timedelta(days=ndays)
     result = []
     for u in users:
-        opps = db.query(Opportunity).filter_by(sales_rep_id=u.id).filter(Opportunity.created_at >= start).all()
+        base = db.query(Opportunity).filter(Opportunity.sales_rep_id == u.id, Opportunity.created_at >= start)
+        base = _perm_filter(base, user)
+        opps = base.all()
         won = [o for o in opps if o.stage and str(o.stage.value) == "5"]
         opp_count = len(opps)
         won_count = len(won)
