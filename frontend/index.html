@@ -7006,6 +7006,22 @@ function OppListPage(props) {
 
 
 
+  function delOpp(oid) { api('DELETE', '/opportunities/' + oid).then(function() { message.success('已删除'); fetchData(); }).catch(function(err) { message.error(err.message); }); }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   useEffect(function() { fetchData(); }, [fetchData]);
 
 
@@ -7367,6 +7383,62 @@ function OppListPage(props) {
 
 
       render: function(v) { return v ? e(Tag, { color: UPDATE_COLORS[v] || 'default' }, v) : '-'; }
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+    { title: '操作', key: 'actions', width: 80,
+
+
+
+
+
+
+
+      render: function(_, r) {
+
+
+
+
+
+
+
+        return e(Popconfirm, { title: '确认删除商机「' + (r.name||'') + '」？', onConfirm: function() { delOpp(r.id); } },
+
+
+
+
+
+
+
+          e(Button, { size: 'small', type: 'link', danger: true }, '删除')
+
+
+
+
+
+
+
+        );
+
+
+
+
+
+
+
+      }
 
 
 
