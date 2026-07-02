@@ -6193,7 +6193,7 @@ function CustomerDrawer(props) {
 
 
 
-          e('div', null, e('div', { style: { fontSize: 22, fontWeight: 700 } }, stats.total_opportunities || 0), e('div', { style: { fontSize: 11, color: '#64748b' } }, '关联商机'))
+          e('div', null, e('div', { style: { fontSize: 22, fontWeight: 700, whiteSpace: 'nowrap' } }, stats.total_opportunities || 0), e('div', { style: { fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' } }, '关联商机'))
 
 
 
@@ -6225,7 +6225,7 @@ function CustomerDrawer(props) {
 
 
 
-          e('div', null, e('div', { style: { fontSize: 22, fontWeight: 700 } }, (stats.total_amount || 0).toFixed(0) + '万'), e('div', { style: { fontSize: 11, color: '#64748b' } }, '商机总额'))
+          e('div', null, e('div', { style: { fontSize: 22, fontWeight: 700, whiteSpace: 'nowrap' } }, (stats.total_amount || 0).toFixed(0) + '万'), e('div', { style: { fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' } }, '商机总额'))
 
 
 
