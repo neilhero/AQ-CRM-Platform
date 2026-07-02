@@ -9764,7 +9764,7 @@ function OppDetailPage(props) {
 
 
 
-    api('GET', '/opportunities/' + id).then(function(r) { setOpp(r); try{ var cached=JSON.parse(localStorage.getItem('aq_fus_'+id)||'[]'); setFus(cached); }catch(e){} })
+    api('GET', '/opportunities/' + id).then(function(r) { setOpp(r); api('GET','/follow-ups?opportunity_id='+id).then(function(fus){setFus(fus||[]);}).catch(function(){var cached=JSON.parse(localStorage.getItem('aq_fus_'+id)||'[]');setFus(cached);}); })
 
 
 

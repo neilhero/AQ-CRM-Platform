@@ -94,4 +94,4 @@ def quick_log(fid: int, content: str="", db: Session=Depends(get_db), user=Depen
     db.add(fu)
     opp.updated_at = date.today()
     db.commit()
-    return {"message": "logged"}
+    return {"message": "logged", "follow_up_id": fu.id}
