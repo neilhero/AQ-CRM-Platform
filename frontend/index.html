@@ -1822,7 +1822,7 @@ function AppLayout(props) {
 
 
 
-  useEffect(function() { api('GET','/stages').then(function(d){if(d&&d.length){d.forEach(function(s){STAGE_MAP[s.stage_key]={color:s.color||'#999',label:s.label,pct:s.pct||'20%'};});}}).catch(function(){}); }, []);
+  useEffect(function() { api('GET','/stages').then(function(d){if(d&&d.length){d.forEach(function(s){STAGE_MAP[s.stage_key]={color:s.color||'#999',label:s.label,pct:s.pct||'20%'};});}}).catch(function(){}); }, [window.location.hash]);
 
 
 
