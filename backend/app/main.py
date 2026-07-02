@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
-from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig
+from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig
 from datetime import date, datetime, timezone, timedelta
 import hashlib, os
 
@@ -85,7 +85,7 @@ def seed():
     finally:
         db.close()
 
-from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config
+from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(customers.router, prefix="/api/customers", tags=["Customers"])
@@ -100,6 +100,7 @@ app.include_router(import_data.router, prefix="/api/import", tags=["Import"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(menu_config.router, prefix="/api/menu-config", tags=["MenuConfig"])
+app.include_router(stages.router, prefix="/api/stages", tags=["Stages"])
 
 # ===================== Nested customer contacts =====================
 from app.database import get_db

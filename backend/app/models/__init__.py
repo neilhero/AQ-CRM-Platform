@@ -205,3 +205,12 @@ class MenuConfig(Base):
     is_visible = Column(Boolean, default=True, nullable=False)
     sort_order = Column(Integer, default=0)
     parent_key = Column(String(64), nullable=True)
+
+class StageConfig(Base):
+    __tablename__ = "stage_configs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stage_key = Column(String(10), unique=True, nullable=False, index=True)
+    label = Column(String(64), nullable=False)
+    color = Column(String(20), default="#999")
+    pct = Column(String(10), default="20%")
+    sort_order = Column(Integer, default=0)

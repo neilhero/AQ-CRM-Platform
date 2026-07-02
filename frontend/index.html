@@ -1822,6 +1822,14 @@ function AppLayout(props) {
 
 
 
+  useEffect(function() { api('GET','/stages').then(function(d){if(d&&d.length){d.forEach(function(s){STAGE_MAP[s.stage_key]={color:s.color||'#999',label:s.label,pct:s.pct||'20%'};});}}).catch(function(){}); }, []);
+
+
+
+
+
+
+
   var _s13 = useState([]), customers = _s13[0], setCustomers = _s13[1];
 
 

@@ -110,6 +110,36 @@ function MenuConfigPage(){
   );
 }
 
+function StageConfigPage(){
+  var [stages,setStages]=useState([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
+  function fetch(){setLoading(true);api.get('/stages').then(r=>{setStages(r.data||[])}).catch(()=>{}).finally(()=>setLoading(false))}
+  useEffect(fetch,[]);
+
+  function update(idx,field,val){
+    setStages(prev=>prev.map((s,i)=>i===idx?{...s,[field]:val}:s));
+  }
+
+  function saveAll(){
+    setSaving(true);
+    var promises=stages.map(s=>api.put('/stages/'+s.stage_key,{label:s.label,color:s.color,pct:s.pct}));
+    Promise.all(promises).then(()=>{message.success('已保存，刷新CRM生效');fetch()}).catch(err=>message.error('保存失败')).finally(()=>setSaving(false));
+  }
+
+  return e('div',null,
+    e('h1',{style:{fontSize:22,margin:'0 0 4px'}},'商机阶段管理'),e('p',{style:{color:'#64748b',margin:'0 0 24px'}},'自定义商机5个阶段的名称、颜色和进度百分比'),
+    e(Card,null,
+      stages.map((s,idx)=>e('div',{key:s.stage_key,style:{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderBottom:'1px solid #f0f0f0'}},
+        e('div',{style:{width:30,fontWeight:600,fontSize:15,color:'#64748b',textAlign:'center'}},s.stage_key),
+        e(Input,{value:s.label,onChange:e=>update(idx,'label',e.target.value),style:{flex:1},placeholder:'阶段名称'}),
+        e('div',{style:{width:10,height:10,borderRadius:3,background:s.color,flexShrink:0}}),
+        e(Input,{value:s.color,onChange:e=>update(idx,'color',e.target.value),style:{width:90},placeholder:'#色值'}),
+        e(Input,{value:s.pct,onChange:e=>update(idx,'pct',e.target.value),style:{width:70},placeholder:'进度%'})
+      ))
+    ),
+    e(Button,{type:'primary',loading:saving,onClick:saveAll,style:{marginTop:16}},'💾 保存阶段配置')
+  );
+}
+
 function App(){
   var [user,setUser]=useState(null),[users,setUsers]=useState([]);
   var [tab,setTab]=useState('users');
@@ -122,9 +152,10 @@ function App(){
     e('div',{className:'content'},
       e('div',{className:'tab-nav'},
         e('div',{className:'tab'+(tab==='users'?' active':''),onClick:()=>setTab('users')},'用户管理'),
-        e('div',{className:'tab'+(tab==='menu'?' active':''),onClick:()=>setTab('menu')},'菜单管理')
+        e('div',{className:'tab'+(tab==='menu'?' active':''),onClick:()=>setTab('menu')},'菜单管理'),
+        e('div',{className:'tab'+(tab==='stages'?' active':''),onClick:()=>setTab('stages')},'阶段管理')
       ),
-      tab==='users'?e(UsersPage,{user,users,fetchUsers}):e(MenuConfigPage)
+      tab==='users'?e(UsersPage,{user,users,fetchUsers}):tab==='stages'?e(StageConfigPage):e(MenuConfigPage)
     )
   );
 }

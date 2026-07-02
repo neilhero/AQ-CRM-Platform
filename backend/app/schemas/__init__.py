@@ -114,3 +114,12 @@ class LeadOut(BaseModel):
     assigned_to: Optional[int]=None; customer_id: Optional[int]=None; opportunity_id: Optional[int]=None
     created_at: Optional[datetime]=None; assigned_user_name: Optional[str]=None
     class Config: from_attributes=True
+
+class StageConfigOut(BaseModel):
+    id: int; stage_key: str; label: str; color: Optional[str]=None
+    pct: Optional[str]=None; sort_order: Optional[int]=0
+    class Config: from_attributes=True
+
+class StageConfigUpdate(BaseModel):
+    label: Optional[str]=None; color: Optional[str]=None
+    pct: Optional[str]=None; sort_order: Optional[int]=None
