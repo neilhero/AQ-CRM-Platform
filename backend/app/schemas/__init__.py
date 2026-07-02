@@ -22,11 +22,12 @@ class OpportunityCreate(BaseModel):
     industry: Optional[str]=None; amount: Optional[float]=0.0; stage: Optional[str]="1"
     probability: Optional[str]="LOW"; key_person: Optional[str]=None; brief: Optional[str]=None
     expected_close_date: Optional[date]=None; required_product: Optional[str]=None
+    next_follow_up_date: Optional[date]=None
 
 class OpportunityUpdate(BaseModel):
     name: Optional[str]=None; stage: Optional[str]=None; probability: Optional[str]=None
     amount: Optional[float]=None; key_person: Optional[str]=None; brief: Optional[str]=None
-    expected_close_date: Optional[date]=None; required_product: Optional[str]=None
+    expected_close_date: Optional[date]=None; next_follow_up_date: Optional[date]=None; required_product: Optional[str]=None
     is_closed: Optional[bool]=None; industry: Optional[str]=None
 
 class OpportunityOut(BaseModel):
