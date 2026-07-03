@@ -9994,6 +9994,29 @@ function OppDetailPage(props) {
 
 
 
+
+
+
+
+
+  function addDetailPresales() {
+    detailPresalesForm.validateFields().then(function(v) {
+      if (v.scheduled_date && v.scheduled_date.format) v.scheduled_date = v.scheduled_date.format('YYYY-MM-DD');
+      v.opportunity_id = Number(id);
+      return api('POST', '/security-business/presales-requests', v);
+    }).then(function() {
+      message.success('售前协同申请已创建');
+      detailPresalesForm.resetFields();
+      return api('GET','/security-business/presales-requests?opportunity_id='+id);
+    }).then(function(rows) {
+      setPresalesReqs(rows || []);
+    }).catch(function(err) { if (err && err.errorFields) return; message.error(err.message || '创建失败'); });
+  }
+
+
+
+
+
   function edit() {
 
 
@@ -19484,19 +19507,11 @@ function SecurityBusinessPage() {
 
 
 
-  function addDetailPresales() {
-    detailPresalesForm.validateFields().then(function(v) {
-      if (v.scheduled_date && v.scheduled_date.format) v.scheduled_date = v.scheduled_date.format('YYYY-MM-DD');
-      v.opportunity_id = Number(id);
-      return api('POST', '/security-business/presales-requests', v);
-    }).then(function() {
-      message.success('售前协同申请已创建');
-      detailPresalesForm.resetFields();
-      return api('GET','/security-business/presales-requests?opportunity_id='+id);
-    }).then(function(rows) {
-      setPresalesReqs(rows || []);
-    }).catch(function(err) { if (err && err.errorFields) return; message.error(err.message || '创建失败'); });
-  }
+
+
+
+
+
   function loadOperational() {
     setLoading(true);
     Promise.all([
