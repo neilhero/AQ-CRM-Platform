@@ -331,3 +331,62 @@ class BidRadarFollowTask(Base):
     status = Column(String(32), default="open", index=True)
     notes = Column(Text)
     created_at = Column(DateTime, default=now_cst)
+
+class SalesTarget(Base):
+    __tablename__ = "sales_targets"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sales_rep_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    period_type = Column(String(16), default="quarter", index=True)
+    period_label = Column(String(32), nullable=False, index=True)
+    sales_target = Column(Float, default=0.0)
+    collection_target = Column(Float, default=0.0)
+    new_customer_target = Column(Integer, default=0)
+    channel_contribution_target = Column(Float, default=0.0)
+    lead_conversion_target = Column(Float, default=0.0)
+    win_rate_target = Column(Float, default=0.0)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=now_cst)
+    updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
+
+class CustomerOperationProfile(Base):
+    __tablename__ = "customer_operation_profiles"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), unique=True, nullable=False, index=True)
+    segment = Column(String(32), default="normal", index=True)
+    owner_strategy = Column(Text)
+    next_action = Column(Text)
+    health_status = Column(String(32), default="normal", index=True)
+    updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
+    created_at = Column(DateTime, default=now_cst)
+
+class OpportunityReview(Base):
+    __tablename__ = "opportunity_reviews"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=False, index=True)
+    result = Column(String(16), nullable=False, index=True)
+    reason = Column(String(256))
+    competitor = Column(String(256))
+    price_gap = Column(Text)
+    technical_gap = Column(Text)
+    relationship_gap = Column(Text)
+    product_feedback = Column(Text)
+    market_feedback = Column(Text)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    review_date = Column(Date, default=date.today, index=True)
+    created_at = Column(DateTime, default=now_cst)
+    updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
+
+class PartnerGrowthRecord(Base):
+    __tablename__ = "partner_growth_records"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    partner_id = Column(Integer, ForeignKey("channel_partners.id"), nullable=False, index=True)
+    record_type = Column(String(32), nullable=False, index=True)
+    title = Column(String(256), nullable=False)
+    person_name = Column(String(128))
+    record_date = Column(Date, default=date.today, index=True)
+    expiry_date = Column(Date, nullable=True)
+    score = Column(Float, default=0.0)
+    status = Column(String(32), default="valid", index=True)
+    notes = Column(Text)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=now_cst)

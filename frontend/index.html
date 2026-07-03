@@ -2034,6 +2034,13 @@ function AppLayout(props) {
 
 
 
+
+    { key: '/sales-growth', icon: IC('RiseOutlined'), label: '销售增长' },
+
+
+
+
+
     { key: '/products', icon: IC('AppstoreOutlined'), label: '产品管理' },
 
 
@@ -2266,7 +2273,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/security-business': '网安业务', '/products': '产品管理', '/partners': '伙伴档案', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/security-business': '网安业务', '/sales-growth': '销售增长', '/products': '产品管理', '/partners': '伙伴档案', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
 
 
 
@@ -19615,6 +19622,267 @@ function SecurityBusinessPage() {
   return e('div', null, e(Tabs, { defaultActiveKey: 'profile' }, e(Tabs.TabPane, { tab: '客户360画像', key: 'profile' }, profileTab), e(Tabs.TabPane, { tab: '项目报备/撞单', key: 'registration' }, registrationTab), e(Tabs.TabPane, { tab: '售前协同', key: 'presales' }, presalesTab), e(Tabs.TabPane, { tab: '招标雷达', key: 'radar' }, radarTab)));
 }
 
+function SalesGrowthPage() {
+  var _f = useState(null), forecast = _f[0], setForecast = _f[1];
+  var _gb = useState('sales'), groupBy = _gb[0], setGroupBy = _gb[1];
+  var _pl = useState((function(){ var d = new Date(); return d.getFullYear() + 'Q' + (Math.floor(d.getMonth() / 3) + 1); })()), periodLabel = _pl[0], setPeriodLabel = _pl[1];
+  var _targets = useState([]), targets = _targets[0], setTargets = _targets[1];
+  var _ops = useState({ summary: {}, items: [], alerts: [] }), customerOps = _ops[0], setCustomerOps = _ops[1];
+  var _reviews = useState([]), reviews = _reviews[0], setReviews = _reviews[1];
+  var _ps = useState([]), partnerSummary = _ps[0], setPartnerSummary = _ps[1];
+  var _pr = useState([]), partnerRecords = _pr[0], setPartnerRecords = _pr[1];
+  var _opps = useState([]), opps = _opps[0], setOpps = _opps[1];
+  var _users = useState([]), users = _users[0], setUsers = _users[1];
+  var _partners = useState([]), partners = _partners[0], setPartners = _partners[1];
+  var _loading = useState(false), loading = _loading[0], setLoading = _loading[1];
+  var _targetForm = Form.useForm(), targetForm = _targetForm[0];
+  var _reviewForm = Form.useForm(), reviewForm = _reviewForm[0];
+  var _recordForm = Form.useForm(), recordForm = _recordForm[0];
+  var _opForm = Form.useForm(), opForm = _opForm[0];
+  var _opOpen = useState(false), opOpen = _opOpen[0], setOpOpen = _opOpen[1];
+  var _opCustomer = useState(null), opCustomer = _opCustomer[0], setOpCustomer = _opCustomer[1];
+  function fmtDate(v) { return v && v.format ? v.format('YYYY-MM-DD') : v; }
+  function loadGrowth() {
+    setLoading(true);
+    Promise.all([
+      api('GET', '/sales-growth/forecast?group_by=' + groupBy + '&period_label=' + encodeURIComponent(periodLabel)),
+      api('GET', '/sales-growth/targets/summary?period_label=' + encodeURIComponent(periodLabel)),
+      api('GET', '/sales-growth/customer-operations'),
+      api('GET', '/sales-growth/opportunity-reviews'),
+      api('GET', '/sales-growth/partner-growth/summary'),
+      api('GET', '/sales-growth/partner-growth/records'),
+      api('GET', '/opportunities?limit=500'),
+      api('GET', '/sales-growth/users'),
+      api('GET', '/channel-partners?limit=500')
+    ]).then(function(res) {
+      setForecast(res[0] || null);
+      setTargets((res[1] && res[1].items) || []);
+      setCustomerOps(res[2] || { summary: {}, items: [], alerts: [] });
+      setReviews(res[3] || []);
+      setPartnerSummary(res[4] || []);
+      setPartnerRecords(res[5] || []);
+      setOpps(res[6] || []);
+      setUsers(res[7] || []);
+      setPartners(res[8] || []);
+    }).catch(function(err) {
+      message.error(err.message || '销售增长数据加载失败');
+    }).finally(function() { setLoading(false); });
+  }
+  useEffect(function() { loadGrowth(); }, [groupBy]);
+  function saveTarget() {
+    targetForm.validateFields().then(function(v) {
+      v.period_label = v.period_label || periodLabel;
+      return api('POST', '/sales-growth/targets', v);
+    }).then(function() {
+      message.success('目标已保存');
+      targetForm.resetFields();
+      loadGrowth();
+    }).catch(function(err) { message.error(err.message || '保存失败'); });
+  }
+  function saveReview() {
+    reviewForm.validateFields().then(function(v) {
+      if (v.review_date) v.review_date = fmtDate(v.review_date);
+      return api('POST', '/sales-growth/opportunity-reviews', v);
+    }).then(function() {
+      message.success('复盘已记录');
+      reviewForm.resetFields();
+      loadGrowth();
+    }).catch(function(err) { message.error(err.message || '保存失败'); });
+  }
+  function savePartnerRecord() {
+    recordForm.validateFields().then(function(v) {
+      if (v.record_date) v.record_date = fmtDate(v.record_date);
+      if (v.expiry_date) v.expiry_date = fmtDate(v.expiry_date);
+      return api('POST', '/sales-growth/partner-growth/records', v);
+    }).then(function() {
+      message.success('伙伴成长记录已保存');
+      recordForm.resetFields();
+      loadGrowth();
+    }).catch(function(err) { message.error(err.message || '保存失败'); });
+  }
+  function openOperation(row) {
+    setOpCustomer(row);
+    opForm.setFieldsValue({ segment: row.segment || 'normal', health_status: row.health_status || 'normal', owner_strategy: row.owner_strategy, next_action: row.next_action });
+    setOpOpen(true);
+  }
+  function saveOperation() {
+    opForm.validateFields().then(function(v) {
+      return api('PUT', '/sales-growth/customer-operations/' + opCustomer.customer_id, v);
+    }).then(function() {
+      message.success('客户运营策略已更新');
+      setOpOpen(false);
+      loadGrowth();
+    }).catch(function(err) { message.error(err.message || '保存失败'); });
+  }
+  var forecastTotals = forecast && forecast.totals ? forecast.totals : {};
+  var forecastTab = e('div', null,
+    e(Row, { gutter: 12, style: { marginBottom: 16 } },
+      e(Col, { span: 6 }, e(Card, { size: 'small' }, e(Statistic, { title: 'Commit 承诺预测', value: forecastTotals.commit || 0, suffix: '万' }))),
+      e(Col, { span: 6 }, e(Card, { size: 'small' }, e(Statistic, { title: 'Best Case 最佳情况', value: forecastTotals.best_case || 0, suffix: '万' }))),
+      e(Col, { span: 6 }, e(Card, { size: 'small' }, e(Statistic, { title: 'Pipeline 管道储备', value: forecastTotals.pipeline || 0, suffix: '万' }))),
+      e(Col, { span: 6 }, e(Card, { size: 'small' }, e(Statistic, { title: '加权预测', value: forecastTotals.weighted || 0, suffix: '万' })))
+    ),
+    e(Card, { size: 'small', title: '销售预测 Forecast', extra: e(Space, null,
+      e(Input, { size: 'small', style: { width: 100 }, value: periodLabel, onChange: function(ev){ setPeriodLabel(ev.target.value); }, onPressEnter: loadGrowth }),
+      e(Select, { size: 'small', value: groupBy, style: { width: 130 }, onChange: setGroupBy },
+        e(Option, { value: 'sales' }, '按销售'),
+        e(Option, { value: 'region' }, '按区域'),
+        e(Option, { value: 'industry' }, '按行业'),
+        e(Option, { value: 'product_line' }, '按产品线'),
+        e(Option, { value: 'stage' }, '按阶段'),
+        e(Option, { value: 'probability' }, '按概率')
+      ),
+      e(Button, { size: 'small', onClick: loadGrowth }, '刷新')
+    ) },
+      e(Table, { rowKey: 'group', loading: loading, dataSource: (forecast && forecast.items) || [], pagination: false, columns: [
+        { title: '维度', dataIndex: 'group', ellipsis: true },
+        { title: '商机数', dataIndex: 'opp_count', width: 90 },
+        { title: 'Commit', dataIndex: 'commit', width: 110, render: function(v){ return (v || 0) + '万'; } },
+        { title: 'Best Case', dataIndex: 'best_case', width: 120, render: function(v){ return (v || 0) + '万'; } },
+        { title: 'Pipeline', dataIndex: 'pipeline', width: 110, render: function(v){ return (v || 0) + '万'; } },
+        { title: '加权预测', dataIndex: 'weighted', width: 120, render: function(v){ return e('strong', null, (v || 0) + '万'); } },
+        { title: '原始金额', dataIndex: 'raw', width: 110, render: function(v){ return (v || 0) + '万'; } }
+      ] })
+    )
+  );
+  var targetTab = e('div', null,
+    e(Card, { title: '录入季度目标', size: 'small', style: { marginBottom: 16 } },
+      e(Form, { form: targetForm, layout: 'vertical' },
+        e(Row, { gutter: 12 },
+          e(Col, { span: 4 }, e(Form.Item, { name: 'period_label', label: '周期', initialValue: periodLabel, rules: [{ required: true }] }, e(Input, { placeholder: '2026Q3' }))),
+          e(Col, { span: 5 }, e(Form.Item, { name: 'sales_rep_id', label: '销售', rules: [{ required: true }] }, e(Select, { showSearch: true }, users.map(function(u){ return e(Option, { key: u.id, value: u.id }, u.real_name); })))),
+          e(Col, { span: 3 }, e(Form.Item, { name: 'sales_target', label: '销售目标' }, e(InputNumber, { min: 0, style: { width: '100%' } }))),
+          e(Col, { span: 3 }, e(Form.Item, { name: 'collection_target', label: '回款目标' }, e(InputNumber, { min: 0, style: { width: '100%' } }))),
+          e(Col, { span: 3 }, e(Form.Item, { name: 'new_customer_target', label: '新客户' }, e(InputNumber, { min: 0, style: { width: '100%' } }))),
+          e(Col, { span: 3 }, e(Form.Item, { name: 'channel_contribution_target', label: '渠道贡献' }, e(InputNumber, { min: 0, style: { width: '100%' } }))),
+          e(Col, { span: 3 }, e(Form.Item, { name: 'win_rate_target', label: '赢单率%' }, e(InputNumber, { min: 0, max: 100, style: { width: '100%' } })))
+        ),
+        e(Form.Item, { name: 'notes', label: '说明' }, e(TextArea, { rows: 2 })),
+        e(Button, { type: 'primary', onClick: saveTarget }, '保存目标')
+      )
+    ),
+    e(Table, { rowKey: 'id', loading: loading, dataSource: targets, pagination: { pageSize: 8 }, columns: [
+      { title: '销售', dataIndex: 'sales_rep_name', width: 100 },
+      { title: '周期', dataIndex: 'period_label', width: 90 },
+      { title: '销售目标/实际', width: 150, render: function(_, r){ return (r.actual_sales || 0) + ' / ' + (r.sales_target || 0) + '万'; } },
+      { title: '回款目标/实际', width: 150, render: function(_, r){ return (r.actual_collection || 0) + ' / ' + (r.collection_target || 0) + '万'; } },
+      { title: '新客户', width: 110, render: function(_, r){ return (r.actual_new_customers || 0) + ' / ' + (r.new_customer_target || 0); } },
+      { title: '渠道贡献', width: 130, render: function(_, r){ return (r.actual_channel_contribution || 0) + ' / ' + (r.channel_contribution_target || 0) + '万'; } },
+      { title: '线索转化率', width: 110, render: function(_, r){ return (r.actual_lead_conversion || 0) + '% / ' + (r.lead_conversion_target || 0) + '%'; } },
+      { title: '赢单率', width: 110, render: function(_, r){ return (r.actual_win_rate || 0) + '% / ' + (r.win_rate_target || 0) + '%'; } }
+    ] })
+  );
+  var segmentTab = e('div', null,
+    e(Row, { gutter: 12, style: { marginBottom: 16 } },
+      ['strategic','key','normal','dormant'].map(function(k){ var text = { strategic: '战略客户', key: '重点客户', normal: '普通客户', dormant: '沉睡客户' }[k]; return e(Col, { span: 6, key: k }, e(Card, { size: 'small' }, e(Statistic, { title: text, value: (customerOps.summary || {})[k] || 0, suffix: '个' }))); })
+    ),
+    e(Card, { size: 'small', title: '自动运营提醒', style: { marginBottom: 16 } },
+      e(Table, { rowKey: function(r, i){ return r.type + '-' + (r.opportunity_id || r.customer_id) + '-' + i; }, size: 'small', dataSource: customerOps.alerts || [], pagination: { pageSize: 5 }, columns: [
+        { title: '提醒', dataIndex: 'message', width: 140, render: function(v){ return e(Tag, { color: 'orange' }, v); } },
+        { title: '客户', dataIndex: 'customer_name', width: 180 },
+        { title: '商机', dataIndex: 'opportunity_name', ellipsis: true, render: function(v){ return v || '-'; } }
+      ] })
+    ),
+    e(Table, { rowKey: 'customer_id', loading: loading, dataSource: customerOps.items || [], pagination: { pageSize: 10 }, columns: [
+      { title: '客户', dataIndex: 'customer_name', ellipsis: true },
+      { title: '行业', dataIndex: 'industry', width: 100 },
+      { title: '分层', dataIndex: 'segment_label', width: 100, render: function(v, r){ return e(Tag, { color: r.segment === 'strategic' ? 'red' : r.segment === 'key' ? 'blue' : r.segment === 'dormant' ? 'default' : 'green' }, v); } },
+      { title: '活跃商机', dataIndex: 'active_opportunities', width: 100 },
+      { title: '累计金额', dataIndex: 'total_amount', width: 110, render: function(v){ return (v || 0) + '万'; } },
+      { title: '健康度', dataIndex: 'health_status', width: 100 },
+      { title: '下一步动作', dataIndex: 'next_action', ellipsis: true, render: function(v){ return v || '-'; } },
+      { title: '操作', width: 100, render: function(_, r){ return e(Button, { size: 'small', onClick: function(){ openOperation(r); } }, '运营策略'); } }
+    ] })
+  );
+  var reviewTab = e('div', null,
+    e(Card, { title: '输赢单复盘', size: 'small', style: { marginBottom: 16 } },
+      e(Form, { form: reviewForm, layout: 'vertical' },
+        e(Row, { gutter: 12 },
+          e(Col, { span: 6 }, e(Form.Item, { name: 'opportunity_id', label: '商机', rules: [{ required: true }] }, e(Select, { showSearch: true }, opps.map(function(o){ return e(Option, { key: o.id, value: o.id }, o.name); })))),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'result', label: '结果', rules: [{ required: true }] }, e(Select, null, e(Option, { value: 'won' }, '赢单'), e(Option, { value: 'lost' }, '输单')))),
+          e(Col, { span: 5 }, e(Form.Item, { name: 'reason', label: '原因' }, e(Input))),
+          e(Col, { span: 5 }, e(Form.Item, { name: 'competitor', label: '竞品' }, e(Input, { placeholder: '安恒/奇安信/深信服' }))),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'review_date', label: '复盘日期' }, e(DatePicker, { style: { width: '100%' } })))
+        ),
+        e(Row, { gutter: 12 },
+          e(Col, { span: 8 }, e(Form.Item, { name: 'price_gap', label: '价格短板' }, e(TextArea, { rows: 2 }))),
+          e(Col, { span: 8 }, e(Form.Item, { name: 'technical_gap', label: '技术短板' }, e(TextArea, { rows: 2 }))),
+          e(Col, { span: 8 }, e(Form.Item, { name: 'relationship_gap', label: '关系短板' }, e(TextArea, { rows: 2 })))
+        ),
+        e(Row, { gutter: 12 },
+          e(Col, { span: 12 }, e(Form.Item, { name: 'product_feedback', label: '产品反馈' }, e(TextArea, { rows: 2 }))),
+          e(Col, { span: 12 }, e(Form.Item, { name: 'market_feedback', label: '市场反馈' }, e(TextArea, { rows: 2 })))
+        ),
+        e(Button, { type: 'primary', onClick: saveReview }, '保存复盘')
+      )
+    ),
+    e(Table, { rowKey: 'id', loading: loading, dataSource: reviews, pagination: { pageSize: 8 }, columns: [
+      { title: '商机', dataIndex: 'opportunity_name', ellipsis: true },
+      { title: '结果', dataIndex: 'result', width: 90, render: function(v){ return e(Tag, { color: v === 'won' ? 'green' : 'red' }, v === 'won' ? '赢单' : '输单'); } },
+      { title: '原因', dataIndex: 'reason', width: 160, ellipsis: true },
+      { title: '竞品', dataIndex: 'competitor', width: 140, render: function(v){ return v || '-'; } },
+      { title: '技术短板', dataIndex: 'technical_gap', ellipsis: true },
+      { title: '复盘人', dataIndex: 'reviewer_name', width: 100 },
+      { title: '日期', dataIndex: 'review_date', width: 110 }
+    ] })
+  );
+  var partnerTab = e('div', null,
+    e(Card, { title: '伙伴成长记录', size: 'small', style: { marginBottom: 16 } },
+      e(Form, { form: recordForm, layout: 'vertical' },
+        e(Row, { gutter: 12 },
+          e(Col, { span: 5 }, e(Form.Item, { name: 'partner_id', label: '伙伴', rules: [{ required: true }] }, e(Select, { showSearch: true }, partners.map(function(p){ return e(Option, { key: p.id, value: p.id }, p.name); })))),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'record_type', label: '类型', rules: [{ required: true }] }, e(Select, null, e(Option, { value: 'certification' }, '认证人员'), e(Option, { value: 'training' }, '培训记录'), e(Option, { value: 'violation' }, '违规记录')))),
+          e(Col, { span: 5 }, e(Form.Item, { name: 'title', label: '标题', rules: [{ required: true }] }, e(Input))),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'person_name', label: '人员' }, e(Input))),
+          e(Col, { span: 3 }, e(Form.Item, { name: 'score', label: '分值' }, e(InputNumber, { style: { width: '100%' } }))),
+          e(Col, { span: 3 }, e(Form.Item, { name: 'record_date', label: '日期' }, e(DatePicker, { style: { width: '100%' } })))
+        ),
+        e(Form.Item, { name: 'notes', label: '备注' }, e(TextArea, { rows: 2 })),
+        e(Button, { type: 'primary', onClick: savePartnerRecord }, '保存记录')
+      )
+    ),
+    e(Table, { rowKey: 'partner_id', loading: loading, dataSource: partnerSummary, pagination: false, style: { marginBottom: 16 }, columns: [
+      { title: '伙伴', dataIndex: 'partner_name', ellipsis: true },
+      { title: '等级', dataIndex: 'level', width: 90 },
+      { title: '授权区域', dataIndex: 'authorized_region', width: 100 },
+      { title: '累计业绩', dataIndex: 'cumulative_performance', width: 110, render: function(v){ return (v || 0) + '万'; } },
+      { title: '赢单业绩', dataIndex: 'won_performance', width: 110, render: function(v){ return (v || 0) + '万'; } },
+      { title: '返点测算', dataIndex: 'estimated_rebate', width: 110, render: function(v, r){ return (v || 0) + '万（' + (r.rebate_rate || 0) + '%）'; } },
+      { title: '认证', dataIndex: 'certified_people', width: 80 },
+      { title: '培训', dataIndex: 'training_count', width: 80 },
+      { title: '违规', dataIndex: 'violation_count', width: 80 }
+    ] }),
+    e(Table, { rowKey: 'id', size: 'small', dataSource: partnerRecords, pagination: { pageSize: 6 }, columns: [
+      { title: '伙伴', dataIndex: 'partner_name', width: 160 },
+      { title: '类型', dataIndex: 'record_type', width: 100, render: function(v){ return ({ certification: '认证', training: '培训', violation: '违规' }[v] || v); } },
+      { title: '标题', dataIndex: 'title', ellipsis: true },
+      { title: '人员', dataIndex: 'person_name', width: 100 },
+      { title: '日期', dataIndex: 'record_date', width: 110 },
+      { title: '备注', dataIndex: 'notes', ellipsis: true }
+    ] })
+  );
+  return e('div', null,
+    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '📈  销售增长'), e('p', { className: 'page-desc' }, 'Forecast、目标绩效、客户分层、输赢复盘与渠道伙伴成长体系')),
+    e(Tabs, { defaultActiveKey: 'forecast' },
+      e(Tabs.TabPane, { tab: '销售预测', key: 'forecast' }, forecastTab),
+      e(Tabs.TabPane, { tab: '目标绩效', key: 'target' }, targetTab),
+      e(Tabs.TabPane, { tab: '客户分层运营', key: 'segment' }, segmentTab),
+      e(Tabs.TabPane, { tab: '输赢单复盘', key: 'review' }, reviewTab),
+      e(Tabs.TabPane, { tab: '渠道伙伴成长', key: 'partner' }, partnerTab)
+    ),
+    e(Modal, { title: opCustomer ? '客户运营策略 - ' + opCustomer.customer_name : '客户运营策略', open: opOpen, onOk: saveOperation, onCancel: function(){ setOpOpen(false); }, width: 620 },
+      e(Form, { form: opForm, layout: 'vertical' },
+        e(Row, { gutter: 12 },
+          e(Col, { span: 12 }, e(Form.Item, { name: 'segment', label: '客户分层', rules: [{ required: true }] }, e(Select, null, e(Option, { value: 'strategic' }, '战略客户'), e(Option, { value: 'key' }, '重点客户'), e(Option, { value: 'normal' }, '普通客户'), e(Option, { value: 'dormant' }, '沉睡客户')))),
+          e(Col, { span: 12 }, e(Form.Item, { name: 'health_status', label: '健康度' }, e(Select, null, e(Option, { value: 'normal' }, '正常'), e(Option, { value: 'risk' }, '风险'), e(Option, { value: 'inactive' }, '沉睡'))))
+        ),
+        e(Form.Item, { name: 'owner_strategy', label: '运营策略' }, e(TextArea, { rows: 3 })),
+        e(Form.Item, { name: 'next_action', label: '下一步动作' }, e(TextArea, { rows: 2 }))
+      )
+    )
+  );
+}
+
 function App() {
 
 
@@ -19900,6 +20168,20 @@ function App() {
 
 
     content = e(SecurityBusinessPage);
+
+
+
+
+
+
+  } else if (hash === '/sales-growth') {
+
+
+
+
+
+
+    content = e(SalesGrowthPage);
 
 
 
