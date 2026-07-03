@@ -1686,7 +1686,7 @@ function LoginPage() {
 
 
 
-      e(Form, { form: form, onFinish: submit, size: 'large' },
+      e(Form, { form: form, onFinish: submit, size: 'large', autoComplete: 'off' },
 
 
 
@@ -1702,7 +1702,7 @@ function LoginPage() {
 
 
 
-          e(Input, { prefix: IC('UserOutlined'), placeholder: '用户名', style: { borderRadius: 8 } })
+          e(Input, { prefix: IC('UserOutlined'), placeholder: '用户名', autoComplete: 'off', style: { borderRadius: 8 } })
 
 
 
@@ -1726,7 +1726,7 @@ function LoginPage() {
 
 
 
-          e(Input.Password, { prefix: IC('LockOutlined'), placeholder: '密码', style: { borderRadius: 8 } })
+          e(Input.Password, { prefix: IC('LockOutlined'), placeholder: '密码', autoComplete: 'new-password', style: { borderRadius: 8 } })
 
 
 
@@ -1766,15 +1766,7 @@ function LoginPage() {
 
 
 
-      ),
-
-
-
-
-
-
-
-      e('div', { className: 'hint' }, 'admin / admin123  \u00B7  sales001 / sales123')
+      )
 
 
 
