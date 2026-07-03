@@ -7,6 +7,8 @@ import hashlib, os
 
 CST = timezone(timedelta(hours=8))
 
+from app.services.auth import hash_password
+
 app = FastAPI(title="AnQuan CRM v3.3")
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
@@ -22,7 +24,7 @@ def seed():
     db = SessionLocal()
     try:
         if db.query(User).count() == 0:
-            db.add(User(username="admin", password_hash=hashlib.sha256("admin@aq123".encode()).hexdigest(), real_name="系统管理员", role="admin"))
+            db.add(User(username="admin", password_hash=hash_password("admin@aq123"), real_name="系统管理员", role="admin"))
             db.add(User(username="channel001", password_hash=hashlib.sha256("channel123".encode()).hexdigest(), real_name="张三", role="manager"))
             db.add(User(username="sales001", password_hash=hashlib.sha256("sales123".encode()).hexdigest(), real_name="李四", role="sales"))
             db.commit()

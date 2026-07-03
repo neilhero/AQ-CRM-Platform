@@ -113,5 +113,5 @@ def stats(db: Session=Depends(get_db), user=Depends(require_user)):
     q = _apply_perm_filter(q, user)
     total = q.count()
     active = q.filter(Opportunity.is_closed == False).count()
-    total_amt = db.query(func.sum(Opportunity.amount)).filter(Opportunity.is_closed == False).scalar() or 0
+    total_amt = _apply_perm_filter(db.query(func.sum(Opportunity.amount)), user).filter(Opportunity.is_closed == False).scalar() or 0
     return {"total": total, "active": active, "total_amount": round(total_amt,1)}

@@ -1,19 +1,31 @@
-import hashlib
+import hashlib, os, secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import jwt
 from sqlalchemy.orm import Session
 from app.models import User
 
-SECRET_KEY = "aq-crm-secret-key-2026"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "aq-crm-" + secrets.token_hex(32))
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 
 def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000)
+    return f"pbkdf2:sha256:100000${salt}${dk.hex()}"
 
 def verify_password(password: str, hashed: str) -> bool:
-    return hash_password(password) == hashed
+    try:
+        parts = hashed.split("$")
+        if len(parts) == 3 and hashed.startswith("pbkdf2:sha256:"):
+            algo, iters_str, rest = parts[0], parts[1], parts[2]
+            iters = int(iters_str)
+            salt, stored = rest.split("$")
+            dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), iters)
+            return dk.hex() == stored
+        return hashlib.sha256(password.encode()).hexdigest() == hashed
+    except Exception:
+        return False
 
 def create_token(user_id: int, username: str) -> str:
     payload = {"user_id": user_id, "username": username,
