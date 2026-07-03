@@ -1263,6 +1263,22 @@ var PROB_COLORS = {
 
 
 var UPDATE_COLORS = { '本周新增': 'green', '本周更新': 'orange', '本周未变': 'default' };
+var OPP_TYPE_LABELS = { direct: '直销', channel: '渠道', '直销': '直销', '渠道': '渠道' };
+var PROB_LABELS = { HIGH: '高概率（100-90%）', MID_HIGH: '中高概率（80-70%）', MID: '中概率（60-50%）', LOW: '低概率（40-10%）' };
+var UPDATE_STATUS_LABELS = { NEW: '本周新增', UPDATED: '本周更新', UNCHANGED: '本周未变', '本周新增': '本周新增', '本周更新': '本周更新', '本周未变': '本周未变' };
+var UPDATE_STATUS_COLORS = { NEW: 'green', UPDATED: 'orange', UNCHANGED: 'default', '本周新增': 'green', '本周更新': 'orange', '本周未变': 'default' };
+
+function oppTypeLabel(value) {
+  return OPP_TYPE_LABELS[value] || value || '-';
+}
+
+function probabilityLabel(value) {
+  return PROB_LABELS[value] || value || '-';
+}
+
+function updateStatusLabel(value) {
+  return UPDATE_STATUS_LABELS[value] || value || '-';
+}
 
 
 
@@ -7399,7 +7415,7 @@ function OppListPage(props) {
 
 
 
-      render: function(v) { var pl = {HIGH:'高概率(100-90%)',MID_HIGH:'中高概率(80-70%)',MID:'中概率(60-50%)',LOW:'低概率(40-10%)'}; return v ? e(Tag, { color: PROB_COLORS[v] || 'default' }, pl[v] || v) : '-'; }
+      render: function(v) { return v ? e(Tag, { color: PROB_COLORS[v] || 'default' }, probabilityLabel(v)) : '-'; }
 
 
 
@@ -7519,7 +7535,7 @@ function OppListPage(props) {
 
 
 
-      render: function(v) { return v ? e(Tag, { color: UPDATE_COLORS[v] || 'default' }, v) : '-'; }
+      render: function(v) { return v ? e(Tag, { color: UPDATE_STATUS_COLORS[v] || UPDATE_COLORS[v] || 'default' }, updateStatusLabel(v)) : '-'; }
 
 
 
@@ -9543,7 +9559,7 @@ function KanbanBoard(props) {
 
 
 
-                      ? e(Tag, { color: probColor, style: { margin: 0, fontSize: 11, lineHeight: '20px', borderRadius: 4, flexShrink: 0 } }, opp.probability.replace('（',' ').replace('）',''))
+                      ? e(Tag, { color: probColor, style: { margin: 0, fontSize: 11, lineHeight: '20px', borderRadius: 4, flexShrink: 0 } }, probabilityLabel(opp.probability))
 
 
 
@@ -10119,7 +10135,7 @@ function OppDetailPage(props) {
 
 
 
-      e(Button, { icon: IC('ArrowLeftOutlined'), onClick: function() { nav('/opportunities/' + (opp.opp_type === '渠道' ? 'channel' : 'direct')); } }, '返回列表'),
+      e(Button, { icon: IC('ArrowLeftOutlined'), onClick: function() { nav('/opportunities/' + (opp.opp_type === 'channel' || opp.opp_type === '渠道' ? 'channel' : 'direct')); } }, '返回列表'),
 
 
 
@@ -10135,7 +10151,7 @@ function OppDetailPage(props) {
 
 
 
-      e(Tag, { color: opp.opp_type === '直销' ? 'blue' : 'purple' }, opp.opp_type),
+      e(Tag, { color: (opp.opp_type === 'direct' || opp.opp_type === '直销') ? 'blue' : 'purple' }, oppTypeLabel(opp.opp_type)),
 
 
 
@@ -10151,7 +10167,7 @@ function OppDetailPage(props) {
 
 
 
-      opp.probability ? e(Tag, { color: PROB_COLORS[opp.probability] || 'default' }, opp.probability) : null
+      opp.probability ? e(Tag, { color: PROB_COLORS[opp.probability] || 'default' }, probabilityLabel(opp.probability)) : null
 
 
 
@@ -10367,7 +10383,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Descriptions.Item, { label: '状态' }, e(Tag, { color: UPDATE_COLORS[opp.update_status] || 'default' }, opp.update_status || '-')),
+          e(Descriptions.Item, { label: '状态' }, e(Tag, { color: UPDATE_STATUS_COLORS[opp.update_status] || UPDATE_COLORS[opp.update_status] || 'default' }, updateStatusLabel(opp.update_status))),
 
 
 
