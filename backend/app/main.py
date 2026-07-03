@@ -130,7 +130,7 @@ def cust_contacts_create(customer_id: int, data: ContactCreate, db: Session=Depe
 @app.put("/api/customers/{customer_id}/contacts/{cid}")
 def cust_contacts_update(customer_id: int, cid: int, data: ContactUpdate, db: Session=Depends(get_db), user=Depends(require_user)):
     _check_cust_owner(customer_id, db, user)
-    c = db.query(Contact).filter_by(id=cid).first()
+    c = db.query(Contact).filter_by(id=cid, customer_id=customer_id).first()
     if not c: raise HTTPException(404, "Not found")
     for k,v in data.model_dump(exclude_unset=True).items(): setattr(c,k,v)
     db.commit(); db.refresh(c); return c
@@ -138,6 +138,6 @@ def cust_contacts_update(customer_id: int, cid: int, data: ContactUpdate, db: Se
 @app.delete("/api/customers/{customer_id}/contacts/{cid}", status_code=204)
 def cust_contacts_delete(customer_id: int, cid: int, db: Session=Depends(get_db), user=Depends(require_user)):
     _check_cust_owner(customer_id, db, user)
-    c = db.query(Contact).filter_by(id=cid).first()
+    c = db.query(Contact).filter_by(id=cid, customer_id=customer_id).first()
     if not c: raise HTTPException(404, "Not found")
     db.delete(c); db.commit()
