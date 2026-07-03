@@ -222,3 +222,16 @@ class IndustryConfig(Base):
     sort_order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=now_cst)
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    username = Column(String(64), index=True)
+    method = Column(String(12), nullable=False)
+    path = Column(String(512), nullable=False, index=True)
+    status_code = Column(Integer, default=0)
+    client_ip = Column(String(64))
+    user_agent = Column(String(512))
+    action = Column(String(64), index=True)
+    created_at = Column(DateTime, default=now_cst, index=True)

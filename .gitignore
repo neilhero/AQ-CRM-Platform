@@ -6,6 +6,8 @@ frontend/static/*.css
 *.db
 *.db-shm
 *.db-wal
+backend/backups/
+*.sql
 
 # Python
 __pycache__/

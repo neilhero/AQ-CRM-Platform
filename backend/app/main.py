@@ -1,19 +1,53 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
-from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig
+from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog
 from datetime import date, datetime, timezone, timedelta
 import hashlib, os
 
 CST = timezone(timedelta(hours=8))
 
 from app.services.auth import hash_password
+from app.services.auth import get_current_user
 
 app = FastAPI(title="AnQuan CRM v3.3")
 
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8097", "http://127.0.0.1:8097", "http://121.41.66.121"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 Base.metadata.create_all(bind=engine)
+
+AUDIT_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+@app.middleware("http")
+async def audit_write_requests(request, call_next):
+    response = None
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        if request.method in AUDIT_METHODS and request.url.path.startswith("/api/"):
+            db = SessionLocal()
+            try:
+                user = None
+                auth_header = request.headers.get("authorization") or ""
+                if auth_header.startswith("Bearer "):
+                    user = get_current_user(db, auth_header.replace("Bearer ", ""))
+                client = request.client.host if request.client else ""
+                db.add(AuditLog(
+                    user_id=user.id if user else None,
+                    username=user.username if user else None,
+                    method=request.method,
+                    path=request.url.path,
+                    status_code=response.status_code if response else 500,
+                    client_ip=client,
+                    user_agent=request.headers.get("user-agent", "")[:512],
+                    action=f"{request.method} {request.url.path}",
+                ))
+                db.commit()
+            except Exception:
+                db.rollback()
+            finally:
+                db.close()
 
 @app.get("/")
 def root():
@@ -87,7 +121,7 @@ def seed():
     finally:
         db.close()
 
-from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages, commissions, company_utils, export_data, industries
+from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages, commissions, company_utils, export_data, industries, audit
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(customers.router, prefix="/api/customers", tags=["Customers"])
@@ -108,6 +142,7 @@ app.include_router(industries.router, prefix="/api/industries", tags=["Industrie
 app.include_router(commissions.router, prefix="/api/commissions", tags=["Commissions"])
 app.include_router(company_utils.router, prefix="/api/utils", tags=["Utils"])
 app.include_router(export_data.router, prefix="/api/export", tags=["Export"])
+app.include_router(audit.router, prefix="/api/audit-logs", tags=["AuditLogs"])
 
 # ===================== Nested customer contacts =====================
 from app.database import get_db

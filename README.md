@@ -84,6 +84,57 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8097
 | /api/import/ | POST | 数据导入（模板/预览/确认） |
 | /api/users | CRUD + reset-password | 用户管理（仅 admin） |
 | /api/menu-config | GET/PUT | 菜单配置（v3.4） |
+| /api/audit-logs | GET | 审计日志（仅 admin） |
+
+## 生产数据库与运维
+
+默认仍使用 SQLite，适合演示和轻量部署。生产环境建议设置 `DATABASE_URL` 切换到 PostgreSQL 或 MySQL：
+
+```bash
+# PostgreSQL
+export DATABASE_URL='postgresql+psycopg2://aq_crm:password@127.0.0.1:5432/aq_crm'
+
+# MySQL
+export DATABASE_URL='mysql+pymysql://aq_crm:password@127.0.0.1:3306/aq_crm?charset=utf8mb4'
+```
+
+systemd 部署可参考 `deploy/env/aq-crm.env.example`，复制到 `/etc/aq-crm/aq-crm.env` 后执行：
+
+```bash
+systemctl daemon-reload
+systemctl restart aq-crm
+```
+
+### SQLite 迁移到 PostgreSQL/MySQL
+
+```bash
+cd /opt/aq-crm
+export DATABASE_URL='postgresql+psycopg2://aq_crm:password@127.0.0.1:5432/aq_crm'
+python3 backend/scripts/migrate_sqlite_to_db.py --truncate
+```
+
+### 备份
+
+```bash
+cd /opt/aq-crm
+python3 backend/scripts/backup_db.py
+```
+
+SQLite 会生成 `.db` 备份；PostgreSQL/MySQL 会生成 SQL dump（需要服务器安装 `pg_dump` 或 `mysqldump`）。
+
+### 恢复
+
+恢复前请先停止服务：
+
+```bash
+systemctl stop aq-crm
+python3 backend/scripts/restore_db.py backend/backups/your-backup-file
+systemctl start aq-crm
+```
+
+### 审计日志
+
+系统会自动记录 `POST/PUT/PATCH/DELETE` 写操作，包括用户、路径、方法、状态码、IP、User-Agent 和时间。管理员可通过 `/api/audit-logs` 查询。
 
 ## 种子数据
 
