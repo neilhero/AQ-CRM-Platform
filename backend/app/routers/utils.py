@@ -11,3 +11,8 @@ def require_user(db: Session = Depends(get_db), authorization: str = Header(None
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
+
+def require_admin(user=Depends(require_user)):
+    if user.role != "admin":
+        raise HTTPException(403, "仅管理员可操作")
+    return user

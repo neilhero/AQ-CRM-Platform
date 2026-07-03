@@ -11,7 +11,7 @@ from app.services.auth import hash_password
 
 app = FastAPI(title="AnQuan CRM v3.3")
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8097", "http://127.0.0.1:8097", "http://121.41.66.121"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 Base.metadata.create_all(bind=engine)
 

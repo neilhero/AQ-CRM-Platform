@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 from app.database import get_db
 from app.models import Lead, LeadStatus, User, Customer, Opportunity
 from app.schemas import LeadCreate, LeadUpdate
-from app.routers.utils import require_user
+from app.routers.utils import require_user, require_admin
 
 CST = timezone(timedelta(hours=8))
 router = APIRouter()
@@ -53,7 +53,7 @@ def update_lead(lid: int, data: LeadUpdate, db: Session=Depends(get_db), user=De
     db.commit(); db.refresh(l); return l
 
 @router.delete("/{lid}", status_code=204)
-def delete_lead(lid: int, db: Session=Depends(get_db), user=Depends(require_user)):
+def delete_lead(lid: int, db: Session=Depends(get_db), admin=Depends(require_admin)):
     l = db.query(Lead).filter_by(id=lid).first()
     if not l: raise HTTPException(404, "Not found")
     db.delete(l); db.commit()

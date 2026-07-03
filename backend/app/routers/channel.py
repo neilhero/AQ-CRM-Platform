@@ -4,7 +4,7 @@ from typing import Optional
 from app.database import get_db
 from app.models import ChannelPartner
 from app.schemas import ChannelPartnerCreate, ChannelPartnerUpdate
-from app.routers.utils import require_user
+from app.routers.utils import require_user, require_admin
 
 router = APIRouter()
 
@@ -25,19 +25,19 @@ def get_partner(pid: int, db: Session=Depends(get_db), user=Depends(require_user
     return p
 
 @router.post("", status_code=201)
-def create_partner(data: ChannelPartnerCreate, db: Session=Depends(get_db), user=Depends(require_user)):
+def create_partner(data: ChannelPartnerCreate, db: Session=Depends(get_db), admin=Depends(require_admin)):
     p = ChannelPartner(**data.model_dump())
     db.add(p); db.commit(); db.refresh(p); return p
 
 @router.put("/{pid}")
-def update_partner(pid: int, data: ChannelPartnerUpdate, db: Session=Depends(get_db), user=Depends(require_user)):
+def update_partner(pid: int, data: ChannelPartnerUpdate, db: Session=Depends(get_db), admin=Depends(require_admin)):
     p = db.query(ChannelPartner).filter_by(id=pid).first()
     if not p: raise HTTPException(404, "Not found")
     for k,v in data.model_dump(exclude_unset=True).items(): setattr(p,k,v)
     db.commit(); db.refresh(p); return p
 
 @router.delete("/{pid}", status_code=204)
-def delete_partner(pid: int, db: Session=Depends(get_db), user=Depends(require_user)):
+def delete_partner(pid: int, db: Session=Depends(get_db), admin=Depends(require_admin)):
     p = db.query(ChannelPartner).filter_by(id=pid).first()
     if not p: raise HTTPException(404, "Not found")
     db.delete(p); db.commit()

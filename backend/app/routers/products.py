@@ -4,7 +4,7 @@ from typing import Optional
 from app.database import get_db
 from app.models import Product
 from app.schemas import ProductCreate, ProductUpdate
-from app.routers.utils import require_user
+from app.routers.utils import require_user, require_admin
 
 router = APIRouter()
 
@@ -24,20 +24,20 @@ def get_product(pid: int, db: Session=Depends(get_db), user=Depends(require_user
     return p
 
 @router.post("", status_code=201)
-def create_product(data: ProductCreate, db: Session=Depends(get_db), user=Depends(require_user)):
+def create_product(data: ProductCreate, db: Session=Depends(get_db), admin=Depends(require_admin)):
     if db.query(Product).filter_by(name=data.name).first(): raise HTTPException(400, "Name exists")
     p = Product(**data.model_dump())
     db.add(p); db.commit(); db.refresh(p); return p
 
 @router.put("/{pid}")
-def update_product(pid: int, data: ProductUpdate, db: Session=Depends(get_db), user=Depends(require_user)):
+def update_product(pid: int, data: ProductUpdate, db: Session=Depends(get_db), admin=Depends(require_admin)):
     p = db.query(Product).filter_by(id=pid).first()
     if not p: raise HTTPException(404, "Not found")
     for k,v in data.model_dump(exclude_unset=True).items(): setattr(p,k,v)
     db.commit(); db.refresh(p); return p
 
 @router.delete("/{pid}", status_code=204)
-def delete_product(pid: int, db: Session=Depends(get_db), user=Depends(require_user)):
+def delete_product(pid: int, db: Session=Depends(get_db), admin=Depends(require_admin)):
     p = db.query(Product).filter_by(id=pid).first()
     if not p: raise HTTPException(404, "Not found")
     db.delete(p); db.commit()

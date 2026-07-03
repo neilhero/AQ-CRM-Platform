@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+
+class QuickLogReq(BaseModel):
+    content: str = ""
+    contact_person: Optional[str] = None
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime, timezone, timedelta, date
@@ -81,7 +85,7 @@ def today_followups(db: Session=Depends(get_db), user=Depends(require_user)):
     }
 
 @router.post("/{fid}/quick-log")
-def quick_log(fid: int, content: str="", db: Session=Depends(get_db), user=Depends(require_user)):
+def quick_log(fid: int, req: QuickLogReq, db: Session=Depends(get_db), user=Depends(require_user)):
     opp = db.query(Opportunity).filter_by(id=fid).first()
     if not opp: raise HTTPException(404, "Not found")
     if user.role != "admin":
@@ -89,7 +93,7 @@ def quick_log(fid: int, content: str="", db: Session=Depends(get_db), user=Depen
             raise HTTPException(403, "Access denied")
         if user.role not in ("admin", "channel_manager") and opp.sales_rep_id != user.id:
             raise HTTPException(403, "Access denied")
-    fu = FollowUp(opportunity_id=fid, creator_id=user.id, content=content or "快捷跟进",
+    fu = FollowUp(opportunity_id=fid, creator_id=user.id, content=req.content or "快捷跟进", contact_person=req.contact_person,
                   created_at=datetime.now(CST))
     db.add(fu)
     opp.updated_at = date.today()

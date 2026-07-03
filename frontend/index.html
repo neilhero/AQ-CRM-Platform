@@ -19780,7 +19780,7 @@ window.onerror = function(msg, src, line, col, err) {
 
 
 
-  document.getElementById('root').innerHTML = '<div class="error-disp"><h3>运行时错误</h3><p>' + msg + '</p><p style="font-size:11px;color:#888">' + src + ' @' + line + ':' + col + '</p><pre style="font-size:10px;text-align:left;max-height:200px;overflow:auto">' + (err ? err.stack : '') + '</pre></div>';
+  document.getElementById('root').innerHTML = '<div class="error-disp"><h3>运行时错误</h3><p>' + msg.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p><p style="font-size:11px;color:#888">' + src + ' @' + line + ':' + col + '</p><pre style="font-size:10px;text-align:left;max-height:200px;overflow:auto">' + (err ? err.stack : '') + '</pre></div>';
 
 
 
@@ -19852,7 +19852,7 @@ try {
 
 
 
-  document.getElementById('root').innerHTML = '<div class="error-disp"><h3>启动失败</h3><p>' + err.message + '</p></div>';
+  document.getElementById('root').innerHTML = '<div class="error-disp"><h3>启动失败</h3><p>' + err.message.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</p></div>';
 
 
 
