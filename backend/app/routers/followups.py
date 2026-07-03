@@ -1,10 +1,7 @@
-from pydantic import BaseModel
-
-class QuickLogReq(BaseModel):
-    content: str = ""
-    contact_person: Optional[str] = None
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
+from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta, date
 from app.database import get_db
 from app.models import FollowUp, Opportunity, User
@@ -12,6 +9,10 @@ from app.routers.utils import require_user
 
 CST = timezone(timedelta(hours=8))
 router = APIRouter()
+
+class QuickLogReq(BaseModel):
+    content: str = ""
+    contact_person: Optional[str] = None
 
 def _opp_perm_filter(q, user):
     if user.role == "admin": return q
