@@ -85,6 +85,17 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8097
 | /api/users | CRUD + reset-password | 用户管理（仅 admin） |
 | /api/menu-config | GET/PUT | 菜单配置（v3.4） |
 | /api/audit-logs | GET | 审计日志（仅 admin） |
+| /api/security-business/customer-profiles | GET/PUT | 客户 360 画像 |
+| /api/security-business/channel-registrations | GET/POST/PUT | 渠道项目报备、保护期、撞单仲裁 |
+| /api/security-business/presales-requests | GET/POST/PUT | 售前协同、POC、排期、方案/标书/演示支持 |
+| /api/security-business/bid-radar | GET/POST/PUT | 招标雷达、关键词订阅、情报跟进任务 |
+
+## 网安行业 P1 业务能力
+
+- 客户 360 画像：记录组织架构、决策链、技术负责人、采购负责人、历史项目、在用安全产品、竞品情况、等保/密评/信创状态。
+- 项目报备/撞单：渠道商机支持最终客户穿透、区域归属、保护期、重复客户识别、保护期冲突和管理员仲裁。
+- 售前协同：商机可发起售前支持、POC、测试资源排期、方案评审、标书支持、演示记录，并跟踪负责人、排期和状态。
+- 招标雷达：支持关键词订阅、预算下限、产品线匹配、竞品判断、截止提醒，并在采集/录入情报时自动生成跟进任务。
 
 ## 生产数据库与运维
 

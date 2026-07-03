@@ -25,11 +25,15 @@ from app.models import Base
 from app.models import (
     User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp,
     CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog,
+    CustomerSecurityProfile, ChannelRegistration, PresalesRequest,
+    BidRadarSubscription, BidRadarItem, BidRadarFollowTask,
 )
 
 MODELS = [
     User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp,
     CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog,
+    CustomerSecurityProfile, ChannelRegistration, PresalesRequest,
+    BidRadarSubscription, BidRadarItem, BidRadarFollowTask,
 ]
 
 

@@ -2028,6 +2028,12 @@ function AppLayout(props) {
 
 
 
+    { key: '/security-business', icon: IC('SafetyCertificateOutlined'), label: '网安业务' },
+
+
+
+
+
     { key: '/products', icon: IC('AppstoreOutlined'), label: '产品管理' },
 
 
@@ -2260,7 +2266,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/products': '产品管理', '/partners': '伙伴档案', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/security-business': '网安业务', '/products': '产品管理', '/partners': '伙伴档案', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
 
 
 
@@ -9733,6 +9739,12 @@ function OppDetailPage(props) {
 
 
 
+  var _sp = useState([]), presalesReqs = _sp[0], setPresalesReqs = _sp[1];
+
+
+
+
+
 
 
   var _s3 = useState(true), loading = _s3[0], setLoading = _s3[1];
@@ -9776,6 +9788,7 @@ function OppDetailPage(props) {
 
 
   var _f = Form.useForm(), editForm = _f[0];
+  var _pf = Form.useForm(), detailPresalesForm = _pf[0];
 
 
 
@@ -9800,6 +9813,12 @@ function OppDetailPage(props) {
 
 
   var _s13 = useState([]), customers = _s13[0], setCustomers = _s13[1];
+
+
+
+
+
+  var detailReqTypeText = { presales_support: '售前支持', poc: 'POC申请', test_resource: '测试资源排期', solution_review: '方案评审', bid_support: '标书支持', demo: '演示记录' };
 
 
 
@@ -9847,7 +9866,7 @@ function OppDetailPage(props) {
 
 
 
-    api('GET', '/opportunities/' + id).then(function(r) { setOpp(r); api('GET','/follow-ups?opportunity_id='+id).then(function(fus){setFus(fus||[]);}).catch(function(){var cached=JSON.parse(localStorage.getItem('aq_fus_'+id)||'[]');setFus(cached);}); })
+    api('GET', '/opportunities/' + id).then(function(r) { setOpp(r); api('GET','/follow-ups?opportunity_id='+id).then(function(fus){setFus(fus||[]);}).catch(function(){var cached=JSON.parse(localStorage.getItem('aq_fus_'+id)||'[]');setFus(cached);}); api('GET','/security-business/presales-requests?opportunity_id='+id).then(function(rows){setPresalesReqs(rows||[]);}).catch(function(){setPresalesReqs([]);}); })
 
 
 
@@ -10894,6 +10913,29 @@ function OppDetailPage(props) {
 
 
 
+
+    e('div', { className: 'section-card', style: { marginBottom: 20 } },
+      e('div', { className: 'card-header' }, e('h3', null, IC('ToolOutlined'), ' 售前协同')),
+      e('div', { className: 'card-body' },
+        e(Form, { form: detailPresalesForm, layout: 'vertical' },
+          e(Row, { gutter: 12 },
+            e(Col, { span: 5 }, e(Form.Item, { name: 'request_type', label: '类型', rules: [{ required: true, message: '请选择类型' }] }, e(Select, null, Object.keys(detailReqTypeText).map(function(k){ return e(Option, { key: k, value: k }, detailReqTypeText[k]); })))),
+            e(Col, { span: 7 }, e(Form.Item, { name: 'title', label: '标题', rules: [{ required: true, message: '请输入标题' }] }, e(Input, { placeholder: '如：POC 环境申请' }))),
+            e(Col, { span: 5 }, e(Form.Item, { name: 'scheduled_date', label: '排期' }, e(DatePicker, { style: { width: '100%' } }))),
+            e(Col, { span: 5 }, e(Form.Item, { name: 'resource_name', label: '资源' }, e(Input, { placeholder: '工程师/测试资源' }))),
+            e(Col, { span: 2 }, e(Form.Item, { label: ' ' }, e(Button, { type: 'primary', block: true, onClick: addDetailPresales }, '申请')))
+          ),
+          e(Form.Item, { name: 'details', label: '说明' }, e(TextArea, { rows: 2, placeholder: '售前支持、POC、测试资源、方案评审、标书支持或演示记录的需求说明' }))
+        ),
+        e(Table, { rowKey: 'id', size: 'small', pagination: false, dataSource: presalesReqs, columns: [
+          { title: '类型', dataIndex: 'request_type', width: 120, render: function(v) { return detailReqTypeText[v] || v; } },
+          { title: '标题', dataIndex: 'title', ellipsis: true },
+          { title: '排期', dataIndex: 'scheduled_date', width: 110, render: function(v) { return v || '-'; } },
+          { title: '资源', dataIndex: 'resource_name', width: 120, render: function(v) { return v || '-'; } },
+          { title: '状态', dataIndex: 'status', width: 100, render: function(v) { var colors = { pending: 'gold', in_progress: 'cyan', done: 'green' }; return e(Tag, { color: colors[v] || 'default' }, v || '-'); } }
+        ] })
+      )
+    ),
 
     // Edit Modal
 
@@ -19414,6 +19456,149 @@ function ImportModal(props) {
 
 
 
+function SecurityBusinessPage() {
+  var _c = useState([]), customers = _c[0], setCustomers = _c[1];
+  var _o = useState([]), opps = _o[0], setOpps = _o[1];
+  var _p = useState([]), partners = _p[0], setPartners = _p[1];
+  var _u = useState([]), users = _u[0], setUsers = _u[1];
+  var _profile = useState(null), profile = _profile[0], setProfile = _profile[1];
+  var _regs = useState([]), regs = _regs[0], setRegs = _regs[1];
+  var _presales = useState([]), presales = _presales[0], setPresales = _presales[1];
+  var _subs = useState([]), subs = _subs[0], setSubs = _subs[1];
+  var _items = useState([]), radarItems = _items[0], setRadarItems = _items[1];
+  var _tasks = useState([]), radarTasks = _tasks[0], setRadarTasks = _tasks[1];
+  var _loading = useState(false), loading = _loading[0], setLoading = _loading[1];
+  var _custId = useState(null), selectedCustomerId = _custId[0], setSelectedCustomerId = _custId[1];
+  var profileForm = Form.useForm()[0], regForm = Form.useForm()[0], presalesForm = Form.useForm()[0], subForm = Form.useForm()[0], itemForm = Form.useForm()[0];
+  var reqTypeText = { presales_support: '售前支持', poc: 'POC申请', test_resource: '测试资源排期', solution_review: '方案评审', bid_support: '标书支持', demo: '演示记录' };
+  var statusColor = { pending: 'gold', protected: 'green', conflict: 'red', rejected: 'default', done: 'green', open: 'blue', in_progress: 'cyan', new: 'blue' };
+  function fmtDate(v) { return v && v.format ? v.format('YYYY-MM-DD') : v; }
+  function loadBasics() {
+    api('GET', '/customers?limit=500').then(function(d) { setCustomers(d.items || d || []); }).catch(function(){});
+    api('GET', '/opportunities?limit=500').then(function(d) { setOpps(d || []); }).catch(function(){});
+    api('GET', '/channel-partners?limit=500').then(function(d) { setPartners(d || []); }).catch(function(){});
+    api('GET', '/leads/sales/list').then(function(d) { setUsers(d || []); }).catch(function(){});
+  }
+
+
+
+
+
+  function addDetailPresales() {
+    detailPresalesForm.validateFields().then(function(v) {
+      if (v.scheduled_date && v.scheduled_date.format) v.scheduled_date = v.scheduled_date.format('YYYY-MM-DD');
+      v.opportunity_id = Number(id);
+      return api('POST', '/security-business/presales-requests', v);
+    }).then(function() {
+      message.success('售前协同申请已创建');
+      detailPresalesForm.resetFields();
+      return api('GET','/security-business/presales-requests?opportunity_id='+id);
+    }).then(function(rows) {
+      setPresalesReqs(rows || []);
+    }).catch(function(err) { if (err && err.errorFields) return; message.error(err.message || '创建失败'); });
+  }
+  function loadOperational() {
+    setLoading(true);
+    Promise.all([
+      api('GET', '/security-business/channel-registrations').then(setRegs).catch(function(){}),
+      api('GET', '/security-business/presales-requests').then(setPresales).catch(function(){}),
+      api('GET', '/security-business/bid-radar/subscriptions').then(setSubs).catch(function(){}),
+      api('GET', '/security-business/bid-radar/items').then(setRadarItems).catch(function(){}),
+      api('GET', '/security-business/bid-radar/tasks').then(setRadarTasks).catch(function(){})
+    ]).finally(function() { setLoading(false); });
+  }
+  function loadProfile(cid) {
+    if (!cid) return;
+    setSelectedCustomerId(cid);
+    api('GET', '/security-business/customer-profiles/' + cid).then(function(d) { setProfile(d); profileForm.setFieldsValue(d || {}); }).catch(function(err) { message.error(err.message || '加载客户画像失败'); });
+  }
+  useEffect(function() { loadBasics(); loadOperational(); }, []);
+  function saveProfile() {
+    if (!selectedCustomerId) return message.warning('请先选择客户');
+    profileForm.validateFields().then(function(v) { return api('PUT', '/security-business/customer-profiles/' + selectedCustomerId, v); }).then(function(d) { setProfile(Object.assign({}, profile || {}, d)); message.success('客户360画像已保存'); }).catch(function(err) { message.error(err.message || '保存失败'); });
+  }
+  function submitRegistration() {
+    regForm.validateFields().then(function(v) { if (v.protection_start) v.protection_start = fmtDate(v.protection_start); return api('POST', '/security-business/channel-registrations', v); }).then(function() { message.success('报备已提交'); regForm.resetFields(); loadOperational(); }).catch(function(err) { message.error(err.message || '报备失败'); });
+  }
+  function arbitrate(row, status) {
+    api('PUT', '/security-business/channel-registrations/' + row.id, { status: status, arbitration_result: status === 'protected' ? '仲裁通过，进入保护期' : '仲裁驳回' }).then(function() { message.success('已更新报备状态'); loadOperational(); }).catch(function(err) { message.error(err.message || '更新失败'); });
+  }
+  function submitPresales() {
+    presalesForm.validateFields().then(function(v) { if (v.scheduled_date) v.scheduled_date = fmtDate(v.scheduled_date); return api('POST', '/security-business/presales-requests', v); }).then(function() { message.success('售前申请已创建'); presalesForm.resetFields(); loadOperational(); }).catch(function(err) { message.error(err.message || '创建失败'); });
+  }
+  function updatePresales(row, status) {
+    api('PUT', '/security-business/presales-requests/' + row.id, { status: status }).then(function() { message.success('售前状态已更新'); loadOperational(); }).catch(function(err) { message.error(err.message || '更新失败'); });
+  }
+  function submitSubscription() {
+    subForm.validateFields().then(function(v) { return api('POST', '/security-business/bid-radar/subscriptions', v); }).then(function() { message.success('关键词订阅已创建'); subForm.resetFields(); loadOperational(); }).catch(function(err) { message.error(err.message || '创建失败'); });
+  }
+  function submitRadarItem() {
+    itemForm.validateFields().then(function(v) { if (v.deadline) v.deadline = fmtDate(v.deadline); return api('POST', '/security-business/bid-radar/items', v); }).then(function() { message.success('招标情报已录入，并生成跟进任务'); itemForm.resetFields(); loadOperational(); }).catch(function(err) { message.error(err.message || '录入失败'); });
+  }
+  function collectRadar() {
+    setLoading(true);
+    api('POST', '/security-business/bid-radar/collect').then(function(d) { message.success('招标雷达新增 ' + (d.created || 0) + ' 条情报'); loadOperational(); }).catch(function(err) { message.error(err.message || '采集失败'); }).finally(function() { setLoading(false); });
+  }
+  var profileTab = e('div', null,
+    e(Row, { gutter: 16 },
+      e(Col, { span: 7 }, e(Card, { title: '选择客户', size: 'small' },
+        e(Select, { showSearch: true, style: { width: '100%', marginBottom: 12 }, placeholder: '搜索客户', value: selectedCustomerId, onChange: loadProfile, filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); })),
+        profile ? e(Descriptions, { size: 'small', column: 1, bordered: true }, e(Descriptions.Item, { label: '客户' }, profile.customer_name || '-'), e(Descriptions.Item, { label: '联系人' }, (profile.contacts || []).length + ' 人'), e(Descriptions.Item, { label: '历史商机' }, (profile.opportunities || []).length + ' 个')) : e(Empty, { description: '请选择客户' })
+      )),
+      e(Col, { span: 17 }, e(Card, { title: '客户360画像', size: 'small', extra: e(Button, { type: 'primary', onClick: saveProfile }, '保存画像') },
+        e(Form, { form: profileForm, layout: 'vertical' },
+          e(Row, { gutter: 12 }, e(Col, { span: 8 }, e(Form.Item, { name: 'technical_owner', label: '技术负责人' }, e(Input))), e(Col, { span: 8 }, e(Form.Item, { name: 'purchase_owner', label: '采购负责人' }, e(Input))), e(Col, { span: 8 }, e(Form.Item, { name: 'competitors', label: '竞品情况' }, e(Input, { placeholder: '奇安信/深信服/绿盟等' })))),
+          e(Row, { gutter: 12 }, e(Col, { span: 8 }, e(Form.Item, { name: 'mlps_status', label: '等保状态' }, e(Select, { allowClear: true }, ['未启动','测评中','整改中','已通过'].map(function(x){return e(Option,{key:x,value:x},x);})))) , e(Col, { span: 8 }, e(Form.Item, { name: 'crypto_status', label: '密评状态' }, e(Select, { allowClear: true }, ['未启动','测评中','整改中','已通过'].map(function(x){return e(Option,{key:x,value:x},x);})))) , e(Col, { span: 8 }, e(Form.Item, { name: 'xinchuang_status', label: '信创状态' }, e(Select, { allowClear: true }, ['无要求','规划中','适配中','已完成'].map(function(x){return e(Option,{key:x,value:x},x);}))))),
+          e(Form.Item, { name: 'org_structure', label: '客户组织架构' }, e(TextArea, { rows: 3 })),
+          e(Form.Item, { name: 'decision_chain', label: '决策链' }, e(TextArea, { rows: 3, placeholder: '业务部门/信息中心/采购/分管领导/最终拍板人' })),
+          e(Form.Item, { name: 'historical_projects', label: '历史项目' }, e(TextArea, { rows: 2 })),
+          e(Form.Item, { name: 'security_products', label: '在用安全产品' }, e(TextArea, { rows: 2 })),
+          e(Form.Item, { name: 'notes', label: '补充备注' }, e(TextArea, { rows: 2 }))
+        )
+      ))
+    )
+  );
+  var registrationTab = e('div', null,
+    e(Card, { title: '渠道项目报备', size: 'small', style: { marginBottom: 16 } }, e(Form, { form: regForm, layout: 'vertical' },
+      e(Row, { gutter: 12 }, e(Col, { span: 6 }, e(Form.Item, { name: 'opportunity_id', label: '关联渠道商机' }, e(Select, { allowClear: true, showSearch: true }, opps.filter(function(o){return o.opp_type === 'channel';}).map(function(o){return e(Option,{key:o.id,value:o.id},o.name);})))) , e(Col, { span: 6 }, e(Form.Item, { name: 'partner_id', label: '渠道伙伴' }, e(Select, { allowClear: true, showSearch: true }, partners.map(function(p){return e(Option,{key:p.id,value:p.id},p.name);})))) , e(Col, { span: 5 }, e(Form.Item, { name: 'final_customer_name', label: '最终客户', rules: [{ required: true, message: '请输入最终客户' }] }, e(Input))), e(Col, { span: 4 }, e(Form.Item, { name: 'region', label: '区域归属' }, e(Input, { placeholder: '华东/华南' }))), e(Col, { span: 3 }, e(Form.Item, { name: 'protection_days', label: '保护期' }, e(InputNumber, { min: 1, style: { width: '100%' }, placeholder: '90' })))),
+      e(Form.Item, { name: 'notes', label: '报备说明' }, e(TextArea, { rows: 2 })),
+      e(Button, { type: 'primary', onClick: submitRegistration }, '提交报备')
+    )),
+    e(Table, { rowKey: 'id', loading: loading, dataSource: regs, pagination: { pageSize: 8 }, columns: [
+      { title: '最终客户', dataIndex: 'final_customer_name' }, { title: '渠道伙伴', dataIndex: 'partner_name', width: 160, render: function(v){return v || '-';} }, { title: '区域', dataIndex: 'region', width: 90 }, { title: '保护截止', dataIndex: 'protection_end', width: 110 }, { title: '重复客户', dataIndex: 'duplicate_customer_name', width: 130, render: function(v){return v ? e(Tag,{color:'orange'},v) : '-';} }, { title: '状态', dataIndex: 'status', width: 100, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }, { title: '冲突说明', dataIndex: 'conflict_reason', ellipsis: true }, { title: '操作', width: 170, render: function(_, r){ return e(Space, null, e(Button, { size: 'small', onClick: function(){ arbitrate(r, 'protected'); } }, '通过'), e(Button, { size: 'small', danger: true, onClick: function(){ arbitrate(r, 'rejected'); } }, '驳回')); } }
+    ] })
+  );
+  var presalesTab = e('div', null,
+    e(Card, { title: '售前协同申请', size: 'small', style: { marginBottom: 16 } }, e(Form, { form: presalesForm, layout: 'vertical' },
+      e(Row, { gutter: 12 }, e(Col, { span: 7 }, e(Form.Item, { name: 'opportunity_id', label: '商机', rules: [{ required: true, message: '请选择商机' }] }, e(Select, { showSearch: true }, opps.map(function(o){return e(Option,{key:o.id,value:o.id},o.name);})))) , e(Col, { span: 5 }, e(Form.Item, { name: 'request_type', label: '协同类型', rules: [{ required: true, message: '请选择类型' }] }, e(Select, null, Object.keys(reqTypeText).map(function(k){return e(Option,{key:k,value:k},reqTypeText[k]);})))) , e(Col, { span: 5 }, e(Form.Item, { name: 'owner_id', label: '负责人' }, e(Select, { allowClear: true }, users.map(function(u){return e(Option,{key:u.id,value:u.id},u.real_name);})))) , e(Col, { span: 4 }, e(Form.Item, { name: 'scheduled_date', label: '排期日期' }, e(DatePicker, { style: { width: '100%' } }))), e(Col, { span: 3 }, e(Form.Item, { name: 'resource_name', label: '资源' }, e(Input)))),
+      e(Form.Item, { name: 'title', label: '申请标题', rules: [{ required: true, message: '请输入申请标题' }] }, e(Input)),
+      e(Form.Item, { name: 'details', label: '需求说明' }, e(TextArea, { rows: 2 })),
+      e(Button, { type: 'primary', onClick: submitPresales }, '创建申请')
+    )),
+    e(Table, { rowKey: 'id', loading: loading, dataSource: presales, pagination: { pageSize: 8 }, columns: [
+      { title: '商机', dataIndex: 'opportunity_name', width: 220, ellipsis: true }, { title: '类型', dataIndex: 'request_type', width: 120, render: function(v){return reqTypeText[v] || v;} }, { title: '标题', dataIndex: 'title', ellipsis: true }, { title: '负责人', dataIndex: 'owner_name', width: 100, render: function(v){return v || '-';} }, { title: '排期', dataIndex: 'scheduled_date', width: 110 }, { title: '状态', dataIndex: 'status', width: 110, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }, { title: '操作', width: 180, render: function(_, r){return e(Space, null, e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'in_progress'); } }, '进行中'), e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'done'); } }, '完成'));} }
+    ] })
+  );
+  var radarTab = e('div', null,
+    e(Row, { gutter: 16 },
+      e(Col, { span: 10 }, e(Card, { title: '关键词订阅', size: 'small', style: { marginBottom: 16 } }, e(Form, { form: subForm, layout: 'vertical' },
+        e(Form.Item, { name: 'name', label: '订阅名称', rules: [{ required: true }] }, e(Input, { placeholder: '如：大模型安全招标' })),
+        e(Form.Item, { name: 'keywords', label: '关键词', rules: [{ required: true }] }, e(Input, { placeholder: '大模型,数据安全,等保,密评' })),
+        e(Row, { gutter: 12 }, e(Col, { span: 8 }, e(Form.Item, { name: 'regions', label: '区域' }, e(Input, { placeholder: '华东' }))), e(Col, { span: 10 }, e(Form.Item, { name: 'product_lines', label: '产品线' }, e(Input, { placeholder: '大模型防火墙' }))), e(Col, { span: 6 }, e(Form.Item, { name: 'min_budget', label: '预算下限' }, e(InputNumber, { min: 0, style: { width: '100%' } })))),
+        e(Space, null, e(Button, { type: 'primary', onClick: submitSubscription }, '保存订阅'), e(Button, { loading: loading, onClick: collectRadar }, '运行雷达'))
+      )), e(Table, { rowKey: 'id', size: 'small', dataSource: subs, pagination: false, columns: [{ title: '订阅', dataIndex: 'name' }, { title: '关键词', dataIndex: 'keywords', ellipsis: true }, { title: '启用', dataIndex: 'is_active', width: 70, render: function(v){return v ? e(Tag,{color:'green'},'启用') : e(Tag,'停用');} }] })),
+      e(Col, { span: 14 }, e(Card, { title: '手工录入招标情报', size: 'small', style: { marginBottom: 16 } }, e(Form, { form: itemForm, layout: 'vertical' },
+        e(Row, { gutter: 12 }, e(Col, { span: 12 }, e(Form.Item, { name: 'title', label: '项目名称', rules: [{ required: true }] }, e(Input))), e(Col, { span: 6 }, e(Form.Item, { name: 'buyer', label: '采购单位' }, e(Input))), e(Col, { span: 6 }, e(Form.Item, { name: 'budget', label: '预算(万)' }, e(InputNumber, { min: 0, style: { width: '100%' } })))),
+        e(Row, { gutter: 12 }, e(Col, { span: 6 }, e(Form.Item, { name: 'deadline', label: '截止日期' }, e(DatePicker, { style: { width: '100%' } }))), e(Col, { span: 6 }, e(Form.Item, { name: 'matched_product_line', label: '匹配产品线' }, e(Input))), e(Col, { span: 12 }, e(Form.Item, { name: 'competitor_judgment', label: '竞品判断' }, e(Input)))),
+        e(Button, { onClick: submitRadarItem }, '录入并生成任务')
+      )))
+    ),
+    e(Table, { rowKey: 'id', loading: loading, dataSource: radarItems, pagination: { pageSize: 8 }, columns: [{ title: '项目', dataIndex: 'title', ellipsis: true }, { title: '采购单位', dataIndex: 'buyer', width: 160 }, { title: '预算', dataIndex: 'budget', width: 90, render: function(v){return (v || 0) + '万';} }, { title: '截止', dataIndex: 'deadline', width: 110 }, { title: '产品线', dataIndex: 'matched_product_line', width: 150 }, { title: '竞品判断', dataIndex: 'competitor_judgment', width: 190, ellipsis: true }, { title: '状态', dataIndex: 'status', width: 90, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }] }),
+    e(Card, { title: '自动跟进任务', size: 'small', style: { marginTop: 16 } }, e(Table, { rowKey: 'id', size: 'small', dataSource: radarTasks, pagination: false, columns: [{ title: '任务', dataIndex: 'title', ellipsis: true }, { title: '截止', dataIndex: 'due_date', width: 110 }, { title: '状态', dataIndex: 'status', width: 90, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }, { title: '说明', dataIndex: 'notes', ellipsis: true }] }))
+  );
+  return e('div', null, e(Tabs, { defaultActiveKey: 'profile' }, e(Tabs.TabPane, { tab: '客户360画像', key: 'profile' }, profileTab), e(Tabs.TabPane, { tab: '项目报备/撞单', key: 'registration' }, registrationTab), e(Tabs.TabPane, { tab: '售前协同', key: 'presales' }, presalesTab), e(Tabs.TabPane, { tab: '招标雷达', key: 'radar' }, radarTab)));
+}
+
 function App() {
 
 
@@ -19687,6 +19872,18 @@ function App() {
 
 
     content = e(LeadListPage);
+
+
+
+
+
+  } else if (hash === '/security-business') {
+
+
+
+
+
+    content = e(SecurityBusinessPage);
 
 
 

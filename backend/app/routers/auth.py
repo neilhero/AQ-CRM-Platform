@@ -36,9 +36,9 @@ def login(req: LoginReq, db: Session = Depends(get_db)):
 def me(user=Depends(require_user)):
     menus = ["dashboard"]
     if user.role == "admin":
-        menus = ["dashboard","customers","opportunities","products","channel","contacts","followups","leads","bidding"]
+        menus = ["dashboard","customers","opportunities","products","channel","contacts","followups","leads","bidding","security-business"]
     elif user.role == "manager":
-        menus = ["dashboard","customers","opportunities","leads"]
+        menus = ["dashboard","customers","opportunities","leads","security-business"]
     else:
         menus = ["dashboard","opportunities","leads"]
     return {"user_id": user.id, "username": user.username, "real_name": user.real_name, "role": user.role, "menus": menus}

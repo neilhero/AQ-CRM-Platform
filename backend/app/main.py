@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
-from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog
+from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask
 from datetime import date, datetime, timezone, timedelta
 import hashlib, os
 
@@ -110,6 +110,7 @@ def seed():
                 MenuConfig(menu_key="/opportunities/direct", label="直销商机", is_visible=True, sort_order=41, parent_key="group-opp"),
                 MenuConfig(menu_key="/opportunities/channel", label="渠道商机", is_visible=True, sort_order=42, parent_key="group-opp"),
                 MenuConfig(menu_key="/leads", label="线索管理", is_visible=True, sort_order=5),
+                MenuConfig(menu_key="/security-business", label="网安业务", is_visible=True, sort_order=55),
                 MenuConfig(menu_key="/products", label="产品管理", is_visible=True, sort_order=6),
                 MenuConfig(menu_key="group-partner", label="渠道伙伴管理", is_visible=True, sort_order=7),
                 MenuConfig(menu_key="/partners", label="伙伴档案", is_visible=True, sort_order=71, parent_key="group-partner"),
@@ -121,7 +122,7 @@ def seed():
     finally:
         db.close()
 
-from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages, commissions, company_utils, export_data, industries, audit
+from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages, commissions, company_utils, export_data, industries, audit, security_business
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(customers.router, prefix="/api/customers", tags=["Customers"])
@@ -143,6 +144,7 @@ app.include_router(commissions.router, prefix="/api/commissions", tags=["Commiss
 app.include_router(company_utils.router, prefix="/api/utils", tags=["Utils"])
 app.include_router(export_data.router, prefix="/api/export", tags=["Export"])
 app.include_router(audit.router, prefix="/api/audit-logs", tags=["AuditLogs"])
+app.include_router(security_business.router, prefix="/api/security-business", tags=["SecurityBusiness"])
 
 # ===================== Nested customer contacts =====================
 from app.database import get_db
