@@ -1,26 +1,43 @@
-import base64, os, tarfile, subprocess
+"""
+AQ-CRM 部署指南
+================
+本文件为部署参考文档，不会自动执行任何系统级操作。
 
-b64 = open('/root/aq-crm.b64','r').read()
-data = base64.b64decode(b64)
-with open('/root/aq-crm.tar.gz','wb') as f: f.write(data)
-with tarfile.open('/root/aq-crm.tar.gz') as t: t.extractall('/root/')
+## 前置条件
+- Ubuntu 22.04+ / Python 3.10+
+- Nginx（反向代理）
+- systemd（服务管理）
 
-subprocess.run(['cp','-r','/root/aq-crm-deploy/backend/*','/opt/aq-crm/backend/'], shell=True)
-subprocess.run(['cp','/root/aq-crm-deploy/frontend/index.html','/opt/aq-crm/frontend/'])
+## 1. 安装依赖
+    cd backend
+    pip install -r requirements.txt
 
-subprocess.run(['pip3','install','fastapi','uvicorn','sqlalchemy','pyjwt','pydantic','python-multipart'])
+## 2. 配置环境变量（推荐）
+    export JWT_SECRET_KEY=$(python -c "import secrets;print(secrets.token_hex(32))")
 
-with open('/etc/systemd/system/aq-crm.service','w') as f:
-    f.write('''[Unit]\nDescription=AQ CRM\nAfter=network.target\n[Service]\nType=simple\nWorkingDirectory=/opt/aq-crm/backend\nExecStart=/usr/bin/python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8097\nRestart=always\n[Install]\nWantedBy=multi-user.target\n''')
+## 3. 启动后端（临时测试）
+    cd backend
+    python -m uvicorn app.main:app --host 127.0.0.1 --port 8097
 
-with open('/etc/nginx/sites-available/aq-crm','w') as f:
-    f.write('''server {\n    listen 80;\n    root /opt/aq-crm/frontend;\n    index index.html;\n    location /api/ {\n        proxy_pass http://127.0.0.1:8097/api/;\n        proxy_set_header Host $host;\n    }\n    location / { try_files $uri /index.html; }\n}\n''')
+## 4. 配置 systemd 服务
+    参考 deploy/systemd/aq-crm.service 复制到 /etc/systemd/system/
+    systemctl daemon-reload && systemctl enable --now aq-crm
 
-subprocess.run(['ln','-sf','/etc/nginx/sites-available/aq-crm','/etc/nginx/sites-enabled/'])
-subprocess.run(['rm','-f','/etc/nginx/sites-enabled/default'])
-subprocess.run(['systemctl','daemon-reload'])
-subprocess.run(['systemctl','enable','aq-crm'])
-subprocess.run(['systemctl','restart','aq-crm'])
-subprocess.run(['nginx','-t'])
-subprocess.run(['systemctl','restart','nginx'])
-print('DONE')
+## 5. 配置 Nginx 反向代理
+    参考 deploy/nginx/aq-crm.conf 复制到 /etc/nginx/sites-available/
+    ln -sf /etc/nginx/sites-available/aq-crm /etc/nginx/sites-enabled/
+    nginx -t && systemctl restart nginx
+
+## 6. 部署前端
+    将 frontend/index.html 及 frontend/static/ 复制到 /opt/aq-crm/frontend/
+
+## 安全建议
+- 首次启动后立即修改 admin 默认密码
+- 将 JWT_SECRET_KEY 写入 /etc/environment 或 systemd 环境变量
+- 启用 HTTPS（Let's Encrypt + certbot）
+- 限制 CORS 白名单为用户实际域名
+"""
+
+if __name__ == "__main__":
+    print(__doc__)
+    print("\n⚠ 此脚本仅为文档，不会自动部署。请按上面步骤手动操作。")

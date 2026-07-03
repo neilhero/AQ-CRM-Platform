@@ -1,0 +1,15 @@
+[Unit]
+Description=AQ CRM Backend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/aq-crm/backend
+Environment=JWT_SECRET_KEY=change-me-in-production
+ExecStart=/usr/bin/python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8097
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
