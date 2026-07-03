@@ -214,3 +214,11 @@ class StageConfig(Base):
     color = Column(String(20), default="#999")
     pct = Column(String(10), default="20%")
     sort_order = Column(Integer, default=0)
+
+class IndustryConfig(Base):
+    __tablename__ = "industry_configs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(64), unique=True, nullable=False, index=True)
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=now_cst)

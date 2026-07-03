@@ -1270,7 +1270,8 @@ var UPDATE_COLORS = { '本周新增': 'green', '本周更新': 'orange', '本周
 
 
 
-var INDUSTRIES = ['网信','公安','能源/电力','运营商','金融','教育','医疗','交通','企业','政府','测评机构','政数（大数据局）','其他'];
+var INDUSTRIES_DEFAULT = ['网信','公安','能源/电力','运营商','金融','教育','医疗','交通','企业','政府','测评机构','政数（大数据局）','其他'];
+var INDUSTRIES = INDUSTRIES_DEFAULT.slice();
 
 
 
@@ -1863,6 +1864,11 @@ function AppLayout(props) {
 
 
   useEffect(function() { api('GET','/menu-config').then(function(d){setMenuConfig(d||[]);}).catch(function(){}); }, []);
+  useEffect(function() {
+    api('GET','/industries').then(function(d){
+      if (d && d.length) INDUSTRIES = d.map(function(item){ return item.name; });
+    }).catch(function(){ INDUSTRIES = INDUSTRIES_DEFAULT.slice(); });
+  }, []);
 
 
 

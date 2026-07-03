@@ -110,6 +110,42 @@ function MenuConfigPage(){
   );
 }
 
+function IndustryConfigPage(){
+  var [items,setItems]=useState([]),[loading,setLoading]=useState(true),[modalOpen,setModalOpen]=useState(false),[editing,setEditing]=useState(null),[saving,setSaving]=useState(false);
+  var form=Form.useForm()[0];
+  function fetch(){setLoading(true);api.get('/industries?include_inactive=true').then(r=>{setItems(r.data||[])}).catch(()=>message.error('行业加载失败')).finally(()=>setLoading(false))}
+  useEffect(fetch,[]);
+  function openModal(item){setEditing(item||null);if(item){form.setFieldsValue(item)}else{form.resetFields();form.setFieldsValue({is_active:true})}setModalOpen(true)}
+  function save(v){setSaving(true);var payload={name:v.name,sort_order:v.sort_order,is_active:v.is_active!==false};var p=editing?api.put('/industries/'+editing.id,payload):api.post('/industries',payload);p.then(()=>{message.success(editing?'已更新':'已创建');setModalOpen(false);fetch()}).catch(err=>message.error(err.response?.data?.detail||'保存失败')).finally(()=>setSaving(false))}
+  function toggle(item){api.put('/industries/'+item.id,{is_active:!item.is_active}).then(()=>fetch()).catch(err=>message.error(err.response?.data?.detail||'操作失败'))}
+  function del(item){api.delete('/industries/'+item.id).then(()=>{message.success('已删除');fetch()}).catch(err=>message.error(err.response?.data?.detail||'删除失败'))}
+  function move(idx,dir){
+    var next=items.slice();var target=idx+dir;if(target<0||target>=next.length)return;
+    var tmp=next[idx];next[idx]=next[target];next[target]=tmp;
+    var payload=next.map((it,i)=>({id:it.id,sort_order:i+1}));
+    setItems(next.map((it,i)=>({...it,sort_order:i+1})));
+    api.put('/industries/reorder',payload).then(()=>fetch()).catch(()=>message.error('排序保存失败'));
+  }
+  var cols=[
+    {title:'排序',width:110,render:(_,r,idx)=>e(Space,{size:4},e(Button,{size:'small',disabled:idx===0,onClick:()=>move(idx,-1)},'上移'),e(Button,{size:'small',disabled:idx===items.length-1,onClick:()=>move(idx,1)},'下移'))},
+    {title:'行业名称',dataIndex:'name',render:t=>e('strong',null,t)},
+    {title:'状态',dataIndex:'is_active',width:100,render:v=>e(Tag,{color:v?'green':'default'},v?'启用':'停用')},
+    {title:'操作',width:220,render:(_,r)=>e(Space,{size:'small'},e(Button,{size:'small',onClick:()=>openModal(r)},'编辑'),e(Button,{size:'small',onClick:()=>toggle(r)},r.is_active?'停用':'启用'),e(Popconfirm,{title:'确认删除行业「'+r.name+'」?',onConfirm:()=>del(r)},e(Button,{size:'small',danger:true},'删除')))}
+  ];
+  return e('div',null,
+    e('h1',{style:{fontSize:22,margin:'0 0 4px'}},'行业管理'),e('p',{style:{color:'#64748b',margin:'0 0 24px'}},'维护客户、商机、线索中可选择的行业分类'),
+    e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},e('h3',{style:{margin:0}},'行业分类'),e(Button,{type:'primary',icon:e(PlusOutlined),onClick:()=>openModal(null)},'新建行业')),
+    e(Table,{rowKey:'id',columns:cols,dataSource:items,loading,pagination:false}),
+    e(Modal,{title:editing?'编辑行业':'新建行业',open:modalOpen,onCancel:()=>setModalOpen(false),onOk:()=>form.submit(),confirmLoading:saving,width:420},
+      e(Form,{form,layout:'vertical',onFinish:save},
+        e(Form.Item,{name:'name',label:'行业名称',rules:[{required:true,message:'请输入行业名称'}]},e(Input,{placeholder:'如：网信、金融、能源/电力'})),
+        e(Form.Item,{name:'sort_order',label:'排序'},e(Input,{type:'number',placeholder:'留空则排到末尾'})),
+        e(Form.Item,{name:'is_active',label:'状态',valuePropName:'checked'},e(Switch,{checkedChildren:'启用',unCheckedChildren:'停用'}))
+      )
+    )
+  );
+}
+
 function StageConfigPage(){
   var [stages,setStages]=useState([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
   function fetch(){setLoading(true);api.get('/stages').then(r=>{setStages(r.data||[])}).catch(()=>{}).finally(()=>setLoading(false))}
@@ -153,9 +189,10 @@ function App(){
       e('div',{className:'tab-nav'},
         e('div',{className:'tab'+(tab==='users'?' active':''),onClick:()=>setTab('users')},'用户管理'),
         e('div',{className:'tab'+(tab==='menu'?' active':''),onClick:()=>setTab('menu')},'菜单管理'),
-        e('div',{className:'tab'+(tab==='stages'?' active':''),onClick:()=>setTab('stages')},'阶段管理')
+        e('div',{className:'tab'+(tab==='stages'?' active':''),onClick:()=>setTab('stages')},'阶段管理'),
+        e('div',{className:'tab'+(tab==='industries'?' active':''),onClick:()=>setTab('industries')},'行业管理')
       ),
-      tab==='users'?e(UsersPage,{user,users,fetchUsers}):tab==='stages'?e(StageConfigPage):e(MenuConfigPage)
+      tab==='users'?e(UsersPage,{user,users,fetchUsers}):tab==='stages'?e(StageConfigPage):tab==='industries'?e(IndustryConfigPage):e(MenuConfigPage)
     )
   );
 }

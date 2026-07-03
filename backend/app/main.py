@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
-from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig
+from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig
 from datetime import date, datetime, timezone, timedelta
 import hashlib, os
 
@@ -87,7 +87,7 @@ def seed():
     finally:
         db.close()
 
-from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages, commissions, company_utils, export_data
+from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages, commissions, company_utils, export_data, industries
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(customers.router, prefix="/api/customers", tags=["Customers"])
@@ -104,6 +104,7 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"]
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(menu_config.router, prefix="/api/menu-config", tags=["MenuConfig"])
 app.include_router(stages.router, prefix="/api/stages", tags=["Stages"])
+app.include_router(industries.router, prefix="/api/industries", tags=["Industries"])
 app.include_router(commissions.router, prefix="/api/commissions", tags=["Commissions"])
 app.include_router(company_utils.router, prefix="/api/utils", tags=["Utils"])
 app.include_router(export_data.router, prefix="/api/export", tags=["Export"])
