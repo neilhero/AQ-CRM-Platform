@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import date, datetime, timezone, timedelta
 from app.database import get_db
-from app.models import Opportunity, Customer, Lead, User
+from app.models import Opportunity, Customer, Lead, User, FollowUp
 from app.routers.utils import require_user
 
 CST = timezone(timedelta(hours=8))
@@ -26,6 +26,28 @@ def dashboard_stats(db: Session=Depends(get_db), user=Depends(require_user)):
     today = date.today()
     weekly_new = base.filter(Opportunity.created_at >= today - timedelta(days=7)).count()
     weekly_updated = base.filter(Opportunity.updated_at >= today).count()
+    recent_rows = (
+        _perm_filter(
+            db.query(FollowUp, Opportunity, User)
+            .join(Opportunity, FollowUp.opportunity_id == Opportunity.id)
+            .outerjoin(User, FollowUp.creator_id == User.id),
+            user,
+        )
+        .order_by(FollowUp.created_at.desc())
+        .limit(8)
+        .all()
+    )
+    recent_follow_ups = []
+    for follow_up, opportunity, creator in recent_rows:
+        recent_follow_ups.append({
+            "id": follow_up.id,
+            "opportunity_id": follow_up.opportunity_id,
+            "opportunity_name": opportunity.name if opportunity else "",
+            "content": follow_up.content,
+            "contact_person": follow_up.contact_person,
+            "created_at": follow_up.created_at.isoformat() if follow_up.created_at else None,
+            "creator_name": creator.real_name if creator else "",
+        })
     return {
         "total_opportunities": total_opps,
         "total_amount": round(total_amount, 1),
@@ -38,7 +60,7 @@ def dashboard_stats(db: Session=Depends(get_db), user=Depends(require_user)):
         "lead_count": db.query(Lead).count(),
         "overdue_reminders": [],
         "upcoming_reminders": [],
-        "recent_follow_ups": []
+        "recent_follow_ups": recent_follow_ups
     }
 
 @router.get("/sales-performance")
