@@ -131,6 +131,15 @@ def _check_opp_access(db: Session, opportunity_id: int, user):
     raise HTTPException(403, "无权访问该商机")
 
 
+def _accessible_opp_ids(db: Session, user):
+    q = db.query(Opportunity.id)
+    if user.role == "admin":
+        return [row[0] for row in q.all()]
+    if user.role == "channel_manager":
+        return [row[0] for row in q.filter(Opportunity.opp_type == "channel").all()]
+    return [row[0] for row in q.filter(Opportunity.sales_rep_id == user.id).all()]
+
+
 def _enrich_registration(db: Session, reg: ChannelRegistration):
     data = _to_dict(reg)
     if reg.partner_id:
@@ -182,6 +191,9 @@ def list_channel_registrations(
     user=Depends(require_user),
 ):
     q = db.query(ChannelRegistration)
+    if user.role != "admin":
+        opp_ids = _accessible_opp_ids(db, user)
+        q = q.filter(or_(ChannelRegistration.created_by == user.id, ChannelRegistration.opportunity_id.in_(opp_ids or [-1])))
     if keyword:
         q = q.filter(ChannelRegistration.final_customer_name.contains(keyword))
     if status:
@@ -253,6 +265,9 @@ def list_presales_requests(
     if opportunity_id:
         _check_opp_access(db, opportunity_id, user)
         q = q.filter(PresalesRequest.opportunity_id == opportunity_id)
+    elif user.role != "admin":
+        opp_ids = _accessible_opp_ids(db, user)
+        q = q.filter(or_(PresalesRequest.created_by == user.id, PresalesRequest.opportunity_id.in_(opp_ids or [-1])))
     if status:
         q = q.filter(PresalesRequest.status == status)
     rows = q.order_by(PresalesRequest.created_at.desc()).limit(200).all()
