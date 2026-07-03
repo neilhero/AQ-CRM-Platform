@@ -19,8 +19,8 @@ class CustomerOut(BaseModel):
 class OpportunityCreate(BaseModel):
     name: str; opp_type: str="direct"; sales_rep_id: int; customer_id: Optional[int]=None
     channel_partner_id: Optional[int]=None; end_customer_name: Optional[str]=None
-    industry: Optional[str]=None; amount: Optional[float]=0.0; stage: Optional[str]="1"
-    probability: Optional[str]="LOW"; key_person: Optional[str]=None; brief: Optional[str]=None
+    industry: str; amount: float; stage: str
+    probability: str; key_person: Optional[str]=None; brief: Optional[str]=None
     expected_close_date: Optional[date]=None; required_product: Optional[str]=None
     next_follow_up_date: Optional[date]=None
 

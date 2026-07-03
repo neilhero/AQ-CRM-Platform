@@ -9,6 +9,38 @@ from app.routers.utils import require_user
 
 router = APIRouter()
 
+REQUIRED_OPPORTUNITY_FIELDS = {
+    "industry": "行业",
+    "stage": "阶段",
+    "probability": "概率",
+    "amount": "金额",
+}
+VALID_STAGES = {"1", "2", "3", "4", "5"}
+VALID_PROBABILITIES = {"HIGH", "MID_HIGH", "MID", "LOW"}
+
+def _raw_value(value):
+    return value.value if hasattr(value, "value") else value
+
+def _validate_required_opportunity_fields(values):
+    missing = []
+    for field, label in REQUIRED_OPPORTUNITY_FIELDS.items():
+        value = _raw_value(values.get(field))
+        if field == "amount":
+            if value is None:
+                missing.append(label)
+        elif value is None or str(value).strip() == "":
+            missing.append(label)
+    if missing:
+        raise HTTPException(400, "请填写必填项：" + "、".join(missing))
+    if float(values["amount"]) < 0:
+        raise HTTPException(400, "金额不能小于 0")
+    stage = str(_raw_value(values["stage"]))
+    probability = str(_raw_value(values["probability"]))
+    if stage not in VALID_STAGES:
+        raise HTTPException(400, "阶段不合法")
+    if probability not in VALID_PROBABILITIES:
+        raise HTTPException(400, "概率不合法")
+
 def _apply_perm_filter(q, user):
     """Apply role-based permission filter to opportunity query."""
     if user.role == "admin":
@@ -82,6 +114,7 @@ def get_opp(oid: int, db: Session=Depends(get_db), user=Depends(require_user)):
 @router.post("", status_code=201)
 def create_opp(data: OpportunityCreate, db: Session=Depends(get_db), user=Depends(require_user)):
     kwargs = data.model_dump()
+    _validate_required_opportunity_fields(kwargs)
     if kwargs.get("opp_type") == "channel":
         kwargs["opp_type"] = "channel"
     else:
@@ -97,7 +130,13 @@ def update_opp(oid: int, data: OpportunityUpdate, db: Session=Depends(get_db), u
     o = db.query(Opportunity).filter_by(id=oid).first()
     if not o: raise HTTPException(404, "Not found")
     _check_access(o, user)
-    for k,v in data.model_dump(exclude_unset=True).items(): setattr(o,k,v)
+    updates = data.model_dump(exclude_unset=True)
+    final_values = {
+        field: updates[field] if field in updates else _raw_value(getattr(o, field))
+        for field in REQUIRED_OPPORTUNITY_FIELDS
+    }
+    _validate_required_opportunity_fields(final_values)
+    for k,v in updates.items(): setattr(o,k,v)
     db.commit(); db.refresh(o); return {"message": "updated"}
 
 @router.delete("/{oid}", status_code=204)

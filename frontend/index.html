@@ -8151,7 +8151,7 @@ function OppListPage(props) {
 
 
 
-          e(Col, { span: 10 }, e(Form.Item, { name: 'industry', label: '行业' }, e(Select, { allowClear: true }, INDUSTRIES.map(function(item) { return e(Option, { key: item, value: item }, item); }))))
+          e(Col, { span: 10 }, e(Form.Item, { name: 'industry', label: '行业', rules: [{ required: true, message: '请选择行业' }] }, e(Select, { allowClear: true }, INDUSTRIES.map(function(item) { return e(Option, { key: item, value: item }, item); }))))
 
 
 
@@ -8207,7 +8207,7 @@ function OppListPage(props) {
 
 
 
-          e(Col, { span: 8 }, e(Form.Item, { name: 'stage', label: '阶段', initialValue: '1' }, e(Select, null, Object.entries(STAGE_MAP).map(function(kv) { return e(Option, { key: kv[0], value: kv[0] }, kv[1].label + ' (' + kv[1].pct + ')'); })))),
+          e(Col, { span: 8 }, e(Form.Item, { name: 'stage', label: '阶段', initialValue: '1', rules: [{ required: true, message: '请选择阶段' }] }, e(Select, null, Object.entries(STAGE_MAP).map(function(kv) { return e(Option, { key: kv[0], value: kv[0] }, kv[1].label + ' (' + kv[1].pct + ')'); })))),
 
 
 
@@ -8215,7 +8215,7 @@ function OppListPage(props) {
 
 
 
-          e(Col, { span: 8 }, e(Form.Item, { name: 'probability', label: '概率', initialValue: 'LOW' }, e(Select, null, PROBABILITIES.map(function(item) { return e(Option, { key: item.value, value: item.value }, item.label); })))),
+          e(Col, { span: 8 }, e(Form.Item, { name: 'probability', label: '概率', initialValue: 'LOW', rules: [{ required: true, message: '请选择概率' }] }, e(Select, null, PROBABILITIES.map(function(item) { return e(Option, { key: item.value, value: item.value }, item.label); })))),
 
 
 
@@ -8223,7 +8223,7 @@ function OppListPage(props) {
 
 
 
-          e(Col, { span: 8 }, e(Form.Item, { name: 'amount', label: '金额(万)' }, e(InputNumber, { min: 0, style: { width: '100%' }, placeholder: '0' })))
+          e(Col, { span: 8 }, e(Form.Item, { name: 'amount', label: '金额(万)', rules: [{ required: true, message: '请输入金额' }] }, e(InputNumber, { min: 0, style: { width: '100%' }, placeholder: '0' })))
 
 
 
@@ -10935,7 +10935,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Col, { span: 10 }, e(Form.Item, { name: 'industry', label: '行业' }, e(Select, { allowClear: true }, INDUSTRIES.map(function(item) { return e(Option, { key: item, value: item }, item); }))))
+          e(Col, { span: 10 }, e(Form.Item, { name: 'industry', label: '行业', rules: [{ required: true, message: '请选择行业' }] }, e(Select, { allowClear: true }, INDUSTRIES.map(function(item) { return e(Option, { key: item, value: item }, item); }))))
 
 
 
@@ -10959,7 +10959,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Col, { span: 8 }, e(Form.Item, { name: 'stage', label: '阶段' }, e(Select, null, Object.entries(STAGE_MAP).map(function(kv) { return e(Option, { key: kv[0], value: kv[0] }, kv[1].label + ' (' + kv[1].pct + ')'); })))),
+          e(Col, { span: 8 }, e(Form.Item, { name: 'stage', label: '阶段', rules: [{ required: true, message: '请选择阶段' }] }, e(Select, null, Object.entries(STAGE_MAP).map(function(kv) { return e(Option, { key: kv[0], value: kv[0] }, kv[1].label + ' (' + kv[1].pct + ')'); })))),
 
 
 
@@ -10967,7 +10967,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Col, { span: 8 }, e(Form.Item, { name: 'probability', label: '概率' }, e(Select, null, PROBABILITIES.map(function(item) { return e(Option, { key: item.value, value: item.value }, item.label); })))),
+          e(Col, { span: 8 }, e(Form.Item, { name: 'probability', label: '概率', rules: [{ required: true, message: '请选择概率' }] }, e(Select, null, PROBABILITIES.map(function(item) { return e(Option, { key: item.value, value: item.value }, item.label); })))),
 
 
 
@@ -10975,7 +10975,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Col, { span: 8 }, e(Form.Item, { name: 'amount', label: '金额(万)' }, e(InputNumber, { min: 0, style: { width: '100%' } })))
+          e(Col, { span: 8 }, e(Form.Item, { name: 'amount', label: '金额(万)', rules: [{ required: true, message: '请输入金额' }] }, e(InputNumber, { min: 0, style: { width: '100%' } })))
 
 
 
