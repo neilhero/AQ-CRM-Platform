@@ -2759,6 +2759,7 @@ function DashboardPage() {
 
 
   var indData = Object.entries(stats.industry_distribution || {}).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 8);
+  var probEntries = Object.entries(stats.probability_distribution || {});
 
 
 
@@ -3230,7 +3231,7 @@ function DashboardPage() {
 
 
 
-            : e('div', null,
+            : e('div', { style: { display: 'grid', gap: 12 } },
 
 
 
@@ -3526,7 +3527,7 @@ function DashboardPage() {
 
 
 
-          e(Row, { gutter: [16, 16] },
+          probEntries.length === 0 ? e('div', { className: 'empty-state' }, '暂无概率数据') : e(Row, { gutter: [16, 16] },
 
 
 
@@ -3534,7 +3535,7 @@ function DashboardPage() {
 
 
 
-            Object.entries(stats.probability_distribution || {}).map(function(kv) {
+            probEntries.map(function(kv) {
 
 
 
@@ -4118,7 +4119,7 @@ function DashboardPage() {
 
 
 
-                  var barW = maxAmt > 0 ? Math.max((p.total_amount || 0) / maxAmt * 100, 2) : 0;
+                  var barW = maxAmt > 0 ? Math.max((p.total_amount || 0) / maxAmt * 100, 4) : 0;
 
 
 
@@ -4127,6 +4128,8 @@ function DashboardPage() {
 
 
                   var cvrColor = p.conversion_rate >= 50 ? '#22c55e' : p.conversion_rate >= 25 ? '#f59e0b' : '#94a3b8';
+                  var medalBg = i === 0 ? '#fff7ed' : i === 1 ? '#f8fafc' : i === 2 ? '#fefce8' : '#f8fafc';
+                  var medalColor = i < 3 ? ['#ea580c','#64748b','#ca8a04'][i] : '#94a3b8';
 
 
 
@@ -4134,7 +4137,7 @@ function DashboardPage() {
 
 
 
-                  return e('div', { key: p.sales_rep_id, style: { display: 'flex', alignItems: 'center', marginBottom: 10, gap: 12 } },
+                  return e('div', { key: p.sales_rep_id, style: { display: 'grid', gridTemplateColumns: '42px minmax(120px, 180px) 1fr 92px', alignItems: 'center', gap: 14, padding: '12px 14px', border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff' } },
 
 
 
@@ -4142,7 +4145,7 @@ function DashboardPage() {
 
 
 
-                    e('div', { style: { width: 24, textAlign: 'center', fontWeight: 700, fontSize: 14, color: i < 3 ? ['#f59e0b','#94a3b8','#cd7f32'][i] : '#94a3b8' } }, '#' + (i + 1)),
+                    e('div', { style: { width: 34, height: 34, borderRadius: 10, background: medalBg, color: medalColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 } }, '#' + (i + 1)),
 
 
 
@@ -4150,7 +4153,13 @@ function DashboardPage() {
 
 
 
-                    e('div', { style: { width: 80, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, p.sales_rep_name),
+                    e('div', { style: { minWidth: 0 } },
+                      e('div', { style: { fontSize: 14, fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, p.sales_rep_name),
+                      e('div', { style: { marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 11, color: '#64748b' } },
+                        e('span', null, p.opp_count + ' 商机'),
+                        e('span', null, p.won_count + ' 成交')
+                      )
+                    ),
 
 
 
@@ -4158,7 +4167,7 @@ function DashboardPage() {
 
 
 
-                    e('div', { style: { flex: 1 } },
+                    e('div', { style: { minWidth: 0 } },
 
 
 
@@ -4166,7 +4175,7 @@ function DashboardPage() {
 
 
 
-                      e('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 2 } },
+                      e('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7 } },
 
 
 
@@ -4174,7 +4183,7 @@ function DashboardPage() {
 
 
 
-                        e('div', { className: 'progress-bar', style: { flex: 1 } },
+                        e('div', { className: 'progress-bar', style: { flex: 1, height: 10, background: '#eef2f7' } },
 
 
 
@@ -4198,7 +4207,7 @@ function DashboardPage() {
 
 
 
-                        e('span', { style: { marginLeft: 8, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' } }, (p.total_amount || 0).toFixed(0) + '万')
+                        e('span', { style: { width: 42, textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#475569', whiteSpace: 'nowrap' } }, barW.toFixed(0) + '%')
 
 
 
@@ -4214,7 +4223,7 @@ function DashboardPage() {
 
 
 
-                      e('div', { style: { display: 'flex', gap: 16, fontSize: 11, color: '#94a3b8' } },
+                      e('div', { style: { display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11, color: '#94a3b8' } },
 
 
 
@@ -4262,6 +4271,10 @@ function DashboardPage() {
 
 
 
+                    ),
+                    e('div', { style: { textAlign: 'right' } },
+                      e('div', { style: { fontSize: 18, lineHeight: '22px', fontWeight: 800, color: '#0f172a' } }, (p.total_amount || 0).toFixed(0) + '万'),
+                      e('div', { style: { marginTop: 4, fontSize: 11, color: '#94a3b8' } }, '销售额')
                     )
 
 

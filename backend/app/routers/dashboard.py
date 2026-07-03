@@ -20,9 +20,16 @@ def dashboard_stats(db: Session=Depends(get_db), user=Depends(require_user)):
     total_opps = base.count()
     total_amount = base.with_entities(func.sum(Opportunity.amount)).scalar() or 0
     stage_dist = {}
-    for o in base.filter(Opportunity.is_closed == False).all():
+    industry_dist = {}
+    probability_dist = {}
+    active_opps = base.filter(Opportunity.is_closed == False).all()
+    for o in active_opps:
         s = str(o.stage.value if o.stage else "1")
         stage_dist[s] = stage_dist.get(s, 0) + 1
+        industry = o.industry or "未分类"
+        industry_dist[industry] = industry_dist.get(industry, 0) + 1
+        probability = o.probability.value if o.probability else "LOW"
+        probability_dist[probability] = probability_dist.get(probability, 0) + 1
     today = date.today()
     weekly_new = base.filter(Opportunity.created_at >= today - timedelta(days=7)).count()
     weekly_updated = base.filter(Opportunity.updated_at >= today).count()
@@ -52,8 +59,8 @@ def dashboard_stats(db: Session=Depends(get_db), user=Depends(require_user)):
         "total_opportunities": total_opps,
         "total_amount": round(total_amount, 1),
         "stage_distribution": stage_dist,
-        "industry_distribution": {},
-        "probability_distribution": {},
+        "industry_distribution": industry_dist,
+        "probability_distribution": probability_dist,
         "weekly_new": weekly_new,
         "weekly_updated": weekly_updated,
         "customer_count": db.query(Customer).count(),
@@ -95,4 +102,4 @@ def sales_performance(period: str=Query("month"), db: Session=Depends(get_db), u
             "conversion_rate": round(won_count / opp_count * 100, 1) if opp_count > 0 else 0,
             "avg_deal_size": round(total_amt / won_count, 1) if won_count > 0 else 0
         })
-    return result
+    return sorted(result, key=lambda x: (x["total_amount"], x["opp_count"]), reverse=True)
