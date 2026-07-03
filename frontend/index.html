@@ -1446,6 +1446,62 @@ async function api(method, path, body) {
 
 
 
+async function downloadFile(path, filename) {
+  var token = localStorage.getItem('aq2_token');
+  var headers = {};
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  var r = await fetch(API_BASE + path, { headers: headers });
+  if (r.status === 401) {
+    localStorage.clear(); window.location.hash = '#/login';
+    message.error('请先登录');
+    return;
+  }
+  if (!r.ok) {
+    message.error('下载失败');
+    return;
+  }
+  var blob = await r.blob();
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename || 'download';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadImportErrors(prev, type) {
+  if (!prev || !prev.rows) return;
+  var keys = type === 'customers'
+    ? ['_row','name','industry','address','website','level','description','_errors']
+    : ['_row','name','company','contact_name','contact_phone','source','quality','industry','notes','_errors'];
+  var labels = type === 'customers'
+    ? ['行号','客户名称','行业','地址','网址','客户等级','描述','错误原因']
+    : ['行号','线索名称','公司名称','联系人','联系电话','来源','质量','行业','备注','错误原因'];
+  var badRows = prev.rows.filter(function(r) { return !r._valid; });
+  if (!badRows.length) {
+    message.info('没有错误行');
+    return;
+  }
+  function esc(v) {
+    var s = (v === undefined || v === null) ? '' : String(v);
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  var csv = '\ufeff' + labels.map(esc).join(',') + '\n' + badRows.map(function(row) {
+    return keys.map(function(k) { return esc(row[k]); }).join(',');
+  }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = type === 'customers' ? '客户导入错误行.csv' : '线索导入错误行.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // ===================== LOGIN PAGE =====================
 
 
@@ -18821,6 +18877,14 @@ function ImportModal(props) {
 
 
         e('span', { style: { flex: 1 } }),
+
+
+
+
+
+
+
+        prev.error_count > 0 ? e(Button, { size: 'small', danger: true, icon: IC('DownloadOutlined'), onClick: function() { downloadImportErrors(prev, type); } }, '下载错误行') : null,
 
 
 

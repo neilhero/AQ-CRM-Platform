@@ -87,13 +87,14 @@ def seed():
     finally:
         db.close()
 
-from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages
+from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages, commissions, company_utils, export_data
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(customers.router, prefix="/api/customers", tags=["Customers"])
 app.include_router(opportunities.router, prefix="/api/opportunities", tags=["Opportunities"])
 app.include_router(products.router, prefix="/api/products", tags=["Products"])
 app.include_router(channel.router, prefix="/api/channel", tags=["Channel"])
+app.include_router(channel.router, prefix="/api/channel-partners", tags=["ChannelPartners"])
 app.include_router(contacts.router, prefix="/api/contacts", tags=["Contacts"])
 app.include_router(followups.router, prefix="/api/follow-ups", tags=["FollowUps"])
 app.include_router(leads.router, prefix="/api/leads", tags=["Leads"])
@@ -103,6 +104,9 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"]
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(menu_config.router, prefix="/api/menu-config", tags=["MenuConfig"])
 app.include_router(stages.router, prefix="/api/stages", tags=["Stages"])
+app.include_router(commissions.router, prefix="/api/commissions", tags=["Commissions"])
+app.include_router(company_utils.router, prefix="/api/utils", tags=["Utils"])
+app.include_router(export_data.router, prefix="/api/export", tags=["Export"])
 
 # ===================== Nested customer contacts =====================
 from app.database import get_db

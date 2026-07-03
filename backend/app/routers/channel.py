@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
-from app.models import ChannelPartner
-from app.schemas import ChannelPartnerCreate, ChannelPartnerUpdate
+from app.models import ChannelPartner, Contact
+from app.schemas import ChannelPartnerCreate, ChannelPartnerUpdate, ContactCreate, ContactUpdate
 from app.routers.utils import require_user, require_admin
 
 router = APIRouter()
@@ -41,3 +41,29 @@ def delete_partner(pid: int, db: Session=Depends(get_db), admin=Depends(require_
     p = db.query(ChannelPartner).filter_by(id=pid).first()
     if not p: raise HTTPException(404, "Not found")
     db.delete(p); db.commit()
+
+@router.get("/{pid}/contacts")
+def list_partner_contacts(pid: int, db: Session=Depends(get_db), user=Depends(require_user)):
+    p = db.query(ChannelPartner).filter_by(id=pid).first()
+    if not p: raise HTTPException(404, "Not found")
+    return db.query(Contact).filter(Contact.partner_id == pid).order_by(Contact.id.desc()).all()
+
+@router.post("/{pid}/contacts", status_code=201)
+def create_partner_contact(pid: int, data: ContactCreate, db: Session=Depends(get_db), admin=Depends(require_admin)):
+    p = db.query(ChannelPartner).filter_by(id=pid).first()
+    if not p: raise HTTPException(404, "Not found")
+    c = Contact(**{**data.model_dump(exclude_unset=True), "partner_id": pid, "customer_id": None})
+    db.add(c); db.commit(); db.refresh(c); return c
+
+@router.put("/{pid}/contacts/{cid}")
+def update_partner_contact(pid: int, cid: int, data: ContactUpdate, db: Session=Depends(get_db), admin=Depends(require_admin)):
+    c = db.query(Contact).filter_by(id=cid, partner_id=pid).first()
+    if not c: raise HTTPException(404, "Not found")
+    for k, v in data.model_dump(exclude_unset=True).items(): setattr(c, k, v)
+    db.commit(); db.refresh(c); return c
+
+@router.delete("/{pid}/contacts/{cid}", status_code=204)
+def delete_partner_contact(pid: int, cid: int, db: Session=Depends(get_db), admin=Depends(require_admin)):
+    c = db.query(Contact).filter_by(id=cid, partner_id=pid).first()
+    if not c: raise HTTPException(404, "Not found")
+    db.delete(c); db.commit()
