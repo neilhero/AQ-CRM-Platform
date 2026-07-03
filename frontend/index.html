@@ -2787,7 +2787,9 @@ function DashboardPage() {
 
 
   var indData = Object.entries(stats.industry_distribution || {}).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 8);
-  var probEntries = Object.entries(stats.probability_distribution || {});
+  var probOrder = { HIGH: 1, MID_HIGH: 2, MID: 3, LOW: 4 };
+  var probEntries = Object.entries(stats.probability_distribution || {}).sort(function(a, b) { return (probOrder[a[0]] || 99) - (probOrder[b[0]] || 99); });
+  var probTotal = probEntries.reduce(function(sum, kv) { return sum + (kv[1] || 0); }, 0);
 
 
 
@@ -3579,7 +3581,7 @@ function DashboardPage() {
 
 
 
-              var pct = Math.round(v / stats.total_opportunities * 100);
+              var pct = probTotal > 0 ? Math.round(v / probTotal * 100) : 0;
 
 
 
@@ -3619,7 +3621,7 @@ function DashboardPage() {
 
 
 
-                  e('div', { style: { fontSize: 26, fontWeight: 700, color: clr } }, v),
+                  e('div', { style: { fontSize: 26, fontWeight: 700, color: clr } }, v, e('span', { style: { fontSize: 12, marginLeft: 3, color: '#64748b', fontWeight: 600 } }, '个')),
 
 
 
@@ -3627,7 +3629,7 @@ function DashboardPage() {
 
 
 
-                  e('div', { style: { fontSize: 12, color: '#64748b', marginTop: 4, marginBottom: 8 } }, k.replace('（',' ').replace('）','')),
+                  e('div', { style: { fontSize: 12, color: '#475569', marginTop: 4, marginBottom: 8, fontWeight: 600 } }, probabilityLabel(k)),
 
 
 
@@ -3643,7 +3645,7 @@ function DashboardPage() {
 
 
 
-                  e('div', { style: { fontSize: 11, color: '#94a3b8', marginTop: 4 } }, '占 ' + pct + '%')
+                  e('div', { style: { fontSize: 11, color: '#94a3b8', marginTop: 4 } }, '占活跃商机 ' + pct + '%')
 
 
 
@@ -4147,7 +4149,8 @@ function DashboardPage() {
 
 
 
-                  var barW = maxAmt > 0 ? Math.max((p.total_amount || 0) / maxAmt * 100, 4) : 0;
+                  var rankPct = maxAmt > 0 ? Math.round((p.total_amount || 0) / maxAmt * 100) : 0;
+                  var barW = maxAmt > 0 ? Math.max(rankPct, 4) : 0;
 
 
 
@@ -4235,7 +4238,7 @@ function DashboardPage() {
 
 
 
-                        e('span', { style: { width: 42, textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#475569', whiteSpace: 'nowrap' } }, barW.toFixed(0) + '%')
+                        e('span', { style: { width: 96, textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#475569', whiteSpace: 'nowrap' } }, maxAmt > 0 ? '对标第1名 ' + rankPct + '%' : '暂无销售额')
 
 
 
@@ -4252,8 +4255,6 @@ function DashboardPage() {
 
 
                       e('div', { style: { display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11, color: '#94a3b8' } },
-
-
 
 
 
