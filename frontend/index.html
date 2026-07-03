@@ -17372,7 +17372,14 @@ function FollowUpWorkbench() {
 
 
 
-    var diffText = isOverdue ? '逾期 ' + Math.abs(item.days_diff) + ' 天' : isToday ? '今天' : item.days_diff + ' 天后';
+    var daysDiff = Number(item.days_diff);
+    if (!Number.isFinite(daysDiff) && item.next_follow_up_date) {
+      daysDiff = dayjs(item.next_follow_up_date).startOf('day').diff(dayjs().startOf('day'), 'day');
+    }
+    if (!Number.isFinite(daysDiff) && item.days_overdue !== undefined) {
+      daysDiff = -Number(item.days_overdue || 0);
+    }
+    var diffText = isOverdue ? '逾期 ' + Math.abs(daysDiff || 0) + ' 天' : isToday ? '今天' : (daysDiff || 0) + ' 天后';
 
 
 

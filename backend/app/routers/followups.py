@@ -65,15 +65,17 @@ def today_followups(db: Session=Depends(get_db), user=Depends(require_user)):
     for o in opps:
         if o.next_follow_up_date:
             nfd = o.next_follow_up_date
+            days_diff = (nfd - date.today()).days
             info = {"id": o.id, "name": o.name, "next_follow_up_date": str(nfd),
                     "stage": o.stage.value if o.stage else "1",
-                    "customer_name": "", "amount": o.amount or 0}
+                    "customer_name": "", "amount": o.amount or 0,
+                    "days_diff": days_diff}
             if o.sales_rep_id:
                 c = db.query(User).filter_by(id=o.sales_rep_id).first()
                 info["sales_rep_name"] = c.real_name if c else ""
             today = date.today()
             if nfd < today:
-                info["days_overdue"] = (today - nfd).days
+                info["days_overdue"] = abs(days_diff)
                 overdue.append(info)
             elif nfd == today:
                 today_list.append(info)
