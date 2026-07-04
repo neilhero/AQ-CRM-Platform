@@ -221,6 +221,7 @@ def seed():
                 MenuConfig(menu_key="group-customer", label="客户管理", is_visible=True, sort_order=3),
                 MenuConfig(menu_key="/customers", label="客户管理", is_visible=True, sort_order=31, parent_key="group-customer"),
                 MenuConfig(menu_key="/customers/profile", label="客户360画像", is_visible=True, sort_order=32, parent_key="group-customer"),
+                MenuConfig(menu_key="/customers/operations", label="客户分层运营", is_visible=True, sort_order=33, parent_key="group-customer"),
                 MenuConfig(menu_key="group-opp", label="商机管理", is_visible=True, sort_order=4),
                 MenuConfig(menu_key="/opportunities/direct", label="直销商机", is_visible=True, sort_order=41, parent_key="group-opp"),
                 MenuConfig(menu_key="/opportunities/channel", label="渠道商机", is_visible=True, sort_order=42, parent_key="group-opp"),
@@ -233,8 +234,9 @@ def seed():
                 MenuConfig(menu_key="group-partner", label="渠道伙伴管理", is_visible=True, sort_order=8),
                 MenuConfig(menu_key="/partners", label="伙伴档案", is_visible=True, sort_order=71, parent_key="group-partner"),
                 MenuConfig(menu_key="/partners/registration", label="项目报备/撞单", is_visible=True, sort_order=72, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/performance", label="伙伴绩效", is_visible=True, sort_order=73, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/commission", label="返点管理", is_visible=True, sort_order=74, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/growth", label="渠道伙伴成长", is_visible=True, sort_order=73, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/performance", label="伙伴绩效", is_visible=True, sort_order=74, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/commission", label="返点管理", is_visible=True, sort_order=75, parent_key="group-partner"),
             ]
             for m in menus: db.add(m)
             db.commit()
@@ -254,6 +256,13 @@ def seed():
             customer_profile_menu.label = "客户360画像"
             customer_profile_menu.parent_key = "group-customer"
             customer_profile_menu.sort_order = 32
+        customer_operations_menu = db.query(MenuConfig).filter_by(menu_key="/customers/operations").first()
+        if not customer_operations_menu:
+            db.add(MenuConfig(menu_key="/customers/operations", label="客户分层运营", is_visible=True, sort_order=33, parent_key="group-customer"))
+        else:
+            customer_operations_menu.label = "客户分层运营"
+            customer_operations_menu.parent_key = "group-customer"
+            customer_operations_menu.sort_order = 33
         db.commit()
         leads_group_menu = db.query(MenuConfig).filter_by(menu_key="group-leads").first()
         if not leads_group_menu:
@@ -293,12 +302,19 @@ def seed():
         if not registration_menu:
             db.add(MenuConfig(menu_key="/partners/registration", label="项目报备/撞单", is_visible=True, sort_order=72, parent_key="group-partner"))
             db.commit()
+        partner_growth_menu = db.query(MenuConfig).filter_by(menu_key="/partners/growth").first()
+        if not partner_growth_menu:
+            db.add(MenuConfig(menu_key="/partners/growth", label="渠道伙伴成长", is_visible=True, sort_order=73, parent_key="group-partner"))
+        else:
+            partner_growth_menu.label = "渠道伙伴成长"
+            partner_growth_menu.parent_key = "group-partner"
+            partner_growth_menu.sort_order = 73
         partner_performance_menu = db.query(MenuConfig).filter_by(menu_key="/partners/performance").first()
-        if partner_performance_menu and partner_performance_menu.sort_order != 73:
-            partner_performance_menu.sort_order = 73
+        if partner_performance_menu and partner_performance_menu.sort_order != 74:
+            partner_performance_menu.sort_order = 74
         partner_commission_menu = db.query(MenuConfig).filter_by(menu_key="/partners/commission").first()
-        if partner_commission_menu and partner_commission_menu.sort_order != 74:
-            partner_commission_menu.sort_order = 74
+        if partner_commission_menu and partner_commission_menu.sort_order != 75:
+            partner_commission_menu.sort_order = 75
         db.commit()
         growth_menu = db.query(MenuConfig).filter_by(menu_key="/sales-growth").first()
         if not growth_menu:

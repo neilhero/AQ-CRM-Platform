@@ -1994,7 +1994,8 @@ function AppLayout(props) {
 
     { key: 'group-customer', icon: IC('TeamOutlined'), label: '客户管理', children: [
       { key: '/customers', label: '客户管理' },
-      { key: '/customers/profile', label: '客户360画像' }
+      { key: '/customers/profile', label: '客户360画像' },
+      { key: '/customers/operations', label: '客户分层运营' }
     ] },
 
 
@@ -2083,6 +2084,7 @@ function AppLayout(props) {
 
       { key: '/partners', label: '伙伴档案' },
       { key: '/partners/registration', label: '项目报备/撞单' },
+      { key: '/partners/growth', label: '渠道伙伴成长' },
 
 
 
@@ -2258,7 +2260,7 @@ function AppLayout(props) {
 
 
 
-  if (hash.startsWith('/customers')) { selKey = hash === '/customers/profile' ? '/customers/profile' : '/customers'; openKeys = ['group-customer']; }
+  if (hash.startsWith('/customers')) { selKey = (hash === '/customers/profile' || hash === '/customers/operations') ? hash : '/customers'; openKeys = ['group-customer']; }
   if (hash.startsWith('/leads')) { selKey = hash; openKeys = ['group-leads']; }
   if (hash.startsWith('/opportunities')) { selKey = hash; openKeys = ['group-opp']; }
 
@@ -2300,7 +2302,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/presales': '售前协同', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/presales': '售前协同', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/growth': '渠道伙伴成长', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
 
 
 
@@ -19785,7 +19787,9 @@ function SecurityBusinessPage(props) {
   return e('div', null, e(Tabs, { defaultActiveKey: 'presales' }, e(Tabs.TabPane, { tab: '售前协同', key: 'presales' }, presalesTab), e(Tabs.TabPane, { tab: '招标雷达', key: 'radar' }, radarTab)));
 }
 
-function SalesGrowthPage() {
+function SalesGrowthPage(props) {
+  var segmentOnly = props && props.segmentOnly;
+  var partnerOnly = props && props.partnerOnly;
   var _f = useState(null), forecast = _f[0], setForecast = _f[1];
   var _gb = useState('sales'), groupBy = _gb[0], setGroupBy = _gb[1];
   var _pl = useState((function(){ var d = new Date(); return d.getFullYear() + 'Q' + (Math.floor(d.getMonth() / 3) + 1); })()), periodLabel = _pl[0], setPeriodLabel = _pl[1];
@@ -20024,16 +20028,7 @@ function SalesGrowthPage() {
       { title: '备注', dataIndex: 'notes', ellipsis: true }
     ] })
   );
-  return e('div', null,
-    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '📈  销售增长'), e('p', { className: 'page-desc' }, 'Forecast、目标绩效、客户分层、输赢复盘与渠道伙伴成长体系')),
-    e(Tabs, { defaultActiveKey: 'forecast' },
-      e(Tabs.TabPane, { tab: '销售预测', key: 'forecast' }, forecastTab),
-      e(Tabs.TabPane, { tab: '目标绩效', key: 'target' }, targetTab),
-      e(Tabs.TabPane, { tab: '客户分层运营', key: 'segment' }, segmentTab),
-      e(Tabs.TabPane, { tab: '输赢单复盘', key: 'review' }, reviewTab),
-      e(Tabs.TabPane, { tab: '渠道伙伴成长', key: 'partner' }, partnerTab)
-    ),
-    e(Modal, { title: opCustomer ? '客户运营策略 - ' + opCustomer.customer_name : '客户运营策略', open: opOpen, onOk: saveOperation, onCancel: function(){ setOpOpen(false); }, width: 620 },
+  var operationModal = e(Modal, { title: opCustomer ? '客户运营策略 - ' + opCustomer.customer_name : '客户运营策略', open: opOpen, onOk: saveOperation, onCancel: function(){ setOpOpen(false); }, width: 620 },
       e(Form, { form: opForm, layout: 'vertical' },
         e(Row, { gutter: 12 },
           e(Col, { span: 12 }, e(Form.Item, { name: 'segment', label: '客户分层', rules: [{ required: true }] }, e(Select, null, e(Option, { value: 'strategic' }, '战略客户'), e(Option, { value: 'key' }, '重点客户'), e(Option, { value: 'normal' }, '普通客户'), e(Option, { value: 'dormant' }, '沉睡客户')))),
@@ -20042,6 +20037,26 @@ function SalesGrowthPage() {
         e(Form.Item, { name: 'owner_strategy', label: '运营策略' }, e(TextArea, { rows: 3 })),
         e(Form.Item, { name: 'next_action', label: '下一步动作' }, e(TextArea, { rows: 2 }))
       )
+    );
+  if (segmentOnly) {
+    return e('div', null,
+      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '客户分层运营'), e('p', { className: 'page-desc' }, '按客户价值与活跃度分层经营，沉淀客户健康度、运营策略和下一步动作')),
+      segmentTab,
+      operationModal
+    );
+  }
+  if (partnerOnly) {
+    return e('div', null,
+      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '渠道伙伴成长'), e('p', { className: 'page-desc' }, '围绕伙伴认证、培训、违规、业绩和返点测算，管理渠道能力成长')),
+      partnerTab
+    );
+  }
+  return e('div', null,
+    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '📈  销售增长'), e('p', { className: 'page-desc' }, 'Forecast、目标绩效与输赢复盘体系')),
+    e(Tabs, { defaultActiveKey: 'forecast' },
+      e(Tabs.TabPane, { tab: '销售预测', key: 'forecast' }, forecastTab),
+      e(Tabs.TabPane, { tab: '目标绩效', key: 'target' }, targetTab),
+      e(Tabs.TabPane, { tab: '输赢单复盘', key: 'review' }, reviewTab)
     )
   );
 }
@@ -20433,6 +20448,8 @@ function App() {
 
   } else if (hash === '/customers/profile') {
     content = e(SecurityBusinessPage, { profileOnly: true });
+  } else if (hash === '/customers/operations') {
+    content = e(SalesGrowthPage, { segmentOnly: true });
   } else if (hash === '/opportunities/direct') {
 
 
@@ -20593,6 +20610,8 @@ function App() {
 
 
 
+  } else if (hash === '/partners/growth') {
+    content = e(SalesGrowthPage, { partnerOnly: true });
   } else if (hash === '/partners/performance') {
 
 
