@@ -227,11 +227,23 @@ def seed():
                 MenuConfig(menu_key="/products", label="产品管理", is_visible=True, sort_order=6),
                 MenuConfig(menu_key="group-partner", label="渠道伙伴管理", is_visible=True, sort_order=7),
                 MenuConfig(menu_key="/partners", label="伙伴档案", is_visible=True, sort_order=71, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/performance", label="伙伴绩效", is_visible=True, sort_order=72, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/commission", label="返点管理", is_visible=True, sort_order=73, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/registration", label="项目报备/撞单", is_visible=True, sort_order=72, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/performance", label="伙伴绩效", is_visible=True, sort_order=73, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/commission", label="返点管理", is_visible=True, sort_order=74, parent_key="group-partner"),
             ]
             for m in menus: db.add(m)
             db.commit()
+        registration_menu = db.query(MenuConfig).filter_by(menu_key="/partners/registration").first()
+        if not registration_menu:
+            db.add(MenuConfig(menu_key="/partners/registration", label="项目报备/撞单", is_visible=True, sort_order=72, parent_key="group-partner"))
+            db.commit()
+        partner_performance_menu = db.query(MenuConfig).filter_by(menu_key="/partners/performance").first()
+        if partner_performance_menu and partner_performance_menu.sort_order != 73:
+            partner_performance_menu.sort_order = 73
+        partner_commission_menu = db.query(MenuConfig).filter_by(menu_key="/partners/commission").first()
+        if partner_commission_menu and partner_commission_menu.sort_order != 74:
+            partner_commission_menu.sort_order = 74
+        db.commit()
         growth_menu = db.query(MenuConfig).filter_by(menu_key="/sales-growth").first()
         if not growth_menu:
             db.add(MenuConfig(menu_key="/sales-growth", label="销售增长", is_visible=True, sort_order=56))
