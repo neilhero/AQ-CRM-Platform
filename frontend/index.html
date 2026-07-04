@@ -1992,7 +1992,10 @@ function AppLayout(props) {
 
 
 
-    { key: '/customers', icon: IC('TeamOutlined'), label: '客户管理' },
+    { key: 'group-customer', icon: IC('TeamOutlined'), label: '客户管理', children: [
+      { key: '/customers', label: '客户管理' },
+      { key: '/customers/profile', label: '客户360画像' }
+    ] },
 
 
 
@@ -2253,6 +2256,7 @@ function AppLayout(props) {
 
 
 
+  if (hash.startsWith('/customers')) { selKey = hash === '/customers/profile' ? '/customers/profile' : '/customers'; openKeys = ['group-customer']; }
   if (hash.startsWith('/opportunities')) { selKey = hash; openKeys = ['group-opp']; }
 
 
@@ -2293,7 +2297,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
 
 
 
@@ -19605,6 +19609,7 @@ function ImportModal(props) {
 
 function SecurityBusinessPage(props) {
   var registrationOnly = props && props.registrationOnly;
+  var profileOnly = props && props.profileOnly;
   var _c = useState([]), customers = _c[0], setCustomers = _c[1];
   var _o = useState([]), opps = _o[0], setOpps = _o[1];
   var _p = useState([]), partners = _p[0], setPartners = _p[1];
@@ -19652,7 +19657,7 @@ function SecurityBusinessPage(props) {
     setSelectedCustomerId(cid);
     api('GET', '/security-business/customer-profiles/' + cid).then(function(d) { setProfile(d); profileForm.setFieldsValue(d || {}); }).catch(function(err) { message.error(err.message || '加载客户画像失败'); });
   }
-  useEffect(function() { loadBasics(); loadOperational(); }, []);
+  useEffect(function() { loadBasics(); if (!profileOnly) loadOperational(); }, [profileOnly]);
   function saveProfile() {
     if (!selectedCustomerId) return message.warning('请先选择客户');
     profileForm.validateFields().then(function(v) { return api('PUT', '/security-business/customer-profiles/' + selectedCustomerId, v); }).then(function(d) { setProfile(Object.assign({}, profile || {}, d)); message.success('客户360画像已保存'); }).catch(function(err) { message.error(err.message || '保存失败'); });
@@ -19685,7 +19690,7 @@ function SecurityBusinessPage(props) {
         e(Select, { showSearch: true, style: { width: '100%', marginBottom: 12 }, placeholder: '搜索客户', value: selectedCustomerId, onChange: loadProfile, filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); })),
         profile ? e(Descriptions, { size: 'small', column: 1, bordered: true }, e(Descriptions.Item, { label: '客户' }, profile.customer_name || '-'), e(Descriptions.Item, { label: '联系人' }, (profile.contacts || []).length + ' 人'), e(Descriptions.Item, { label: '历史商机' }, (profile.opportunities || []).length + ' 个')) : e(Empty, { description: '请选择客户' })
       )),
-      e(Col, { span: 17 }, e(Card, { title: '客户360画像', size: 'small', extra: e(Button, { type: 'primary', onClick: saveProfile }, '保存画像') },
+      e(Col, { span: 17 }, e(Card, { title: '客户360画像', size: 'small', extra: e(Button, { type: 'primary', disabled: !selectedCustomerId, onClick: saveProfile }, '保存画像') },
         e(Form, { form: profileForm, layout: 'vertical' },
           e(Row, { gutter: 12 }, e(Col, { span: 8 }, e(Form.Item, { name: 'technical_owner', label: '技术负责人' }, e(Input))), e(Col, { span: 8 }, e(Form.Item, { name: 'purchase_owner', label: '采购负责人' }, e(Input))), e(Col, { span: 8 }, e(Form.Item, { name: 'competitors', label: '竞品情况' }, e(Input, { placeholder: '奇安信/深信服/绿盟等' })))),
           e(Row, { gutter: 12 }, e(Col, { span: 8 }, e(Form.Item, { name: 'mlps_status', label: '等保状态' }, e(Select, { allowClear: true }, ['未启动','测评中','整改中','已通过'].map(function(x){return e(Option,{key:x,value:x},x);})))) , e(Col, { span: 8 }, e(Form.Item, { name: 'crypto_status', label: '密评状态' }, e(Select, { allowClear: true }, ['未启动','测评中','整改中','已通过'].map(function(x){return e(Option,{key:x,value:x},x);})))) , e(Col, { span: 8 }, e(Form.Item, { name: 'xinchuang_status', label: '信创状态' }, e(Select, { allowClear: true }, ['无要求','规划中','适配中','已完成'].map(function(x){return e(Option,{key:x,value:x},x);}))))),
@@ -19736,6 +19741,15 @@ function SecurityBusinessPage(props) {
     e(Table, { rowKey: 'id', loading: loading, dataSource: radarItems, pagination: { pageSize: 8 }, columns: [{ title: '项目', dataIndex: 'title', ellipsis: true }, { title: '采购单位', dataIndex: 'buyer', width: 160 }, { title: '预算', dataIndex: 'budget', width: 90, render: function(v){return (v || 0) + '万';} }, { title: '截止', dataIndex: 'deadline', width: 110 }, { title: '产品线', dataIndex: 'matched_product_line', width: 150 }, { title: '竞品判断', dataIndex: 'competitor_judgment', width: 190, ellipsis: true }, { title: '状态', dataIndex: 'status', width: 90, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }] }),
     e(Card, { title: '自动跟进任务', size: 'small', style: { marginTop: 16 } }, e(Table, { rowKey: 'id', size: 'small', dataSource: radarTasks, pagination: false, columns: [{ title: '任务', dataIndex: 'title', ellipsis: true }, { title: '截止', dataIndex: 'due_date', width: 110 }, { title: '状态', dataIndex: 'status', width: 90, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }, { title: '说明', dataIndex: 'notes', ellipsis: true }] }))
   );
+  if (profileOnly) {
+    return e('div', null,
+      e('div', { style: { marginBottom: 16 } },
+        e('h1', { className: 'page-title' }, '客户360画像'),
+        e('p', { className: 'page-desc' }, '先在客户管理建立客户，再为已存在客户补充组织架构、决策链、合规状态和竞品信息')
+      ),
+      profileTab
+    );
+  }
   if (registrationOnly) {
     return e('div', null,
       e('div', { style: { marginBottom: 16 } },
@@ -19745,7 +19759,7 @@ function SecurityBusinessPage(props) {
       registrationTab
     );
   }
-  return e('div', null, e(Tabs, { defaultActiveKey: 'profile' }, e(Tabs.TabPane, { tab: '客户360画像', key: 'profile' }, profileTab), e(Tabs.TabPane, { tab: '售前协同', key: 'presales' }, presalesTab), e(Tabs.TabPane, { tab: '招标雷达', key: 'radar' }, radarTab)));
+  return e('div', null, e(Tabs, { defaultActiveKey: 'presales' }, e(Tabs.TabPane, { tab: '售前协同', key: 'presales' }, presalesTab), e(Tabs.TabPane, { tab: '招标雷达', key: 'radar' }, radarTab)));
 }
 
 function SalesGrowthPage() {
@@ -20394,6 +20408,8 @@ function App() {
 
 
 
+  } else if (hash === '/customers/profile') {
+    content = e(SecurityBusinessPage, { profileOnly: true });
   } else if (hash === '/opportunities/direct') {
 
 

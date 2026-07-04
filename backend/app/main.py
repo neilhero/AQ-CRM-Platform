@@ -218,7 +218,9 @@ def seed():
             menus = [
                 MenuConfig(menu_key="/dashboard", label="仪表盘", is_visible=True, sort_order=1),
                 MenuConfig(menu_key="/follow-ups", label="今日待跟进", is_visible=True, sort_order=2),
-                MenuConfig(menu_key="/customers", label="客户管理", is_visible=True, sort_order=3),
+                MenuConfig(menu_key="group-customer", label="客户管理", is_visible=True, sort_order=3),
+                MenuConfig(menu_key="/customers", label="客户管理", is_visible=True, sort_order=31, parent_key="group-customer"),
+                MenuConfig(menu_key="/customers/profile", label="客户360画像", is_visible=True, sort_order=32, parent_key="group-customer"),
                 MenuConfig(menu_key="group-opp", label="商机管理", is_visible=True, sort_order=4),
                 MenuConfig(menu_key="/opportunities/direct", label="直销商机", is_visible=True, sort_order=41, parent_key="group-opp"),
                 MenuConfig(menu_key="/opportunities/channel", label="渠道商机", is_visible=True, sort_order=42, parent_key="group-opp"),
@@ -233,6 +235,23 @@ def seed():
             ]
             for m in menus: db.add(m)
             db.commit()
+        customer_group_menu = db.query(MenuConfig).filter_by(menu_key="group-customer").first()
+        if not customer_group_menu:
+            db.add(MenuConfig(menu_key="group-customer", label="客户管理", is_visible=True, sort_order=3))
+            db.commit()
+        customer_menu = db.query(MenuConfig).filter_by(menu_key="/customers").first()
+        if customer_menu:
+            customer_menu.label = "客户管理"
+            customer_menu.parent_key = "group-customer"
+            customer_menu.sort_order = 31
+        customer_profile_menu = db.query(MenuConfig).filter_by(menu_key="/customers/profile").first()
+        if not customer_profile_menu:
+            db.add(MenuConfig(menu_key="/customers/profile", label="客户360画像", is_visible=True, sort_order=32, parent_key="group-customer"))
+        else:
+            customer_profile_menu.label = "客户360画像"
+            customer_profile_menu.parent_key = "group-customer"
+            customer_profile_menu.sort_order = 32
+        db.commit()
         registration_menu = db.query(MenuConfig).filter_by(menu_key="/partners/registration").first()
         if not registration_menu:
             db.add(MenuConfig(menu_key="/partners/registration", label="项目报备/撞单", is_visible=True, sort_order=72, parent_key="group-partner"))
