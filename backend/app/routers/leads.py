@@ -85,5 +85,10 @@ def lead_funnel(db: Session=Depends(get_db), user=Depends(require_user)):
 
 @router.get("/sales/list")
 def sales_list(db: Session=Depends(get_db), user=Depends(require_user)):
-    users = db.query(User).filter_by(is_active=True).all()
+    users = (
+        db.query(User)
+        .filter(User.is_active == True, User.role.in_(["sales", "manager"]))
+        .order_by(User.id)
+        .all()
+    )
     return [{"id": u.id, "username": u.username, "real_name": u.real_name, "role": u.role} for u in users]

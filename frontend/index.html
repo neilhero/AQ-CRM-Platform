@@ -4961,7 +4961,7 @@ function CustomerListPage() {
 
 
   var _s_sales_c = useState([]), salesUsersC = _s_sales_c[0], setSalesUsersC = _s_sales_c[1];
-  function fetchSalesUsersC() { api("GET", "/leads/sales/list").then(function(d) { setSalesUsersC(d || []); }).catch(function(){}); }
+  function fetchSalesUsersC() { api("GET", "/leads/sales/list").then(function(d) { setSalesUsersC((d || []).filter(function(u) { return u.role !== 'admin'; })); }).catch(function(){}); }
   useEffect(function() { if (curRole === "admin") fetchSalesUsersC(); }, []);
 
 
@@ -7244,7 +7244,7 @@ function OppListPage(props) {
 
   var _s_sales = useState([]), salesUsers = _s_sales[0], setSalesUsers = _s_sales[1];
   var curRoleO = JSON.parse(localStorage.getItem("aq2_user")||"{}").role || "";
-  function fetchSalesUsers() { api("GET", "/leads/sales/list").then(function(d) { setSalesUsers(d || []); }).catch(function(){}); }
+  function fetchSalesUsers() { api("GET", "/leads/sales/list").then(function(d) { setSalesUsers((d || []).filter(function(u) { return u.role !== 'admin'; })); }).catch(function(){}); }
   useEffect(function() { if (curRoleO === "admin") fetchSalesUsers(); }, []);
 
 
@@ -15497,7 +15497,7 @@ function LeadListPage() {
 
 
 
-    api('GET', '/leads/sales/list').then(function(d) { setSales(d || []); }).catch(function(){});
+    api('GET', '/leads/sales/list').then(function(d) { setSales((d || []).filter(function(u) { return u.role !== 'admin'; })); }).catch(function(){});
 
 
 
@@ -19581,7 +19581,7 @@ function SecurityBusinessPage() {
     api('GET', '/customers?limit=500').then(function(d) { setCustomers(d.items || d || []); }).catch(function(){});
     api('GET', '/opportunities?limit=500').then(function(d) { setOpps(d || []); }).catch(function(){});
     api('GET', '/channel-partners?limit=500').then(function(d) { setPartners(d || []); }).catch(function(){});
-    api('GET', '/leads/sales/list').then(function(d) { setUsers(d || []); }).catch(function(){});
+    api('GET', '/leads/sales/list').then(function(d) { setUsers((d || []).filter(function(u) { return u.role !== 'admin'; })); }).catch(function(){});
   }
 
 
