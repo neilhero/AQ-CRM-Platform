@@ -2085,6 +2085,8 @@ function AppLayout(props) {
       { key: '/partners/commission', label: '返点管理' }
     ] },
 
+    { key: 'module-presales', label: '售前管理', disabled: true, className: 'sidebar-module-title' },
+
     { key: 'group-presales', icon: IC('ToolOutlined'), label: '售前协同', children: [
       { key: '/presales', label: '售前协同' },
       { key: '/presales/assets', label: '售前资产' }
@@ -2104,6 +2106,8 @@ function AppLayout(props) {
 
 
 
+
+    { key: 'module-product', label: '产品管理', disabled: true, className: 'sidebar-module-title' },
 
     { key: 'group-product', icon: IC('AppstoreOutlined'), label: '产品管理', children: [
       { key: '/products', label: '产品管理' },
