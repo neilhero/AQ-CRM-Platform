@@ -2038,7 +2038,8 @@ function AppLayout(props) {
 
     { key: 'group-leads', icon: IC('AimOutlined'), label: '线索管理', children: [
       { key: '/leads', label: '线索管理' },
-      { key: '/leads/bid-radar', label: '招标雷达' }
+      { key: '/leads/bid-radar', label: '招标雷达' },
+      { key: '/leads/bid-conversion', label: '招标转化' }
     ] },
 
 
@@ -2085,6 +2086,7 @@ function AppLayout(props) {
       { key: '/partners', label: '伙伴档案' },
       { key: '/partners/registration', label: '项目报备/撞单' },
       { key: '/partners/growth', label: '渠道伙伴成长' },
+      { key: '/partners/credit', label: '渠道信用' },
 
 
 
@@ -2302,7 +2304,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/presales': '售前协同', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/growth': '渠道伙伴成长', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/leads/bid-conversion': '招标转化', '/presales': '售前协同', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/growth': '渠道伙伴成长', '/partners/credit': '渠道信用', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
 
 
 
@@ -20061,7 +20063,9 @@ function SalesGrowthPage(props) {
   );
 }
 
-function BusinessExcellencePage() {
+function BusinessExcellencePage(props) {
+  var bidOnly = props && props.bidOnly;
+  var partnerCreditOnly = props && props.partnerCreditOnly;
   var _dash = useState(null), dash = _dash[0], setDash = _dash[1];
   var _dupes = useState([]), dupes = _dupes[0], setDupes = _dupes[1];
   var _sla = useState([]), sla = _sla[0], setSla = _sla[1];
@@ -20224,13 +20228,23 @@ function BusinessExcellencePage() {
       ] })
     )
   );
+  if (bidOnly) {
+    return e('div', null,
+      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '招标转化'), e('p', { className: 'page-desc' }, '将招标情报沉淀为线索或商机，并解析评分项，推动招标线索进入销售闭环')),
+      bidTab
+    );
+  }
+  if (partnerCreditOnly) {
+    return e('div', null,
+      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '渠道信用'), e('p', { className: 'page-desc' }, '结合伙伴等级、业绩、认证、培训和违规记录，识别高价值与高风险渠道伙伴')),
+      partnerTab
+    );
+  }
   return e('div', null,
-    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '🧭  经营增强'), e('p', { className: 'page-desc' }, '客户治理、渠道规则、售前 SLA、招标转化、推荐矩阵、资产库、预测回看和 BI 驾驶舱')),
+    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '🧭  经营增强'), e('p', { className: 'page-desc' }, '客户治理、售前 SLA、推荐矩阵、资产库、预测回看和 BI 驾驶舱')),
     e(Tabs, { defaultActiveKey: 'dashboard' },
       e(Tabs.TabPane, { tab: 'BI驾驶舱', key: 'dashboard' }, dashboardTab),
-      e(Tabs.TabPane, { tab: '招标转化', key: 'bid' }, bidTab),
       e(Tabs.TabPane, { tab: '售前SLA', key: 'sla' }, slaTab),
-      e(Tabs.TabPane, { tab: '渠道信用', key: 'partner' }, partnerTab),
       e(Tabs.TabPane, { tab: '推荐矩阵', key: 'matrix' }, matrixTab),
       e(Tabs.TabPane, { tab: '售前资产', key: 'asset' }, assetTab),
       e(Tabs.TabPane, { tab: '预测回看', key: 'forecast' }, forecastTab)
@@ -20522,6 +20536,8 @@ function App() {
 
   } else if (hash === '/leads/bid-radar') {
     content = e(SecurityBusinessPage, { radarOnly: true });
+  } else if (hash === '/leads/bid-conversion') {
+    content = e(BusinessExcellencePage, { bidOnly: true });
   } else if (hash === '/presales') {
     content = e(SecurityBusinessPage, { presalesOnly: true });
   } else if (hash === '/security-business') {
@@ -20612,6 +20628,8 @@ function App() {
 
   } else if (hash === '/partners/growth') {
     content = e(SalesGrowthPage, { partnerOnly: true });
+  } else if (hash === '/partners/credit') {
+    content = e(BusinessExcellencePage, { partnerCreditOnly: true });
   } else if (hash === '/partners/performance') {
 
 
