@@ -334,7 +334,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 
 
-.kpi-card{background:var(--card-bg);border-radius:12px;padding:20px 24px;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:box-shadow .2s,transform .2s;display:flex;align-items:center;gap:16px}
+.kpi-card{background:var(--card-bg);border-radius:12px;padding:20px 24px;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:box-shadow .2s,transform .2s;display:flex;align-items:center;gap:16px;border-left:4px solid transparent}
 
 
 
@@ -383,6 +383,18 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 
 .kpi-icon.orange{background:#fff7ed;color:#f97316}
+
+.kpi-icon.cyan{background:#ecfeff;color:#0891b2}
+
+.kpi-card.customer{border-left-color:#0891b2}
+
+.kpi-card.amount{border-left-color:#16a34a}
+
+.kpi-card.opp-active{border-left-color:#2563eb}
+
+.kpi-card.opp-new{border-left-color:#a855f7}
+
+.kpi-card.opp-touch{border-left-color:#f97316}
 
 
 
@@ -3021,7 +3033,7 @@ function DashboardPage() {
 
 
 
-      e('div', { className: 'kpi-card' }, e('div', { className: 'kpi-icon blue' }, '📋'), e('div', null, e('div', { className: 'kpi-value' }, stats.total_opportunities), e('div', { className: 'kpi-label' }, '活跃商机'))),
+      e('div', { className: 'kpi-card customer' }, e('div', { className: 'kpi-icon cyan' }, '🏢'), e('div', null, e('div', { className: 'kpi-value' }, custCount), e('div', { className: 'kpi-label' }, '客户总数'))),
 
 
 
@@ -3029,7 +3041,7 @@ function DashboardPage() {
 
 
 
-      e('div', { className: 'kpi-card' }, e('div', { className: 'kpi-icon green' }, '💰'), e('div', null, e('div', { className: 'kpi-value' }, (stats.total_amount || 0).toFixed(0) + '万'), e('div', { className: 'kpi-label' }, '商机总金额'))),
+      e('div', { className: 'kpi-card amount' }, e('div', { className: 'kpi-icon green' }, '💰'), e('div', null, e('div', { className: 'kpi-value' }, (stats.total_amount || 0).toFixed(0) + '万'), e('div', { className: 'kpi-label' }, '商机总金额'))),
 
 
 
@@ -3037,7 +3049,7 @@ function DashboardPage() {
 
 
 
-      e('div', { className: 'kpi-card' }, e('div', { className: 'kpi-icon purple' }, '🏢'), e('div', null, e('div', { className: 'kpi-value' }, custCount), e('div', { className: 'kpi-label' }, '客户总数'))),
+      e('div', { className: 'kpi-card opp-active' }, e('div', { className: 'kpi-icon blue' }, '📋'), e('div', null, e('div', { className: 'kpi-value' }, stats.total_opportunities), e('div', { className: 'kpi-label' }, '在池商机'))),
 
 
 
@@ -3045,7 +3057,7 @@ function DashboardPage() {
 
 
 
-      e('div', { className: 'kpi-card' }, e('div', { className: 'kpi-icon purple' }, '✨'), e('div', null, e('div', { className: 'kpi-value' }, stats.weekly_new), e('div', { className: 'kpi-label' }, '本周新增商机'))),
+      e('div', { className: 'kpi-card opp-new' }, e('div', { className: 'kpi-icon purple' }, '✨'), e('div', null, e('div', { className: 'kpi-value' }, stats.weekly_new), e('div', { className: 'kpi-label' }, '本周新建商机'))),
 
 
 
@@ -3053,7 +3065,7 @@ function DashboardPage() {
 
 
 
-      e('div', { className: 'kpi-card' }, e('div', { className: 'kpi-icon orange' }, '🔄'), e('div', null, e('div', { className: 'kpi-value' }, stats.weekly_updated), e('div', { className: 'kpi-label' }, '本周更新商机')))
+      e('div', { className: 'kpi-card opp-touch' }, e('div', { className: 'kpi-icon orange' }, '🔄'), e('div', null, e('div', { className: 'kpi-value' }, stats.weekly_updated), e('div', { className: 'kpi-label' }, '本周有动态商机')))
 
 
 
