@@ -224,10 +224,13 @@ def seed():
                 MenuConfig(menu_key="group-opp", label="商机管理", is_visible=True, sort_order=4),
                 MenuConfig(menu_key="/opportunities/direct", label="直销商机", is_visible=True, sort_order=41, parent_key="group-opp"),
                 MenuConfig(menu_key="/opportunities/channel", label="渠道商机", is_visible=True, sort_order=42, parent_key="group-opp"),
-                MenuConfig(menu_key="/leads", label="线索管理", is_visible=True, sort_order=5),
-                MenuConfig(menu_key="/security-business", label="网安业务", is_visible=True, sort_order=55),
-                MenuConfig(menu_key="/products", label="产品管理", is_visible=True, sort_order=6),
-                MenuConfig(menu_key="group-partner", label="渠道伙伴管理", is_visible=True, sort_order=7),
+                MenuConfig(menu_key="group-leads", label="线索管理", is_visible=True, sort_order=5),
+                MenuConfig(menu_key="/leads", label="线索管理", is_visible=True, sort_order=51, parent_key="group-leads"),
+                MenuConfig(menu_key="/leads/bid-radar", label="招标雷达", is_visible=True, sort_order=52, parent_key="group-leads"),
+                MenuConfig(menu_key="/presales", label="售前协同", is_visible=True, sort_order=6),
+                MenuConfig(menu_key="/security-business", label="网安业务", is_visible=False, sort_order=55),
+                MenuConfig(menu_key="/products", label="产品管理", is_visible=True, sort_order=7),
+                MenuConfig(menu_key="group-partner", label="渠道伙伴管理", is_visible=True, sort_order=8),
                 MenuConfig(menu_key="/partners", label="伙伴档案", is_visible=True, sort_order=71, parent_key="group-partner"),
                 MenuConfig(menu_key="/partners/registration", label="项目报备/撞单", is_visible=True, sort_order=72, parent_key="group-partner"),
                 MenuConfig(menu_key="/partners/performance", label="伙伴绩效", is_visible=True, sort_order=73, parent_key="group-partner"),
@@ -251,6 +254,40 @@ def seed():
             customer_profile_menu.label = "客户360画像"
             customer_profile_menu.parent_key = "group-customer"
             customer_profile_menu.sort_order = 32
+        db.commit()
+        leads_group_menu = db.query(MenuConfig).filter_by(menu_key="group-leads").first()
+        if not leads_group_menu:
+            db.add(MenuConfig(menu_key="group-leads", label="线索管理", is_visible=True, sort_order=5))
+            db.commit()
+        leads_menu = db.query(MenuConfig).filter_by(menu_key="/leads").first()
+        if leads_menu:
+            leads_menu.label = "线索管理"
+            leads_menu.parent_key = "group-leads"
+            leads_menu.sort_order = 51
+        bid_radar_menu = db.query(MenuConfig).filter_by(menu_key="/leads/bid-radar").first()
+        if not bid_radar_menu:
+            db.add(MenuConfig(menu_key="/leads/bid-radar", label="招标雷达", is_visible=True, sort_order=52, parent_key="group-leads"))
+        else:
+            bid_radar_menu.label = "招标雷达"
+            bid_radar_menu.parent_key = "group-leads"
+            bid_radar_menu.sort_order = 52
+        presales_menu = db.query(MenuConfig).filter_by(menu_key="/presales").first()
+        if not presales_menu:
+            db.add(MenuConfig(menu_key="/presales", label="售前协同", is_visible=True, sort_order=6))
+        else:
+            presales_menu.label = "售前协同"
+            presales_menu.parent_key = None
+            presales_menu.sort_order = 6
+            presales_menu.is_visible = True
+        security_menu = db.query(MenuConfig).filter_by(menu_key="/security-business").first()
+        if security_menu:
+            security_menu.is_visible = False
+        products_menu = db.query(MenuConfig).filter_by(menu_key="/products").first()
+        if products_menu:
+            products_menu.sort_order = 7
+        partner_group_menu = db.query(MenuConfig).filter_by(menu_key="group-partner").first()
+        if partner_group_menu:
+            partner_group_menu.sort_order = 8
         db.commit()
         registration_menu = db.query(MenuConfig).filter_by(menu_key="/partners/registration").first()
         if not registration_menu:

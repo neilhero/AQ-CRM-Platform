@@ -2035,7 +2035,10 @@ function AppLayout(props) {
 
 
 
-    { key: '/leads', icon: IC('AimOutlined'), label: '线索管理' },
+    { key: 'group-leads', icon: IC('AimOutlined'), label: '线索管理', children: [
+      { key: '/leads', label: '线索管理' },
+      { key: '/leads/bid-radar', label: '招标雷达' }
+    ] },
 
 
 
@@ -2043,8 +2046,7 @@ function AppLayout(props) {
 
 
 
-    { key: '/security-business', icon: IC('SafetyCertificateOutlined'), label: '网安业务' },
-
+    { key: '/presales', icon: IC('ToolOutlined'), label: '售前协同' },
 
 
 
@@ -2257,6 +2259,7 @@ function AppLayout(props) {
 
 
   if (hash.startsWith('/customers')) { selKey = hash === '/customers/profile' ? '/customers/profile' : '/customers'; openKeys = ['group-customer']; }
+  if (hash.startsWith('/leads')) { selKey = hash; openKeys = ['group-leads']; }
   if (hash.startsWith('/opportunities')) { selKey = hash; openKeys = ['group-opp']; }
 
 
@@ -2297,7 +2300,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/presales': '售前协同', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
 
 
 
@@ -19610,6 +19613,8 @@ function ImportModal(props) {
 function SecurityBusinessPage(props) {
   var registrationOnly = props && props.registrationOnly;
   var profileOnly = props && props.profileOnly;
+  var presalesOnly = props && props.presalesOnly;
+  var radarOnly = props && props.radarOnly;
   var _c = useState([]), customers = _c[0], setCustomers = _c[1];
   var _o = useState([]), opps = _o[0], setOpps = _o[1];
   var _p = useState([]), partners = _p[0], setPartners = _p[1];
@@ -19757,6 +19762,24 @@ function SecurityBusinessPage(props) {
         e('p', { className: 'page-desc' }, '渠道项目报备、保护期管理、重复客户识别与撞单仲裁')
       ),
       registrationTab
+    );
+  }
+  if (presalesOnly) {
+    return e('div', null,
+      e('div', { style: { marginBottom: 16 } },
+        e('h1', { className: 'page-title' }, '售前协同'),
+        e('p', { className: 'page-desc' }, '统一管理 POC、方案评审、标书支持、测试资源排期等售前请求')
+      ),
+      presalesTab
+    );
+  }
+  if (radarOnly) {
+    return e('div', null,
+      e('div', { style: { marginBottom: 16 } },
+        e('h1', { className: 'page-title' }, '招标雷达'),
+        e('p', { className: 'page-desc' }, '围绕招标关键词、采购单位、预算与竞品线索，沉淀可转化的项目线索')
+      ),
+      radarTab
     );
   }
   return e('div', null, e(Tabs, { defaultActiveKey: 'presales' }, e(Tabs.TabPane, { tab: '售前协同', key: 'presales' }, presalesTab), e(Tabs.TabPane, { tab: '招标雷达', key: 'radar' }, radarTab)));
@@ -20480,6 +20503,10 @@ function App() {
 
 
 
+  } else if (hash === '/leads/bid-radar') {
+    content = e(SecurityBusinessPage, { radarOnly: true });
+  } else if (hash === '/presales') {
+    content = e(SecurityBusinessPage, { presalesOnly: true });
   } else if (hash === '/security-business') {
 
 
