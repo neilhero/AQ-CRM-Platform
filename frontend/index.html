@@ -2580,6 +2580,10 @@ function DashboardPage() {
 
 
 
+  var _sRecentExpanded = useState(false), recentExpanded = _sRecentExpanded[0], setRecentExpanded = _sRecentExpanded[1];
+
+
+
 
 
 
@@ -2705,6 +2709,12 @@ function DashboardPage() {
 
 
   if (!stats) return e('div', { className: 'error-disp' }, '加载失败 — 请确认后端已启动');
+
+
+
+  var recentFollowUps = stats.recent_follow_ups || [];
+  var visibleRecentFollowUps = recentExpanded ? recentFollowUps : recentFollowUps.slice(0, 5);
+  var hiddenRecentFollowUps = Math.max(recentFollowUps.length - 5, 0);
 
 
 
@@ -3212,6 +3222,9 @@ function DashboardPage() {
 
 
               )
+
+
+
 
 
 
@@ -4406,7 +4419,7 @@ function DashboardPage() {
 
 
 
-          (stats.recent_follow_ups || []).length === 0
+          recentFollowUps.length === 0
 
 
 
@@ -4422,7 +4435,11 @@ function DashboardPage() {
 
 
 
-            : e(Timeline, null,
+            : e('div', null,
+
+
+
+              e(Timeline, null,
 
 
 
@@ -4430,7 +4447,7 @@ function DashboardPage() {
 
 
 
-                (stats.recent_follow_ups || []).slice(0, 8).map(function(fu) {
+                visibleRecentFollowUps.map(function(fu) {
 
 
 
@@ -4494,7 +4511,19 @@ function DashboardPage() {
 
 
 
-              )
+              ),
+
+
+
+              hiddenRecentFollowUps > 0 ? e('div', { style: { marginTop: 8, textAlign: 'center' } },
+                e(Button, { size: 'small', type: 'link', onClick: function(){ setRecentExpanded(!recentExpanded); } },
+                  recentExpanded ? '收起' : ('展开全部 ' + recentFollowUps.length + ' 条')
+                )
+              ) : null
+
+
+
+            )
 
 
 
@@ -9752,6 +9781,10 @@ function OppDetailPage(props) {
 
 
 
+  var _sFollowExpanded = useState(false), followExpanded = _sFollowExpanded[0], setFollowExpanded = _sFollowExpanded[1];
+
+
+
 
 
   var _sp = useState([]), presalesReqs = _sp[0], setPresalesReqs = _sp[1];
@@ -10137,6 +10170,11 @@ function OppDetailPage(props) {
 
 
   if (loading) return e(Spin, { size: 'large', style: { display: 'block', margin: '120px auto' } });
+
+
+
+  var visibleFus = followExpanded ? fus : fus.slice(0, 5);
+  var hiddenFus = Math.max(fus.length - 5, 0);
 
 
 
@@ -10776,7 +10814,11 @@ function OppDetailPage(props) {
 
 
 
-            : e(Timeline, null,
+            : e('div', null,
+
+
+
+              e(Timeline, null,
 
 
 
@@ -10784,7 +10826,7 @@ function OppDetailPage(props) {
 
 
 
-                fus.map(function(fu) {
+                visibleFus.map(function(fu) {
 
 
 
@@ -10856,7 +10898,19 @@ function OppDetailPage(props) {
 
 
 
-              )
+              ),
+
+
+
+              hiddenFus > 0 ? e('div', { style: { marginTop: 8, textAlign: 'center' } },
+                e(Button, { size: 'small', type: 'link', onClick: function(){ setFollowExpanded(!followExpanded); } },
+                  followExpanded ? '收起' : ('展开全部 ' + fus.length + ' 条')
+                )
+              ) : null
+
+
+
+            )
 
 
 
