@@ -256,6 +256,12 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 .sidebar-menu .ant-menu-sub .ant-menu-item{padding-left:56px!important;margin:0}
 
+.sidebar-menu .ant-menu-item.sidebar-module-title{height:28px!important;line-height:28px!important;margin:14px 0 4px!important;padding-left:14px!important;color:#64748b!important;background:transparent!important;cursor:default!important;font-size:12px;font-weight:700;letter-spacing:0}
+
+.sidebar-menu .ant-menu-item.sidebar-module-title:after{display:none}
+
+.sidebar-menu .ant-menu-item.sidebar-module-title .ant-menu-title-content{opacity:1!important}
+
 .business-cockpit-tabs>.ant-tabs-nav{margin:0 0 20px;padding:10px;background:#fff;border:1px solid #dbeafe;border-radius:10px;box-shadow:0 8px 18px rgba(15,23,42,.06)}
 
 .business-cockpit-tabs>.ant-tabs-nav:before{display:none}
@@ -2010,6 +2016,8 @@ function AppLayout(props) {
 
 
 
+
+    { key: 'module-business', label: '业务管理', disabled: true, className: 'sidebar-module-title' },
 
     { key: 'group-customer', icon: IC('TeamOutlined'), label: '客户管理', children: [
       { key: '/customers', label: '客户管理' },
