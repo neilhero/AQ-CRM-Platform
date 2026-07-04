@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from sqlalchemy import func
 from app.database import get_db
-from app.models import Opportunity, Customer, ChannelPartner, User
+from app.models import Opportunity, Customer, ChannelPartner, User, Contact
 from app.schemas import OpportunityCreate, OpportunityUpdate
 from app.routers.utils import require_user
 
@@ -61,6 +61,24 @@ def _check_access(opp, user):
     if opp.sales_rep_id != user.id:
         raise HTTPException(403, "Access denied")
 
+def _contact_dict(contact):
+    return {
+        "id": contact.id,
+        "name": contact.name,
+        "position": contact.position,
+        "role_type": contact.role_type,
+        "phone": contact.phone,
+        "email": contact.email,
+        "wechat": contact.wechat,
+        "notes": contact.notes,
+    }
+
+def _contact_person_text(contacts):
+    return ";;".join(
+        "|".join([c.name or "", c.position or "", c.phone or "", c.email or ""])
+        for c in contacts
+    )
+
 @router.get("")
 def list_opps(keyword: Optional[str]=Query(None), stage: Optional[str]=Query(None),
               opp_type: Optional[str]=Query(None), sales_rep_id: Optional[int]=Query(None),
@@ -100,6 +118,26 @@ def get_opp(oid: int, db: Session=Depends(get_db), user=Depends(require_user)):
     if o.customer_id:
         cust = db.query(Customer).filter_by(id=o.customer_id).first()
         d["customer_name"] = cust.name if cust else None
+        contacts = (
+            db.query(Contact)
+            .filter(Contact.customer_id == o.customer_id)
+            .order_by(Contact.id.desc())
+            .all()
+        )
+        d["customer_contacts"] = [
+            _contact_dict(c)
+            for c in contacts
+        ]
+        if not d.get("key_person"):
+            key_contacts = [c for c in contacts if c.role_type == "key_person"]
+            if key_contacts:
+                d["key_person"] = _contact_person_text(key_contacts)
+        if not d.get("handler_person"):
+            handler_contacts = [c for c in contacts if c.role_type == "handler"]
+            if handler_contacts:
+                d["handler_person"] = _contact_person_text(handler_contacts)
+    else:
+        d["customer_contacts"] = []
     if o.channel_partner_id:
         cp = db.query(ChannelPartner).filter_by(id=o.channel_partner_id).first()
         d["channel_partner_name"] = cp.name if cp else None
