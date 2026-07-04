@@ -20287,14 +20287,14 @@ function BusinessExcellencePage(props) {
     );
   }
   return e('div', null,
-    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '🧭  经营驾驶舱'), e('p', { className: 'page-desc' }, 'BI驾驶舱、销售预测、目标绩效、售前SLA、输赢复盘与预测回看')),
+    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '🧭  经营驾驶舱'), e('p', { className: 'page-desc' }, 'BI驾驶舱、目标绩效、销售预测、预测回看、输赢复盘与售前SLA')),
     e(Tabs, { defaultActiveKey: 'dashboard', className: 'business-cockpit-tabs' },
       e(Tabs.TabPane, { tab: 'BI驾驶舱', key: 'dashboard' }, dashboardTab),
-      e(Tabs.TabPane, { tab: '销售预测', key: 'salesForecast' }, e(SalesGrowthPage, { forecastOnly: true })),
       e(Tabs.TabPane, { tab: '目标绩效', key: 'salesTarget' }, e(SalesGrowthPage, { targetOnly: true })),
-      e(Tabs.TabPane, { tab: '售前SLA', key: 'sla' }, slaTab),
+      e(Tabs.TabPane, { tab: '销售预测', key: 'salesForecast' }, e(SalesGrowthPage, { forecastOnly: true })),
+      e(Tabs.TabPane, { tab: '预测回看', key: 'forecast' }, forecastTab),
       e(Tabs.TabPane, { tab: '输赢单复盘', key: 'salesReview' }, e(SalesGrowthPage, { reviewOnly: true })),
-      e(Tabs.TabPane, { tab: '预测回看', key: 'forecast' }, forecastTab)
+      e(Tabs.TabPane, { tab: '售前SLA', key: 'sla' }, slaTab)
     )
   );
 }
