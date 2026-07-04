@@ -231,20 +231,20 @@ def seed():
                 MenuConfig(menu_key="/leads", label="线索管理", is_visible=True, sort_order=51, parent_key="group-leads"),
                 MenuConfig(menu_key="/leads/bid-radar", label="招标雷达", is_visible=True, sort_order=52, parent_key="group-leads"),
                 MenuConfig(menu_key="/leads/bid-conversion", label="招标转化", is_visible=True, sort_order=53, parent_key="group-leads"),
-                MenuConfig(menu_key="group-presales", label="售前协同", is_visible=True, sort_order=6),
-                MenuConfig(menu_key="/presales", label="售前协同", is_visible=True, sort_order=61, parent_key="group-presales"),
-                MenuConfig(menu_key="/presales/assets", label="售前资产", is_visible=True, sort_order=62, parent_key="group-presales"),
+                MenuConfig(menu_key="group-partner", label="渠道伙伴管理", is_visible=True, sort_order=6),
+                MenuConfig(menu_key="/partners", label="渠道伙伴档案", is_visible=True, sort_order=61, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/credit", label="渠道伙伴信用", is_visible=True, sort_order=62, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/performance", label="渠道伙伴绩效", is_visible=True, sort_order=63, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/registration", label="项目报备/撞单", is_visible=True, sort_order=64, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/growth", label="渠道伙伴成长", is_visible=True, sort_order=65, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/commission", label="返点管理", is_visible=True, sort_order=66, parent_key="group-partner"),
+                MenuConfig(menu_key="group-presales", label="售前协同", is_visible=True, sort_order=7),
+                MenuConfig(menu_key="/presales", label="售前协同", is_visible=True, sort_order=71, parent_key="group-presales"),
+                MenuConfig(menu_key="/presales/assets", label="售前资产", is_visible=True, sort_order=72, parent_key="group-presales"),
                 MenuConfig(menu_key="/security-business", label="网安业务", is_visible=False, sort_order=55),
-                MenuConfig(menu_key="group-product", label="产品管理", is_visible=True, sort_order=7),
-                MenuConfig(menu_key="/products", label="产品管理", is_visible=True, sort_order=71, parent_key="group-product"),
-                MenuConfig(menu_key="/products/recommendations", label="推荐产品", is_visible=True, sort_order=72, parent_key="group-product"),
-                MenuConfig(menu_key="group-partner", label="渠道伙伴管理", is_visible=True, sort_order=8),
-                MenuConfig(menu_key="/partners", label="渠道伙伴档案", is_visible=True, sort_order=81, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/credit", label="渠道伙伴信用", is_visible=True, sort_order=82, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/performance", label="渠道伙伴绩效", is_visible=True, sort_order=83, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/registration", label="项目报备/撞单", is_visible=True, sort_order=84, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/growth", label="渠道伙伴成长", is_visible=True, sort_order=85, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/commission", label="返点管理", is_visible=True, sort_order=86, parent_key="group-partner"),
+                MenuConfig(menu_key="group-product", label="产品管理", is_visible=True, sort_order=8),
+                MenuConfig(menu_key="/products", label="产品管理", is_visible=True, sort_order=81, parent_key="group-product"),
+                MenuConfig(menu_key="/products/recommendations", label="推荐产品", is_visible=True, sort_order=82, parent_key="group-product"),
             ]
             for m in menus: db.add(m)
             db.commit()
@@ -315,88 +315,94 @@ def seed():
             bid_conversion_menu.sort_order = 53
         presales_group_menu = db.query(MenuConfig).filter_by(menu_key="group-presales").first()
         if not presales_group_menu:
-            db.add(MenuConfig(menu_key="group-presales", label="售前协同", is_visible=True, sort_order=6))
+            db.add(MenuConfig(menu_key="group-presales", label="售前协同", is_visible=True, sort_order=7))
             db.commit()
+        else:
+            presales_group_menu.sort_order = 7
         presales_menu = db.query(MenuConfig).filter_by(menu_key="/presales").first()
         if not presales_menu:
-            db.add(MenuConfig(menu_key="/presales", label="售前协同", is_visible=True, sort_order=61, parent_key="group-presales"))
+            db.add(MenuConfig(menu_key="/presales", label="售前协同", is_visible=True, sort_order=71, parent_key="group-presales"))
         else:
             presales_menu.label = "售前协同"
             presales_menu.parent_key = "group-presales"
-            presales_menu.sort_order = 61
+            presales_menu.sort_order = 71
             presales_menu.is_visible = True
         presales_assets_menu = db.query(MenuConfig).filter_by(menu_key="/presales/assets").first()
         if not presales_assets_menu:
-            db.add(MenuConfig(menu_key="/presales/assets", label="售前资产", is_visible=True, sort_order=62, parent_key="group-presales"))
+            db.add(MenuConfig(menu_key="/presales/assets", label="售前资产", is_visible=True, sort_order=72, parent_key="group-presales"))
         else:
             presales_assets_menu.label = "售前资产"
             presales_assets_menu.parent_key = "group-presales"
-            presales_assets_menu.sort_order = 62
+            presales_assets_menu.sort_order = 72
         security_menu = db.query(MenuConfig).filter_by(menu_key="/security-business").first()
         if security_menu:
             security_menu.is_visible = False
         product_group_menu = db.query(MenuConfig).filter_by(menu_key="group-product").first()
         if not product_group_menu:
-            db.add(MenuConfig(menu_key="group-product", label="产品管理", is_visible=True, sort_order=7))
+            db.add(MenuConfig(menu_key="group-product", label="产品管理", is_visible=True, sort_order=8))
             db.commit()
+        else:
+            product_group_menu.sort_order = 8
         products_menu = db.query(MenuConfig).filter_by(menu_key="/products").first()
         if products_menu:
             products_menu.label = "产品管理"
             products_menu.parent_key = "group-product"
-            products_menu.sort_order = 71
+            products_menu.sort_order = 81
         product_recommendations_menu = db.query(MenuConfig).filter_by(menu_key="/products/recommendations").first()
         if not product_recommendations_menu:
-            db.add(MenuConfig(menu_key="/products/recommendations", label="推荐产品", is_visible=True, sort_order=72, parent_key="group-product"))
+            db.add(MenuConfig(menu_key="/products/recommendations", label="推荐产品", is_visible=True, sort_order=82, parent_key="group-product"))
         else:
             product_recommendations_menu.label = "推荐产品"
             product_recommendations_menu.parent_key = "group-product"
-            product_recommendations_menu.sort_order = 72
+            product_recommendations_menu.sort_order = 82
         partner_group_menu = db.query(MenuConfig).filter_by(menu_key="group-partner").first()
-        if partner_group_menu:
-            partner_group_menu.sort_order = 8
+        if not partner_group_menu:
+            db.add(MenuConfig(menu_key="group-partner", label="渠道伙伴管理", is_visible=True, sort_order=6))
+        else:
+            partner_group_menu.sort_order = 6
         db.commit()
         partner_archive_menu = db.query(MenuConfig).filter_by(menu_key="/partners").first()
         if partner_archive_menu:
             partner_archive_menu.label = "渠道伙伴档案"
             partner_archive_menu.parent_key = "group-partner"
-            partner_archive_menu.sort_order = 81
+            partner_archive_menu.sort_order = 61
             partner_archive_menu.is_visible = True
         else:
-            db.add(MenuConfig(menu_key="/partners", label="渠道伙伴档案", is_visible=True, sort_order=81, parent_key="group-partner"))
+            db.add(MenuConfig(menu_key="/partners", label="渠道伙伴档案", is_visible=True, sort_order=61, parent_key="group-partner"))
         registration_menu = db.query(MenuConfig).filter_by(menu_key="/partners/registration").first()
         if not registration_menu:
-            db.add(MenuConfig(menu_key="/partners/registration", label="项目报备/撞单", is_visible=True, sort_order=84, parent_key="group-partner"))
+            db.add(MenuConfig(menu_key="/partners/registration", label="项目报备/撞单", is_visible=True, sort_order=64, parent_key="group-partner"))
             db.commit()
         else:
             registration_menu.label = "项目报备/撞单"
             registration_menu.parent_key = "group-partner"
-            registration_menu.sort_order = 84
+            registration_menu.sort_order = 64
         partner_growth_menu = db.query(MenuConfig).filter_by(menu_key="/partners/growth").first()
         if not partner_growth_menu:
-            db.add(MenuConfig(menu_key="/partners/growth", label="渠道伙伴成长", is_visible=True, sort_order=85, parent_key="group-partner"))
+            db.add(MenuConfig(menu_key="/partners/growth", label="渠道伙伴成长", is_visible=True, sort_order=65, parent_key="group-partner"))
         else:
             partner_growth_menu.label = "渠道伙伴成长"
             partner_growth_menu.parent_key = "group-partner"
-            partner_growth_menu.sort_order = 85
+            partner_growth_menu.sort_order = 65
         partner_credit_menu = db.query(MenuConfig).filter_by(menu_key="/partners/credit").first()
         if not partner_credit_menu:
-            db.add(MenuConfig(menu_key="/partners/credit", label="渠道伙伴信用", is_visible=True, sort_order=82, parent_key="group-partner"))
+            db.add(MenuConfig(menu_key="/partners/credit", label="渠道伙伴信用", is_visible=True, sort_order=62, parent_key="group-partner"))
         else:
             partner_credit_menu.label = "渠道伙伴信用"
             partner_credit_menu.parent_key = "group-partner"
-            partner_credit_menu.sort_order = 82
+            partner_credit_menu.sort_order = 62
             partner_credit_menu.is_visible = True
         partner_performance_menu = db.query(MenuConfig).filter_by(menu_key="/partners/performance").first()
         if not partner_performance_menu:
-            db.add(MenuConfig(menu_key="/partners/performance", label="渠道伙伴绩效", is_visible=True, sort_order=83, parent_key="group-partner"))
+            db.add(MenuConfig(menu_key="/partners/performance", label="渠道伙伴绩效", is_visible=True, sort_order=63, parent_key="group-partner"))
         else:
             partner_performance_menu.label = "渠道伙伴绩效"
             partner_performance_menu.parent_key = "group-partner"
-            partner_performance_menu.sort_order = 83
+            partner_performance_menu.sort_order = 63
             partner_performance_menu.is_visible = True
         partner_commission_menu = db.query(MenuConfig).filter_by(menu_key="/partners/commission").first()
-        if partner_commission_menu and partner_commission_menu.sort_order != 86:
-            partner_commission_menu.sort_order = 86
+        if partner_commission_menu and partner_commission_menu.sort_order != 66:
+            partner_commission_menu.sort_order = 66
         db.commit()
         growth_menu = db.query(MenuConfig).filter_by(menu_key="/sales-growth").first()
         if not growth_menu:

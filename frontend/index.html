@@ -2079,6 +2079,17 @@ function AppLayout(props) {
 
 
 
+    { key: 'module-channel', label: '渠道管理', disabled: true, className: 'sidebar-module-title' },
+
+    { key: 'group-partner', icon: IC('TeamOutlined'), label: '渠道伙伴管理', className: 'business-section-item', children: [
+      { key: '/partners', label: '渠道伙伴档案' },
+      { key: '/partners/credit', label: '渠道伙伴信用' },
+      { key: '/partners/performance', label: '渠道伙伴绩效' },
+      { key: '/partners/registration', label: '项目报备/撞单' },
+      { key: '/partners/growth', label: '渠道伙伴成长' },
+      { key: '/partners/commission', label: '返点管理' }
+    ] },
+
     { key: 'group-presales', icon: IC('ToolOutlined'), label: '售前协同', children: [
       { key: '/presales', label: '售前协同' },
       { key: '/presales/assets', label: '售前资产' }
@@ -2103,49 +2114,6 @@ function AppLayout(props) {
       { key: '/products', label: '产品管理' },
       { key: '/products/recommendations', label: '推荐产品' }
     ] },
-
-
-
-
-
-
-
-    { key: 'group-partner', icon: IC('TeamOutlined'), label: '渠道伙伴管理', children: [
-
-
-
-
-
-
-
-      { key: '/partners', label: '渠道伙伴档案' },
-      { key: '/partners/credit', label: '渠道伙伴信用' },
-
-
-
-
-
-
-
-      { key: '/partners/performance', label: '渠道伙伴绩效' },
-      { key: '/partners/registration', label: '项目报备/撞单' },
-      { key: '/partners/growth', label: '渠道伙伴成长' },
-
-
-
-
-
-
-
-      { key: '/partners/commission', label: '返点管理' }
-
-
-
-
-
-
-
-    ] }
 
 
 
