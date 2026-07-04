@@ -1976,7 +1976,10 @@ function AppLayout(props) {
 
 
 
-    { key: '/dashboard', icon: IC('DashboardOutlined'), label: '仪表盘' },
+    { key: 'group-dashboard', icon: IC('DashboardOutlined'), label: '仪表盘', children: [
+      { key: '/dashboard', label: '仪表盘' },
+      { key: '/business-excellence', label: '经营驾驶舱' }
+    ] },
 
 
 
@@ -2057,14 +2060,12 @@ function AppLayout(props) {
 
 
 
-    { key: '/sales-growth', icon: IC('RiseOutlined'), label: '销售增长' },
 
 
 
 
 
 
-    { key: '/business-excellence', icon: IC('ControlOutlined'), label: '经营增强' },
 
 
 
@@ -2268,6 +2269,7 @@ function AppLayout(props) {
 
 
 
+  if (hash === '/dashboard' || hash === '/business-excellence') { selKey = hash; openKeys = ['group-dashboard']; }
   if (hash.startsWith('/customers')) { selKey = (hash === '/customers/profile' || hash === '/customers/operations') ? hash : '/customers'; openKeys = ['group-customer']; }
   if (hash.startsWith('/leads')) { selKey = hash; openKeys = ['group-leads']; }
   if (hash.startsWith('/presales')) { selKey = hash; openKeys = ['group-presales']; }
@@ -2312,7 +2314,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/leads/bid-conversion': '招标转化', '/presales': '售前系统', '/presales/assets': '售前资产', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/products/recommendations': '推荐产品', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/growth': '渠道伙伴成长', '/partners/credit': '渠道信用', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/business-excellence': '经营驾驶舱', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/leads/bid-conversion': '招标转化', '/presales': '售前系统', '/presales/assets': '售前资产', '/security-business': '网安业务', '/sales-growth': '销售增长', '/products': '产品管理', '/products/recommendations': '推荐产品', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/growth': '渠道伙伴成长', '/partners/credit': '渠道信用', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
 
 
 
@@ -19798,6 +19800,9 @@ function SecurityBusinessPage(props) {
 }
 
 function SalesGrowthPage(props) {
+  var forecastOnly = props && props.forecastOnly;
+  var targetOnly = props && props.targetOnly;
+  var reviewOnly = props && props.reviewOnly;
   var segmentOnly = props && props.segmentOnly;
   var partnerOnly = props && props.partnerOnly;
   var _f = useState(null), forecast = _f[0], setForecast = _f[1];
@@ -20061,6 +20066,9 @@ function SalesGrowthPage(props) {
       partnerTab
     );
   }
+  if (forecastOnly) return forecastTab;
+  if (targetOnly) return targetTab;
+  if (reviewOnly) return reviewTab;
   return e('div', null,
     e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '📈  销售增长'), e('p', { className: 'page-desc' }, 'Forecast、目标绩效与输赢复盘体系')),
     e(Tabs, { defaultActiveKey: 'forecast' },
@@ -20111,7 +20119,7 @@ function BusinessExcellencePage(props) {
       setAssets(res[6] || []);
       setBids(res[7] || []);
       setAccuracy(res[8] || []);
-    }).catch(function(err) { message.error(err.message || '经营增强数据加载失败'); }).finally(function(){ setLoading(false); });
+    }).catch(function(err) { message.error(err.message || '经营驾驶舱数据加载失败'); }).finally(function(){ setLoading(false); });
   }
   useEffect(function(){ loadAll(); }, []);
   function seedRecs() {
@@ -20263,10 +20271,13 @@ function BusinessExcellencePage(props) {
     );
   }
   return e('div', null,
-    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '🧭  经营增强'), e('p', { className: 'page-desc' }, '客户治理、售前 SLA、预测回看和 BI 驾驶舱')),
+    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '🧭  经营驾驶舱'), e('p', { className: 'page-desc' }, 'BI驾驶舱、销售预测、目标绩效、售前SLA、输赢复盘与预测回看')),
     e(Tabs, { defaultActiveKey: 'dashboard' },
       e(Tabs.TabPane, { tab: 'BI驾驶舱', key: 'dashboard' }, dashboardTab),
+      e(Tabs.TabPane, { tab: '销售预测', key: 'salesForecast' }, e(SalesGrowthPage, { forecastOnly: true })),
+      e(Tabs.TabPane, { tab: '目标绩效', key: 'salesTarget' }, e(SalesGrowthPage, { targetOnly: true })),
       e(Tabs.TabPane, { tab: '售前SLA', key: 'sla' }, slaTab),
+      e(Tabs.TabPane, { tab: '输赢单复盘', key: 'salesReview' }, e(SalesGrowthPage, { reviewOnly: true })),
       e(Tabs.TabPane, { tab: '预测回看', key: 'forecast' }, forecastTab)
     )
   );

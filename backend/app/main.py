@@ -216,7 +216,9 @@ def seed():
             db.commit()
         if db.query(MenuConfig).count() == 0:
             menus = [
-                MenuConfig(menu_key="/dashboard", label="仪表盘", is_visible=True, sort_order=1),
+                MenuConfig(menu_key="group-dashboard", label="仪表盘", is_visible=True, sort_order=1),
+                MenuConfig(menu_key="/dashboard", label="仪表盘", is_visible=True, sort_order=11, parent_key="group-dashboard"),
+                MenuConfig(menu_key="/business-excellence", label="经营驾驶舱", is_visible=True, sort_order=12, parent_key="group-dashboard"),
                 MenuConfig(menu_key="/follow-ups", label="今日待跟进", is_visible=True, sort_order=2),
                 MenuConfig(menu_key="group-customer", label="客户管理", is_visible=True, sort_order=3),
                 MenuConfig(menu_key="/customers", label="客户管理", is_visible=True, sort_order=31, parent_key="group-customer"),
@@ -246,6 +248,24 @@ def seed():
             ]
             for m in menus: db.add(m)
             db.commit()
+        dashboard_group_menu = db.query(MenuConfig).filter_by(menu_key="group-dashboard").first()
+        if not dashboard_group_menu:
+            db.add(MenuConfig(menu_key="group-dashboard", label="仪表盘", is_visible=True, sort_order=1))
+            db.commit()
+        dashboard_menu = db.query(MenuConfig).filter_by(menu_key="/dashboard").first()
+        if dashboard_menu:
+            dashboard_menu.label = "仪表盘"
+            dashboard_menu.parent_key = "group-dashboard"
+            dashboard_menu.sort_order = 11
+        business_cockpit_menu = db.query(MenuConfig).filter_by(menu_key="/business-excellence").first()
+        if not business_cockpit_menu:
+            db.add(MenuConfig(menu_key="/business-excellence", label="经营驾驶舱", is_visible=True, sort_order=12, parent_key="group-dashboard"))
+        else:
+            business_cockpit_menu.label = "经营驾驶舱"
+            business_cockpit_menu.parent_key = "group-dashboard"
+            business_cockpit_menu.sort_order = 12
+            business_cockpit_menu.is_visible = True
+        db.commit()
         customer_group_menu = db.query(MenuConfig).filter_by(menu_key="group-customer").first()
         if not customer_group_menu:
             db.add(MenuConfig(menu_key="group-customer", label="客户管理", is_visible=True, sort_order=3))
@@ -371,12 +391,20 @@ def seed():
         db.commit()
         growth_menu = db.query(MenuConfig).filter_by(menu_key="/sales-growth").first()
         if not growth_menu:
-            db.add(MenuConfig(menu_key="/sales-growth", label="销售增长", is_visible=True, sort_order=56))
-            db.commit()
+            db.add(MenuConfig(menu_key="/sales-growth", label="销售增长", is_visible=False, sort_order=56))
+        else:
+            growth_menu.is_visible = False
+            growth_menu.parent_key = None
+            growth_menu.sort_order = 56
         excellence_menu = db.query(MenuConfig).filter_by(menu_key="/business-excellence").first()
         if not excellence_menu:
-            db.add(MenuConfig(menu_key="/business-excellence", label="经营增强", is_visible=True, sort_order=57))
-            db.commit()
+            db.add(MenuConfig(menu_key="/business-excellence", label="经营驾驶舱", is_visible=True, sort_order=12, parent_key="group-dashboard"))
+        else:
+            excellence_menu.label = "经营驾驶舱"
+            excellence_menu.parent_key = "group-dashboard"
+            excellence_menu.sort_order = 12
+            excellence_menu.is_visible = True
+        db.commit()
     finally:
         db.close()
 
