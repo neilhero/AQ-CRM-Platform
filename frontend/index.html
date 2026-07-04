@@ -256,13 +256,15 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 .sidebar-menu .ant-menu-sub .ant-menu-item{padding-left:56px!important;margin:0}
 
-.sidebar-menu .ant-menu-item.sidebar-module-title{height:40px!important;line-height:40px!important;margin:10px 0 2px!important;padding-left:24px!important;color:#64748b!important;background:transparent!important;cursor:default!important;font-size:12px;font-weight:700;letter-spacing:0}
+.sidebar-menu .ant-menu-item.sidebar-module-title{height:40px!important;line-height:40px!important;margin:10px 0 2px!important;padding-left:24px!important;color:#7b879c!important;background:transparent!important;cursor:default!important;font-size:14px;font-weight:600;letter-spacing:0}
 
 .sidebar-menu .ant-menu-item.sidebar-module-title:after{display:none}
 
 .sidebar-menu .ant-menu-item.sidebar-module-title .ant-menu-title-content{opacity:1!important}
 
 .sidebar-menu .ant-menu-submenu.business-section-item>.ant-menu-submenu-title{padding-left:48px!important}
+
+.sidebar-menu .ant-menu-item.business-section-item{padding-left:48px!important}
 
 .sidebar-menu .ant-menu-submenu.business-section-item .ant-menu-sub .ant-menu-item{padding-left:72px!important}
 
@@ -2013,15 +2015,9 @@ function AppLayout(props) {
 
 
 
-    { key: '/follow-ups', icon: IC('ClockCircleOutlined'), label: '今日待跟进' },
-
-
-
-
-
-
-
     { key: 'module-business', label: '业务管理', disabled: true, className: 'sidebar-module-title' },
+
+    { key: '/follow-ups', icon: IC('ClockCircleOutlined'), label: '今日待跟进', className: 'business-section-item' },
 
     { key: 'group-customer', icon: IC('TeamOutlined'), label: '客户管理', className: 'business-section-item', children: [
       { key: '/customers', label: '客户管理' },
@@ -2083,7 +2079,6 @@ function AppLayout(props) {
 
     { key: 'group-partner', icon: IC('TeamOutlined'), label: '渠道伙伴管理', className: 'business-section-item', children: [
       { key: '/partners', label: '渠道伙伴档案' },
-      { key: '/partners/credit', label: '渠道伙伴信用' },
       { key: '/partners/performance', label: '渠道伙伴绩效' },
       { key: '/partners/registration', label: '项目报备/撞单' },
       { key: '/partners/growth', label: '渠道伙伴成长' },
