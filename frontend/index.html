@@ -10196,6 +10196,50 @@ function OppDetailPage(props) {
 
   if (!opp) return null;
 
+  function parseDetailPersons(str, roleType) {
+    if (!str) return [];
+    return str.split(';;').map(function(p) {
+      var parts = p.split('|');
+      return { name: parts[0] || '', position: parts[1] || '', phone: parts[2] || '', email: parts[3] || '', role_type: roleType };
+    }).filter(function(p) { return p.name || p.position || p.phone || p.email; });
+  }
+
+  var detailCustomerContacts = opp.customer_contacts || [];
+  var detailKeyContacts = detailCustomerContacts.filter(function(c) { return c.role_type === 'key_person'; });
+  var detailHandlerContacts = detailCustomerContacts.filter(function(c) { return c.role_type === 'handler'; });
+  var detailKeyRows = detailKeyContacts.length ? detailKeyContacts : parseDetailPersons(opp.key_person, 'key_person');
+  var detailHandlerRows = detailHandlerContacts.length ? detailHandlerContacts : parseDetailPersons(opp.handler_person, 'handler');
+
+  function renderContactRows(title, tagColor, rows, emptyText) {
+    return e('div', { style: { marginTop: 12 } },
+      e('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 } },
+        e(Tag, { color: tagColor, style: { margin: 0 } }, title),
+        e('span', { style: { fontSize: 12, color: '#94a3b8' } }, rows.length + ' 人')
+      ),
+      rows.length === 0
+        ? e('div', { style: { border: '1px dashed #cbd5e1', borderRadius: 8, padding: '12px 14px', color: '#94a3b8', background: '#fff' } }, emptyText)
+        : rows.map(function(c, idx) {
+            return e('div', { key: title + idx, style: { display: 'grid', gridTemplateColumns: 'minmax(120px,1.2fr) minmax(110px,1fr) minmax(120px,1fr) minmax(160px,1.3fr)', gap: 12, alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', marginBottom: 8, background: '#fff' } },
+              e('div', { style: { fontWeight: 700, color: '#0f172a' } }, c.name || '-'),
+              e('div', { style: { color: '#475569' } }, c.position || '-'),
+              e('div', { style: { color: '#475569' } }, c.phone || '-'),
+              e('div', { style: { color: '#64748b' } }, c.email || '-')
+            );
+          })
+    );
+  }
+
+  function renderOpportunityContacts() {
+    return e('div', { style: { marginTop: 16, padding: 16, border: '1px solid #dbeafe', borderRadius: 10, background: 'linear-gradient(135deg,#f8fbff 0%,#f8fafc 100%)' } },
+      e('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 } },
+        e('div', { style: { fontSize: 14, fontWeight: 800, color: '#0f172a' } }, '客户联系人'),
+        opp.customer_name ? e('span', { style: { fontSize: 12, color: '#64748b' } }, opp.customer_name) : null
+      ),
+      renderContactRows('关键人', 'purple', detailKeyRows, '暂无关键人'),
+      renderContactRows('经办人', 'blue', detailHandlerRows, '暂无经办人')
+    );
+  }
+
 
 
 
@@ -10540,7 +10584,7 @@ function OppDetailPage(props) {
 
 
 
-          opp.key_person ? (function(){
+          false && opp.key_person ? (function(){
 
 
 
@@ -10628,7 +10672,7 @@ function OppDetailPage(props) {
 
 
 
-          })() : e(Descriptions.Item, { label: '关键人', span: 3 }, '-'),
+          })() : null,
 
 
 
@@ -10636,7 +10680,7 @@ function OppDetailPage(props) {
 
 
 
-          opp.handler_person ? (function(){
+          false && opp.handler_person ? (function(){
 
 
 
@@ -10724,7 +10768,7 @@ function OppDetailPage(props) {
 
 
 
-          })() : e(Descriptions.Item, { label: '经办人', span: 3 }, '-'),
+          })() : null,
 
 
 
@@ -10748,7 +10792,11 @@ function OppDetailPage(props) {
 
 
 
-        )
+        ),
+
+
+
+        renderOpportunityContacts()
 
 
 
