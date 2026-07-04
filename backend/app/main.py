@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
-from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask, SalesTarget, CustomerOperationProfile, OpportunityReview, PartnerGrowthRecord
+from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, AuditChange, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask, SalesTarget, CustomerOperationProfile, OpportunityReview, PartnerGrowthRecord, CustomerIdentity, ChannelRegistrationRule, ChannelRegistrationGovernance, PresalesSlaRule, PresalesSlaTracking, BidConversion, CustomerDecisionNode, CustomerDecisionEdge, CustomerCompetitorInstall, IndustryProductRecommendation, PocRecord, ForecastSnapshot, PresalesAsset, BidScoreCriterion
 from datetime import date, datetime, timezone, timedelta
-import hashlib, os
+import hashlib, os, json, re
 
 CST = timezone(timedelta(hours=8))
 
@@ -18,9 +18,112 @@ Base.metadata.create_all(bind=engine)
 
 AUDIT_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
+AUDIT_ENTITY_MAP = {
+    "customers": Customer,
+    "opportunities": Opportunity,
+    "products": Product,
+    "channel-partners": ChannelPartner,
+    "channel": ChannelPartner,
+    "contacts": Contact,
+    "leads": Lead,
+    "commissions": CommissionRule,
+    "sales-targets": SalesTarget,
+    "channel-registrations": ChannelRegistration,
+    "presales-requests": PresalesRequest,
+    "bid-radar-items": BidRadarItem,
+    "bid-radar-subscriptions": BidRadarSubscription,
+    "customer-identities": CustomerIdentity,
+    "channel-registration-rules": ChannelRegistrationRule,
+    "channel-registration-governance": ChannelRegistrationGovernance,
+    "presales-sla-rules": PresalesSlaRule,
+    "presales-sla-tracking": PresalesSlaTracking,
+    "bid-conversions": BidConversion,
+    "decision-nodes": CustomerDecisionNode,
+    "decision-edges": CustomerDecisionEdge,
+    "competitor-installs": CustomerCompetitorInstall,
+    "industry-product-recommendations": IndustryProductRecommendation,
+    "poc-records": PocRecord,
+    "forecast-snapshots": ForecastSnapshot,
+    "presales-assets": PresalesAsset,
+    "bid-score-criteria": BidScoreCriterion,
+    "opportunity-reviews": OpportunityReview,
+    "partner-growth-records": PartnerGrowthRecord,
+}
+
+def _audit_json_value(value):
+    if hasattr(value, "value"):
+        return value.value
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    return value
+
+def _audit_snapshot(db, model, entity_id):
+    if not model or not entity_id:
+        return None
+    if model is CustomerIdentity:
+        row = db.query(model).filter_by(customer_id=entity_id).first()
+    elif model is ChannelRegistrationGovernance:
+        row = db.query(model).filter_by(registration_id=entity_id).first()
+    else:
+        row = db.query(model).filter_by(id=entity_id).first()
+    if not row:
+        return None
+    return json.dumps({c.name: _audit_json_value(getattr(row, c.name)) for c in row.__table__.columns}, ensure_ascii=False)
+
+def _audit_entity_from_path(path):
+    parts = [p for p in path.split("/") if p]
+    if len(parts) < 3 or parts[0] != "api":
+        return None, None, None
+    entity_key = parts[1]
+    if parts[1] == "security-business" and len(parts) >= 3:
+        if parts[2] == "channel-registrations":
+            entity_key = "channel-registrations"
+        elif parts[2] == "presales-requests":
+            entity_key = "presales-requests"
+        elif parts[2] == "bid-radar" and len(parts) >= 4:
+            entity_key = "bid-radar-" + parts[3]
+    elif parts[1] == "sales-growth" and len(parts) >= 3:
+        if parts[2] == "targets":
+            entity_key = "sales-targets"
+        elif parts[2] == "opportunity-reviews":
+            entity_key = "opportunity-reviews"
+        elif parts[2] == "partner-growth" and len(parts) >= 4 and parts[3] == "records":
+            entity_key = "partner-growth-records"
+    elif parts[1] == "business-excellence" and len(parts) >= 3:
+        if parts[2] in {"industry-product-recommendations", "poc-records", "forecast-snapshots", "presales-assets"}:
+            entity_key = parts[2]
+        elif parts[2] == "customers" and len(parts) >= 5 and parts[4] == "identity":
+            entity_key = "customer-identities"
+        elif parts[2] == "customers" and len(parts) >= 5 and parts[4] == "competitor-installs":
+            entity_key = "competitor-installs"
+        elif parts[2] == "customers" and len(parts) >= 5 and parts[4] == "decision-nodes":
+            entity_key = "decision-nodes"
+        elif parts[2] == "customers" and len(parts) >= 5 and parts[4] == "decision-edges":
+            entity_key = "decision-edges"
+        elif parts[2] == "bid-radar" and len(parts) >= 5 and parts[3] == "items":
+            entity_key = "bid-radar-items"
+        elif parts[2] == "channel-registration-rule":
+            entity_key = "channel-registration-rules"
+        elif parts[2] == "channel-registrations":
+            entity_key = "channel-registrations"
+    entity_id = None
+    for part in parts[2:]:
+        if re.fullmatch(r"\d+", part):
+            entity_id = int(part)
+            break
+    return entity_key, AUDIT_ENTITY_MAP.get(entity_key), entity_id
+
 @app.middleware("http")
 async def audit_write_requests(request, call_next):
     response = None
+    entity_key, entity_model, entity_id = _audit_entity_from_path(request.url.path)
+    before_snapshot = None
+    if request.method in {"PUT", "PATCH", "DELETE"} and request.url.path.startswith("/api/") and entity_model and entity_id:
+        db_before = SessionLocal()
+        try:
+            before_snapshot = _audit_snapshot(db_before, entity_model, entity_id)
+        finally:
+            db_before.close()
     try:
         response = await call_next(request)
         return response
@@ -33,7 +136,7 @@ async def audit_write_requests(request, call_next):
                 if auth_header.startswith("Bearer "):
                     user = get_current_user(db, auth_header.replace("Bearer ", ""))
                 client = request.client.host if request.client else ""
-                db.add(AuditLog(
+                log = AuditLog(
                     user_id=user.id if user else None,
                     username=user.username if user else None,
                     method=request.method,
@@ -42,7 +145,17 @@ async def audit_write_requests(request, call_next):
                     client_ip=client,
                     user_agent=request.headers.get("user-agent", "")[:512],
                     action=f"{request.method} {request.url.path}",
-                ))
+                )
+                db.add(log)
+                db.flush()
+                if entity_model and entity_id and (before_snapshot or request.method in {"PUT", "PATCH", "DELETE"}):
+                    db.add(AuditChange(
+                        audit_log_id=log.id,
+                        entity_type=entity_key,
+                        entity_id=entity_id,
+                        before_snapshot=before_snapshot,
+                        after_snapshot=None if request.method == "DELETE" else _audit_snapshot(db, entity_model, entity_id),
+                    ))
                 db.commit()
             except Exception:
                 db.rollback()
@@ -123,10 +236,14 @@ def seed():
         if not growth_menu:
             db.add(MenuConfig(menu_key="/sales-growth", label="销售增长", is_visible=True, sort_order=56))
             db.commit()
+        excellence_menu = db.query(MenuConfig).filter_by(menu_key="/business-excellence").first()
+        if not excellence_menu:
+            db.add(MenuConfig(menu_key="/business-excellence", label="经营增强", is_visible=True, sort_order=57))
+            db.commit()
     finally:
         db.close()
 
-from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages, commissions, company_utils, export_data, industries, audit, security_business, sales_growth
+from app.routers import auth, customers, opportunities, products, channel, contacts, followups, leads, bidding, import_data, dashboard, users, menu_config, stages, commissions, company_utils, export_data, industries, audit, security_business, sales_growth, business_excellence
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(customers.router, prefix="/api/customers", tags=["Customers"])
@@ -150,6 +267,7 @@ app.include_router(export_data.router, prefix="/api/export", tags=["Export"])
 app.include_router(audit.router, prefix="/api/audit-logs", tags=["AuditLogs"])
 app.include_router(security_business.router, prefix="/api/security-business", tags=["SecurityBusiness"])
 app.include_router(sales_growth.router, prefix="/api/sales-growth", tags=["SalesGrowth"])
+app.include_router(business_excellence.router, prefix="/api/business-excellence", tags=["BusinessExcellence"])
 
 # ===================== Nested customer contacts =====================
 from app.database import get_db

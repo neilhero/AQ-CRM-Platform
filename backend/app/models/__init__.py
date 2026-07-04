@@ -390,3 +390,202 @@ class PartnerGrowthRecord(Base):
     notes = Column(Text)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=now_cst)
+
+class AuditChange(Base):
+    __tablename__ = "audit_changes"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    audit_log_id = Column(Integer, ForeignKey("audit_logs.id"), nullable=True, index=True)
+    entity_type = Column(String(64), index=True)
+    entity_id = Column(Integer, nullable=True, index=True)
+    before_snapshot = Column(Text)
+    after_snapshot = Column(Text)
+    created_at = Column(DateTime, default=now_cst)
+
+class CustomerIdentity(Base):
+    __tablename__ = "customer_identities"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), unique=True, nullable=False, index=True)
+    unified_social_credit_code = Column(String(64), index=True)
+    short_name = Column(String(128), index=True)
+    aliases = Column(Text)
+    parent_customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True, index=True)
+    normalized_name = Column(String(256), index=True)
+    source = Column(String(64), default="manual")
+    updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
+    created_at = Column(DateTime, default=now_cst)
+
+class CustomerMergeLog(Base):
+    __tablename__ = "customer_merge_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_customer_id = Column(Integer, nullable=False, index=True)
+    source_customer_name = Column(String(256))
+    target_customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    target_customer_name = Column(String(256))
+    reason = Column(Text)
+    merged_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=now_cst)
+
+class ChannelRegistrationRule(Base):
+    __tablename__ = "channel_registration_rules"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(128), nullable=False, default="默认报备规则")
+    default_protection_days = Column(Integer, default=90)
+    max_extensions = Column(Integer, default=1)
+    extension_days = Column(Integer, default=30)
+    require_evidence = Column(Boolean, default=True)
+    inactive_days_to_warn = Column(Integer, default=14)
+    inactive_days_to_expire = Column(Integer, default=30)
+    is_active = Column(Boolean, default=True, index=True)
+    notes = Column(Text)
+    updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
+    created_at = Column(DateTime, default=now_cst)
+
+class ChannelRegistrationGovernance(Base):
+    __tablename__ = "channel_registration_governance"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    registration_id = Column(Integer, ForeignKey("channel_registrations.id"), unique=True, nullable=False, index=True)
+    evidence_summary = Column(Text)
+    extension_count = Column(Integer, default=0)
+    last_activity_date = Column(Date, nullable=True, index=True)
+    invalid_reason = Column(Text)
+    owner_comment = Column(Text)
+    updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
+    created_at = Column(DateTime, default=now_cst)
+
+class PresalesSlaRule(Base):
+    __tablename__ = "presales_sla_rules"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    request_type = Column(String(64), unique=True, nullable=False, index=True)
+    label = Column(String(128), nullable=False)
+    response_hours = Column(Integer, default=24)
+    delivery_hours = Column(Integer, default=72)
+    is_active = Column(Boolean, default=True, index=True)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=now_cst)
+
+class PresalesSlaTracking(Base):
+    __tablename__ = "presales_sla_tracking"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    request_id = Column(Integer, ForeignKey("presales_requests.id"), unique=True, nullable=False, index=True)
+    response_due_at = Column(DateTime, nullable=True, index=True)
+    delivery_due_at = Column(DateTime, nullable=True, index=True)
+    responded_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    sla_status = Column(String(32), default="pending", index=True)
+    notes = Column(Text)
+    updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
+    created_at = Column(DateTime, default=now_cst)
+
+class BidConversion(Base):
+    __tablename__ = "bid_conversions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    bid_item_id = Column(Integer, ForeignKey("bid_radar_items.id"), nullable=False, index=True)
+    lead_id = Column(Integer, ForeignKey("leads.id"), nullable=True)
+    opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=True)
+    converted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    conversion_type = Column(String(32), default="lead", index=True)
+    created_at = Column(DateTime, default=now_cst)
+
+class CustomerDecisionNode(Base):
+    __tablename__ = "customer_decision_nodes"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    name = Column(String(128), nullable=False)
+    role = Column(String(64))
+    department = Column(String(128))
+    influence = Column(Integer, default=3)
+    attitude = Column(String(32), default="neutral", index=True)
+    relationship_strength = Column(Integer, default=3)
+    contact_id = Column(Integer, ForeignKey("contacts.id"), nullable=True)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=now_cst)
+
+class CustomerDecisionEdge(Base):
+    __tablename__ = "customer_decision_edges"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    source_node_id = Column(Integer, ForeignKey("customer_decision_nodes.id"), nullable=False)
+    target_node_id = Column(Integer, ForeignKey("customer_decision_nodes.id"), nullable=False)
+    relation = Column(String(64), default="influence")
+    strength = Column(Integer, default=3)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=now_cst)
+
+class CustomerCompetitorInstall(Base):
+    __tablename__ = "customer_competitor_installs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    competitor_name = Column(String(128), nullable=False, index=True)
+    product_line = Column(String(128), index=True)
+    product_name = Column(String(256))
+    contract_end_date = Column(Date, nullable=True, index=True)
+    satisfaction = Column(Integer, default=3)
+    replacement_chance = Column(String(32), default="medium", index=True)
+    pain_points = Column(Text)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=now_cst)
+
+class IndustryProductRecommendation(Base):
+    __tablename__ = "industry_product_recommendations"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    industry = Column(String(64), nullable=False, index=True)
+    product_line = Column(String(128), nullable=False, index=True)
+    priority = Column(Integer, default=3, index=True)
+    scenario = Column(Text)
+    pitch = Column(Text)
+    is_active = Column(Boolean, default=True, index=True)
+    created_at = Column(DateTime, default=now_cst)
+
+class PocRecord(Base):
+    __tablename__ = "poc_records"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    opportunity_id = Column(Integer, ForeignKey("opportunities.id"), nullable=False, index=True)
+    presales_request_id = Column(Integer, ForeignKey("presales_requests.id"), nullable=True, index=True)
+    test_goal = Column(Text)
+    environment = Column(Text)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
+    result = Column(String(32), default="pending", index=True)
+    customer_feedback = Column(Text)
+    next_step = Column(Text)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
+    created_at = Column(DateTime, default=now_cst)
+
+class ForecastSnapshot(Base):
+    __tablename__ = "forecast_snapshots"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    period_label = Column(String(32), nullable=False, index=True)
+    group_by = Column(String(32), default="sales", index=True)
+    group_key = Column(String(128), default="全部", index=True)
+    commit_amount = Column(Float, default=0.0)
+    best_case_amount = Column(Float, default=0.0)
+    pipeline_amount = Column(Float, default=0.0)
+    weighted_amount = Column(Float, default=0.0)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    snapshot_date = Column(Date, default=date.today, index=True)
+    created_at = Column(DateTime, default=now_cst)
+
+class PresalesAsset(Base):
+    __tablename__ = "presales_assets"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(256), nullable=False, index=True)
+    asset_type = Column(String(64), default="solution", index=True)
+    product_line = Column(String(128), index=True)
+    industry = Column(String(64), index=True)
+    url = Column(String(512))
+    summary = Column(Text)
+    tags = Column(String(256))
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=now_cst)
+
+class BidScoreCriterion(Base):
+    __tablename__ = "bid_score_criteria"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    bid_item_id = Column(Integer, ForeignKey("bid_radar_items.id"), nullable=False, index=True)
+    criterion = Column(String(256), nullable=False)
+    weight = Column(Float, default=0.0)
+    our_score = Column(Float, default=0.0)
+    risk_level = Column(String(32), default="medium", index=True)
+    suggestion = Column(Text)
+    created_at = Column(DateTime, default=now_cst)

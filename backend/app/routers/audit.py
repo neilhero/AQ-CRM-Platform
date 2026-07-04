@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import datetime, date, time
 
 from app.database import get_db
-from app.models import AuditLog
+from app.models import AuditLog, AuditChange
 from app.routers.utils import require_admin
 
 router = APIRouter()
@@ -35,6 +35,10 @@ def list_audit_logs(
         q = q.filter(AuditLog.created_at <= datetime.combine(end_date, time.max))
     total = q.count()
     rows = q.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit).all()
+    changes = {
+        change.audit_log_id: change
+        for change in db.query(AuditChange).filter(AuditChange.audit_log_id.in_([row.id for row in rows] or [-1])).all()
+    }
     return {
         "total": total,
         "items": [
@@ -49,6 +53,16 @@ def list_audit_logs(
                 "user_agent": row.user_agent,
                 "action": row.action,
                 "created_at": row.created_at.isoformat() if row.created_at else None,
+                "change": (
+                    {
+                        "entity_type": changes[row.id].entity_type,
+                        "entity_id": changes[row.id].entity_id,
+                        "before_snapshot": changes[row.id].before_snapshot,
+                        "after_snapshot": changes[row.id].after_snapshot,
+                    }
+                    if row.id in changes
+                    else None
+                ),
             }
             for row in rows
         ],

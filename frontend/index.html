@@ -2041,6 +2041,13 @@ function AppLayout(props) {
 
 
 
+
+    { key: '/business-excellence', icon: IC('ControlOutlined'), label: '经营增强' },
+
+
+
+
+
     { key: '/products', icon: IC('AppstoreOutlined'), label: '产品管理' },
 
 
@@ -2273,7 +2280,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/security-business': '网安业务', '/sales-growth': '销售增长', '/products': '产品管理', '/partners': '伙伴档案', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/partners': '伙伴档案', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
 
 
 
@@ -19883,6 +19890,183 @@ function SalesGrowthPage() {
   );
 }
 
+function BusinessExcellencePage() {
+  var _dash = useState(null), dash = _dash[0], setDash = _dash[1];
+  var _dupes = useState([]), dupes = _dupes[0], setDupes = _dupes[1];
+  var _sla = useState([]), sla = _sla[0], setSla = _sla[1];
+  var _credits = useState([]), credits = _credits[0], setCredits = _credits[1];
+  var _maturity = useState([]), maturity = _maturity[0], setMaturity = _maturity[1];
+  var _recs = useState([]), recs = _recs[0], setRecs = _recs[1];
+  var _assets = useState([]), assets = _assets[0], setAssets = _assets[1];
+  var _bids = useState([]), bids = _bids[0], setBids = _bids[1];
+  var _accuracy = useState([]), accuracy = _accuracy[0], setAccuracy = _accuracy[1];
+  var _loading = useState(false), loading = _loading[0], setLoading = _loading[1];
+  var _period = useState((function(){ var d = new Date(); return d.getFullYear() + 'Q' + (Math.floor(d.getMonth() / 3) + 1); })()), period = _period[0], setPeriod = _period[1];
+  var _assetForm = Form.useForm(), assetForm = _assetForm[0];
+  var _recForm = Form.useForm(), recForm = _recForm[0];
+  function loadAll() {
+    setLoading(true);
+    Promise.all([
+      api('GET', '/business-excellence/bi-dashboard'),
+      api('GET', '/business-excellence/customer-duplicates'),
+      api('GET', '/business-excellence/presales-sla'),
+      api('GET', '/business-excellence/partner-credit-scores'),
+      api('GET', '/business-excellence/customer-maturity-scores'),
+      api('GET', '/business-excellence/industry-product-recommendations'),
+      api('GET', '/business-excellence/presales-assets'),
+      api('GET', '/security-business/bid-radar/items'),
+      api('GET', '/business-excellence/forecast-accuracy?period_label=' + encodeURIComponent(period))
+    ]).then(function(res) {
+      setDash(res[0] || null);
+      setDupes(res[1] || []);
+      setSla(res[2] || []);
+      setCredits(res[3] || []);
+      setMaturity(res[4] || []);
+      setRecs(res[5] || []);
+      setAssets(res[6] || []);
+      setBids(res[7] || []);
+      setAccuracy(res[8] || []);
+    }).catch(function(err) { message.error(err.message || '经营增强数据加载失败'); }).finally(function(){ setLoading(false); });
+  }
+  useEffect(function(){ loadAll(); }, []);
+  function seedRecs() {
+    api('POST', '/business-excellence/industry-product-recommendations/seed').then(function(d){ message.success('已补充推荐矩阵 ' + (d.created || 0) + ' 条'); loadAll(); }).catch(function(err){ message.error(err.message || '生成失败'); });
+  }
+  function saveRec() {
+    recForm.validateFields().then(function(v){ return api('POST', '/business-excellence/industry-product-recommendations', v); }).then(function(){ message.success('推荐已保存'); recForm.resetFields(); loadAll(); }).catch(function(err){ message.error(err.message || '保存失败'); });
+  }
+  function saveAsset() {
+    assetForm.validateFields().then(function(v){ return api('POST', '/business-excellence/presales-assets', v); }).then(function(){ message.success('资产已保存'); assetForm.resetFields(); loadAll(); }).catch(function(err){ message.error(err.message || '保存失败'); });
+  }
+  function snapshotForecast() {
+    api('POST', '/business-excellence/forecast-snapshots', { period_label: period, group_by: 'sales' }).then(function(d){ message.success('已生成预测快照 ' + (d.created || 0) + ' 条'); loadAll(); }).catch(function(err){ message.error(err.message || '快照失败'); });
+  }
+  function convertBid(row, type) {
+    api('POST', '/business-excellence/bid-radar/items/' + row.id + '/convert', { conversion_type: type }).then(function(d){ message.success(type === 'opportunity' ? '已转商机' : '已转线索'); loadAll(); }).catch(function(err){ message.error(err.message || '转化失败'); });
+  }
+  function parseScore(row) {
+    api('POST', '/business-excellence/bid-radar/items/' + row.id + '/parse-score').then(function(rows){ message.success('已解析评分项 ' + (rows || []).length + ' 条'); }).catch(function(err){ message.error(err.message || '解析失败'); });
+  }
+  var overview = (dash && dash.overview) || {};
+  var risk = (dash && dash.risk) || {};
+  var closed = (dash && dash.closed_loop) || {};
+  var dashboardTab = e('div', null,
+    e(Row, { gutter: 12, style: { marginBottom: 16 } },
+      e(Col, { span: 4 }, e(Card, { size: 'small' }, e(Statistic, { title: '客户数', value: overview.customers || 0 }))),
+      e(Col, { span: 4 }, e(Card, { size: 'small' }, e(Statistic, { title: '活跃金额', value: overview.active_amount || 0, suffix: '万' }))),
+      e(Col, { span: 4 }, e(Card, { size: 'small' }, e(Statistic, { title: '赢单金额', value: overview.won_amount || 0, suffix: '万' }))),
+      e(Col, { span: 4 }, e(Card, { size: 'small' }, e(Statistic, { title: '售前逾期', value: risk.presales_overdue || 0 }))),
+      e(Col, { span: 4 }, e(Card, { size: 'small' }, e(Statistic, { title: '报备冲突', value: risk.channel_conflicts || 0 }))),
+      e(Col, { span: 4 }, e(Card, { size: 'small' }, e(Statistic, { title: '闭环资产', value: (closed.poc_records || 0) + (closed.opportunity_reviews || 0) + (closed.presales_assets || 0) })))
+    ),
+    e(Row, { gutter: 16 },
+      e(Col, { span: 12 }, e(Card, { title: '客户重复候选', size: 'small' }, e(Table, { rowKey: 'match_key', size: 'small', dataSource: dupes, pagination: { pageSize: 5 }, columns: [
+        { title: '匹配键', dataIndex: 'match_key', width: 160, ellipsis: true },
+        { title: '疑似重复客户', render: function(_, r){ return (r.customers || []).map(function(c){ return c.name; }).join(' / '); } }
+      ] }))),
+      e(Col, { span: 12 }, e(Card, { title: '客户安全成熟度', size: 'small' }, e(Table, { rowKey: 'customer_id', size: 'small', dataSource: maturity.slice(0, 8), pagination: false, columns: [
+        { title: '客户', dataIndex: 'customer_name', ellipsis: true },
+        { title: '行业', dataIndex: 'industry', width: 90 },
+        { title: '成熟度', dataIndex: 'maturity_score', width: 90, render: function(v){ return e(Tag, { color: v >= 80 ? 'green' : v >= 60 ? 'blue' : 'orange' }, v); } }
+      ] })))
+    )
+  );
+  var bidTab = e('div', null,
+    e(Table, { rowKey: 'id', loading: loading, dataSource: bids, pagination: { pageSize: 8 }, columns: [
+      { title: '招标项目', dataIndex: 'title', ellipsis: true },
+      { title: '采购单位', dataIndex: 'buyer', width: 160 },
+      { title: '预算', dataIndex: 'budget', width: 90, render: function(v){ return (v || 0) + '万'; } },
+      { title: '产品线', dataIndex: 'matched_product_line', width: 150 },
+      { title: '状态', dataIndex: 'status', width: 90 },
+      { title: '操作', width: 250, render: function(_, r){ return e(Space, null, e(Button, { size: 'small', onClick: function(){ convertBid(r, 'lead'); } }, '转线索'), e(Button, { size: 'small', type: 'primary', onClick: function(){ convertBid(r, 'opportunity'); } }, '转商机'), e(Button, { size: 'small', onClick: function(){ parseScore(r); } }, '解析评分')); } }
+    ] })
+  );
+  var slaTab = e('div', null,
+    e(Table, { rowKey: function(r){ return (r.request && r.request.id) || Math.random(); }, loading: loading, dataSource: sla, pagination: { pageSize: 8 }, columns: [
+      { title: '申请', render: function(_, r){ return (r.request && r.request.title) || '-'; }, ellipsis: true },
+      { title: '类型', render: function(_, r){ return (r.request && r.request.request_type) || '-'; }, width: 120 },
+      { title: '排期', render: function(_, r){ return (r.request && r.request.scheduled_date) || '-'; }, width: 110 },
+      { title: '交付截止', render: function(_, r){ return (r.sla && r.sla.delivery_due_at) || '-'; }, width: 170 },
+      { title: 'SLA状态', dataIndex: 'computed_status', width: 110, render: function(v){ return e(Tag, { color: v === 'overdue' ? 'red' : v === 'done' ? 'green' : 'blue' }, v || 'pending'); } }
+    ] })
+  );
+  var partnerTab = e('div', null,
+    e(Table, { rowKey: 'partner_id', loading: loading, dataSource: credits, pagination: false, columns: [
+      { title: '伙伴', dataIndex: 'partner_name' },
+      { title: '等级', dataIndex: 'level', width: 90 },
+      { title: '信用分', dataIndex: 'credit_score', width: 100, render: function(v){ return e(Progress, { percent: Math.round(v || 0), size: 'small' }); } },
+      { title: '累计业绩', dataIndex: 'performance', width: 110, render: function(v){ return (v || 0) + '万'; } },
+      { title: '认证/培训/违规', width: 140, render: function(_, r){ return (r.certifications || 0) + ' / ' + (r.trainings || 0) + ' / ' + (r.violations || 0); } }
+    ] })
+  );
+  var matrixTab = e('div', null,
+    e(Card, { size: 'small', title: '行业-产品推荐矩阵', extra: e(Button, { size: 'small', onClick: seedRecs }, '生成默认矩阵'), style: { marginBottom: 16 } },
+      e(Form, { form: recForm, layout: 'vertical' },
+        e(Row, { gutter: 12 },
+          e(Col, { span: 4 }, e(Form.Item, { name: 'industry', label: '行业', rules: [{ required: true }] }, e(Input))),
+          e(Col, { span: 5 }, e(Form.Item, { name: 'product_line', label: '产品线', rules: [{ required: true }] }, e(Input))),
+          e(Col, { span: 3 }, e(Form.Item, { name: 'priority', label: '优先级' }, e(InputNumber, { min: 1, max: 5, style: { width: '100%' } }))),
+          e(Col, { span: 8 }, e(Form.Item, { name: 'scenario', label: '场景' }, e(Input))),
+          e(Col, { span: 4 }, e(Form.Item, { label: ' ' }, e(Button, { type: 'primary', onClick: saveRec }, '保存')))
+        )
+      )
+    ),
+    e(Table, { rowKey: 'id', size: 'small', dataSource: recs, pagination: { pageSize: 8 }, columns: [
+      { title: '行业', dataIndex: 'industry', width: 100 },
+      { title: '产品线', dataIndex: 'product_line', width: 150 },
+      { title: '优先级', dataIndex: 'priority', width: 80 },
+      { title: '场景', dataIndex: 'scenario', ellipsis: true },
+      { title: '话术', dataIndex: 'pitch', ellipsis: true }
+    ] })
+  );
+  var assetTab = e('div', null,
+    e(Card, { size: 'small', title: '售前资产库', style: { marginBottom: 16 } },
+      e(Form, { form: assetForm, layout: 'vertical' },
+        e(Row, { gutter: 12 },
+          e(Col, { span: 5 }, e(Form.Item, { name: 'title', label: '资产标题', rules: [{ required: true }] }, e(Input))),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'asset_type', label: '类型' }, e(Select, null, e(Option, { value: 'solution' }, '方案'), e(Option, { value: 'bid' }, '标书'), e(Option, { value: 'case' }, '案例'), e(Option, { value: 'poc' }, 'POC')))),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'product_line', label: '产品线' }, e(Input))),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'industry', label: '行业' }, e(Input))),
+          e(Col, { span: 5 }, e(Form.Item, { name: 'url', label: '链接' }, e(Input))),
+          e(Col, { span: 2 }, e(Form.Item, { label: ' ' }, e(Button, { type: 'primary', onClick: saveAsset }, '保存')))
+        ),
+        e(Form.Item, { name: 'summary', label: '摘要' }, e(TextArea, { rows: 2 }))
+      )
+    ),
+    e(Table, { rowKey: 'id', size: 'small', dataSource: assets, pagination: { pageSize: 8 }, columns: [
+      { title: '标题', dataIndex: 'title', ellipsis: true },
+      { title: '类型', dataIndex: 'asset_type', width: 90 },
+      { title: '产品线', dataIndex: 'product_line', width: 130 },
+      { title: '行业', dataIndex: 'industry', width: 90 },
+      { title: '链接', dataIndex: 'url', width: 160, render: function(v){ return v ? e('a', { href: v, target: '_blank' }, '打开') : '-'; } }
+    ] })
+  );
+  var forecastTab = e('div', null,
+    e(Card, { size: 'small', title: '预测准确率回看', extra: e(Space, null, e(Input, { size: 'small', style: { width: 110 }, value: period, onChange: function(ev){ setPeriod(ev.target.value); } }), e(Button, { size: 'small', onClick: snapshotForecast }, '生成快照'), e(Button, { size: 'small', onClick: loadAll }, '刷新')) },
+      e(Table, { rowKey: 'id', dataSource: accuracy, pagination: { pageSize: 8 }, columns: [
+        { title: '周期', dataIndex: 'period_label', width: 100 },
+        { title: '维度', dataIndex: 'group_key', ellipsis: true },
+        { title: 'Commit', dataIndex: 'commit_amount', width: 100, render: function(v){ return (v || 0) + '万'; } },
+        { title: '加权预测', dataIndex: 'weighted_amount', width: 110, render: function(v){ return (v || 0) + '万'; } },
+        { title: '实际', dataIndex: 'actual_amount', width: 100, render: function(v){ return (v || 0) + '万'; } },
+        { title: '准确率', dataIndex: 'accuracy_rate', width: 100, render: function(v){ return (v || 0) + '%'; } }
+      ] })
+    )
+  );
+  return e('div', null,
+    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '🧭  经营增强'), e('p', { className: 'page-desc' }, '客户治理、渠道规则、售前 SLA、招标转化、推荐矩阵、资产库、预测回看和 BI 驾驶舱')),
+    e(Tabs, { defaultActiveKey: 'dashboard' },
+      e(Tabs.TabPane, { tab: 'BI驾驶舱', key: 'dashboard' }, dashboardTab),
+      e(Tabs.TabPane, { tab: '招标转化', key: 'bid' }, bidTab),
+      e(Tabs.TabPane, { tab: '售前SLA', key: 'sla' }, slaTab),
+      e(Tabs.TabPane, { tab: '渠道信用', key: 'partner' }, partnerTab),
+      e(Tabs.TabPane, { tab: '推荐矩阵', key: 'matrix' }, matrixTab),
+      e(Tabs.TabPane, { tab: '售前资产', key: 'asset' }, assetTab),
+      e(Tabs.TabPane, { tab: '预测回看', key: 'forecast' }, forecastTab)
+    )
+  );
+}
+
 function App() {
 
 
@@ -20182,6 +20366,20 @@ function App() {
 
 
     content = e(SalesGrowthPage);
+
+
+
+
+
+
+  } else if (hash === '/business-excellence') {
+
+
+
+
+
+
+    content = e(BusinessExcellencePage);
 
 
 
