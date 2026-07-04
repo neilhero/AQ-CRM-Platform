@@ -17435,7 +17435,7 @@ function FollowUpWorkbench() {
 
 
 
-      api('POST', '/follow-ups/' + qk.id + '/quick-log', v).then(function() {
+      api('POST', '/follow-ups/' + qk.id + '/quick-log', Object.assign({}, v, { complete_reminder: true })).then(function() {
 
 
 

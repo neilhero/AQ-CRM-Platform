@@ -13,6 +13,7 @@ router = APIRouter()
 class QuickLogReq(BaseModel):
     content: str = ""
     contact_person: Optional[str] = None
+    complete_reminder: bool = False
 
 def _opp_perm_filter(q, user):
     if user.role == "admin": return q
@@ -100,5 +101,7 @@ def quick_log(fid: int, req: QuickLogReq, db: Session=Depends(get_db), user=Depe
                   created_at=datetime.now(CST))
     db.add(fu)
     opp.updated_at = date.today()
+    if req.complete_reminder:
+        opp.next_follow_up_date = None
     db.commit()
     return {"message": "logged", "follow_up_id": fu.id}
