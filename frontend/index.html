@@ -2048,7 +2048,10 @@ function AppLayout(props) {
 
 
 
-    { key: '/presales', icon: IC('ToolOutlined'), label: '售前协同' },
+    { key: 'group-presales', icon: IC('ToolOutlined'), label: '售前协同', children: [
+      { key: '/presales', label: '售前系统' },
+      { key: '/presales/assets', label: '售前资产' }
+    ] },
 
 
 
@@ -2067,7 +2070,10 @@ function AppLayout(props) {
 
 
 
-    { key: '/products', icon: IC('AppstoreOutlined'), label: '产品管理' },
+    { key: 'group-product', icon: IC('AppstoreOutlined'), label: '产品管理', children: [
+      { key: '/products', label: '产品管理' },
+      { key: '/products/recommendations', label: '推荐产品' }
+    ] },
 
 
 
@@ -2264,7 +2270,9 @@ function AppLayout(props) {
 
   if (hash.startsWith('/customers')) { selKey = (hash === '/customers/profile' || hash === '/customers/operations') ? hash : '/customers'; openKeys = ['group-customer']; }
   if (hash.startsWith('/leads')) { selKey = hash; openKeys = ['group-leads']; }
+  if (hash.startsWith('/presales')) { selKey = hash; openKeys = ['group-presales']; }
   if (hash.startsWith('/opportunities')) { selKey = hash; openKeys = ['group-opp']; }
+  if (hash.startsWith('/products')) { selKey = hash === '/products/recommendations' ? '/products/recommendations' : '/products'; openKeys = ['group-product']; }
 
 
 
@@ -2304,7 +2312,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/leads/bid-conversion': '招标转化', '/presales': '售前协同', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/growth': '渠道伙伴成长', '/partners/credit': '渠道信用', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/leads/bid-conversion': '招标转化', '/presales': '售前系统', '/presales/assets': '售前资产', '/security-business': '网安业务', '/sales-growth': '销售增长', '/business-excellence': '经营增强', '/products': '产品管理', '/products/recommendations': '推荐产品', '/partners': '伙伴档案', '/partners/registration': '项目报备/撞单', '/partners/growth': '渠道伙伴成长', '/partners/credit': '渠道信用', '/partners/performance': '伙伴绩效', '/partners/commission': '返点管理' };
 
 
 
@@ -20066,6 +20074,8 @@ function SalesGrowthPage(props) {
 function BusinessExcellencePage(props) {
   var bidOnly = props && props.bidOnly;
   var partnerCreditOnly = props && props.partnerCreditOnly;
+  var assetOnly = props && props.assetOnly;
+  var recommendationOnly = props && props.recommendationOnly;
   var _dash = useState(null), dash = _dash[0], setDash = _dash[1];
   var _dupes = useState([]), dupes = _dupes[0], setDupes = _dupes[1];
   var _sla = useState([]), sla = _sla[0], setSla = _sla[1];
@@ -20105,7 +20115,7 @@ function BusinessExcellencePage(props) {
   }
   useEffect(function(){ loadAll(); }, []);
   function seedRecs() {
-    api('POST', '/business-excellence/industry-product-recommendations/seed').then(function(d){ message.success('已补充推荐矩阵 ' + (d.created || 0) + ' 条'); loadAll(); }).catch(function(err){ message.error(err.message || '生成失败'); });
+    api('POST', '/business-excellence/industry-product-recommendations/seed').then(function(d){ message.success('已补充推荐产品 ' + (d.created || 0) + ' 条'); loadAll(); }).catch(function(err){ message.error(err.message || '生成失败'); });
   }
   function saveRec() {
     recForm.validateFields().then(function(v){ return api('POST', '/business-excellence/industry-product-recommendations', v); }).then(function(){ message.success('推荐已保存'); recForm.resetFields(); loadAll(); }).catch(function(err){ message.error(err.message || '保存失败'); });
@@ -20175,7 +20185,7 @@ function BusinessExcellencePage(props) {
     ] })
   );
   var matrixTab = e('div', null,
-    e(Card, { size: 'small', title: '行业-产品推荐矩阵', extra: e(Button, { size: 'small', onClick: seedRecs }, '生成默认矩阵'), style: { marginBottom: 16 } },
+    e(Card, { size: 'small', title: '行业推荐产品', extra: e(Button, { size: 'small', onClick: seedRecs }, '生成默认推荐'), style: { marginBottom: 16 } },
       e(Form, { form: recForm, layout: 'vertical' },
         e(Row, { gutter: 12 },
           e(Col, { span: 4 }, e(Form.Item, { name: 'industry', label: '行业', rules: [{ required: true }] }, e(Input))),
@@ -20240,13 +20250,23 @@ function BusinessExcellencePage(props) {
       partnerTab
     );
   }
+  if (assetOnly) {
+    return e('div', null,
+      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '售前资产'), e('p', { className: 'page-desc' }, '沉淀方案、标书、案例、POC 等售前材料，按行业和产品线复用')),
+      assetTab
+    );
+  }
+  if (recommendationOnly) {
+    return e('div', null,
+      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '推荐产品'), e('p', { className: 'page-desc' }, '按行业、场景和优先级维护产品推荐关系，支撑销售选型和方案组合')),
+      matrixTab
+    );
+  }
   return e('div', null,
-    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '🧭  经营增强'), e('p', { className: 'page-desc' }, '客户治理、售前 SLA、推荐矩阵、资产库、预测回看和 BI 驾驶舱')),
+    e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '🧭  经营增强'), e('p', { className: 'page-desc' }, '客户治理、售前 SLA、预测回看和 BI 驾驶舱')),
     e(Tabs, { defaultActiveKey: 'dashboard' },
       e(Tabs.TabPane, { tab: 'BI驾驶舱', key: 'dashboard' }, dashboardTab),
       e(Tabs.TabPane, { tab: '售前SLA', key: 'sla' }, slaTab),
-      e(Tabs.TabPane, { tab: '推荐矩阵', key: 'matrix' }, matrixTab),
-      e(Tabs.TabPane, { tab: '售前资产', key: 'asset' }, assetTab),
       e(Tabs.TabPane, { tab: '预测回看', key: 'forecast' }, forecastTab)
     )
   );
@@ -20540,6 +20560,8 @@ function App() {
     content = e(BusinessExcellencePage, { bidOnly: true });
   } else if (hash === '/presales') {
     content = e(SecurityBusinessPage, { presalesOnly: true });
+  } else if (hash === '/presales/assets') {
+    content = e(BusinessExcellencePage, { assetOnly: true });
   } else if (hash === '/security-business') {
 
 
@@ -20598,6 +20620,8 @@ function App() {
 
 
 
+  } else if (hash === '/products/recommendations') {
+    content = e(BusinessExcellencePage, { recommendationOnly: true });
   } else if (hash === '/partners') {
 
 
