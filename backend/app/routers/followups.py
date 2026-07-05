@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta, date
 from app.database import get_db
 from app.models import FollowUp, Opportunity, User
+from app.permissions import can_view_all_sales_data, is_channel_only
 from app.routers.utils import require_user
 
 CST = timezone(timedelta(hours=8))
@@ -16,9 +17,19 @@ class QuickLogReq(BaseModel):
     complete_reminder: bool = False
 
 def _opp_perm_filter(q, user):
-    if user.role == "admin": return q
-    if user.role == "channel_manager": return q.filter(Opportunity.opp_type == "channel")
+    if can_view_all_sales_data(user): return q
+    if is_channel_only(user): return q.filter(Opportunity.opp_type == "channel")
     return q.filter(Opportunity.sales_rep_id == user.id)
+
+def _check_opp_access(opp, user):
+    if can_view_all_sales_data(user):
+        return
+    if is_channel_only(user):
+        if opp.opp_type and opp.opp_type.value != "channel":
+            raise HTTPException(403, "Access denied")
+        return
+    if opp.sales_rep_id != user.id:
+        raise HTTPException(403, "Access denied")
 
 @router.get("")
 def list_followups(opportunity_id: Optional[int]=Query(None),
@@ -46,11 +57,7 @@ def create_followup(opportunity_id: int, content: str = "", contact_person: Opti
     # Check access to the opportunity
     opp = db.query(Opportunity).filter_by(id=opportunity_id).first()
     if not opp: raise HTTPException(404, "Opportunity not found")
-    if user.role != "admin":
-        if user.role == "channel_manager" and opp.opp_type and opp.opp_type.value != "channel":
-            raise HTTPException(403, "Access denied")
-        if user.role not in ("admin", "channel_manager") and opp.sales_rep_id != user.id:
-            raise HTTPException(403, "Access denied")
+    _check_opp_access(opp, user)
     fu = FollowUp(opportunity_id=opportunity_id, creator_id=user.id,
                   content=content, contact_person=contact_person, created_at=datetime.now(CST))
     db.add(fu)
@@ -92,11 +99,7 @@ def today_followups(db: Session=Depends(get_db), user=Depends(require_user)):
 def quick_log(fid: int, req: QuickLogReq, db: Session=Depends(get_db), user=Depends(require_user)):
     opp = db.query(Opportunity).filter_by(id=fid).first()
     if not opp: raise HTTPException(404, "Not found")
-    if user.role != "admin":
-        if user.role == "channel_manager" and opp.opp_type and opp.opp_type.value != "channel":
-            raise HTTPException(403, "Access denied")
-        if user.role not in ("admin", "channel_manager") and opp.sales_rep_id != user.id:
-            raise HTTPException(403, "Access denied")
+    _check_opp_access(opp, user)
     fu = FollowUp(opportunity_id=fid, creator_id=user.id, content=req.content or "快捷跟进", contact_person=req.contact_person,
                   created_at=datetime.now(CST))
     db.add(fu)

@@ -1,7 +1,10 @@
 from fastapi import Depends, HTTPException, Header
 from sqlalchemy.orm import Session
+
 from app.database import get_db
+from app.permissions import require_admin_role
 from app.services.auth import get_current_user
+
 
 def require_user(db: Session = Depends(get_db), authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
@@ -12,7 +15,6 @@ def require_user(db: Session = Depends(get_db), authorization: str = Header(None
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
 
+
 def require_admin(user=Depends(require_user)):
-    if user.role != "admin":
-        raise HTTPException(403, "仅管理员可操作")
-    return user
+    return require_admin_role(user)

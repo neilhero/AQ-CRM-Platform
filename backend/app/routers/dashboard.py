@@ -4,15 +4,28 @@ from sqlalchemy import func
 from datetime import date, datetime, timezone, timedelta
 from app.database import get_db
 from app.models import Opportunity, Customer, Lead, User, FollowUp
+from app.permissions import can_view_all_sales_data, is_channel_only
 from app.routers.utils import require_user
 
 CST = timezone(timedelta(hours=8))
 router = APIRouter()
 
 def _perm_filter(q, user):
-    if user.role == "admin": return q
-    if user.role == "channel_manager": return q.filter(Opportunity.opp_type == "channel")
+    if can_view_all_sales_data(user): return q
+    if is_channel_only(user): return q.filter(Opportunity.opp_type == "channel")
     return q.filter(Opportunity.sales_rep_id == user.id)
+
+def _customer_count(db: Session, user):
+    if can_view_all_sales_data(user):
+        return db.query(Customer).count()
+    return db.query(Customer).filter(Customer.owner_id == user.id).count()
+
+def _lead_count(db: Session, user):
+    if can_view_all_sales_data(user):
+        return db.query(Lead).count()
+    if is_channel_only(user):
+        return db.query(Lead).filter(Lead.source == "partner").count()
+    return db.query(Lead).filter(Lead.assigned_to == user.id).count()
 
 @router.get("/stats")
 def dashboard_stats(db: Session=Depends(get_db), user=Depends(require_user)):
@@ -63,8 +76,8 @@ def dashboard_stats(db: Session=Depends(get_db), user=Depends(require_user)):
         "probability_distribution": probability_dist,
         "weekly_new": weekly_new,
         "weekly_updated": weekly_updated,
-        "customer_count": db.query(Customer).count(),
-        "lead_count": db.query(Lead).count(),
+        "customer_count": _customer_count(db, user),
+        "lead_count": _lead_count(db, user),
         "overdue_reminders": [],
         "upcoming_reminders": [],
         "recent_follow_ups": recent_follow_ups
@@ -73,9 +86,9 @@ def dashboard_stats(db: Session=Depends(get_db), user=Depends(require_user)):
 @router.get("/sales-performance")
 def sales_performance(period: str=Query("month"), db: Session=Depends(get_db), user=Depends(require_user)):
     # Filter users: admin sees all, sales sees self, channel_manager sees all
-    if user.role == "admin":
+    if can_view_all_sales_data(user):
         users = db.query(User).filter_by(is_active=True).all()
-    elif user.role == "channel_manager":
+    elif is_channel_only(user):
         users = db.query(User).filter_by(is_active=True).all()
     else:
         users = [user]

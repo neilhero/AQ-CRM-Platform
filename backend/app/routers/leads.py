@@ -4,11 +4,29 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from app.database import get_db
 from app.models import Lead, LeadStatus, User, Customer, Opportunity
+from app.permissions import ROLE_ADMIN, ROLE_CHANNEL_MANAGER, ROLE_MANAGER, ROLE_SALES, can_view_all_sales_data, is_channel_only
 from app.schemas import LeadCreate, LeadUpdate
 from app.routers.utils import require_user, require_admin
 
 CST = timezone(timedelta(hours=8))
 router = APIRouter()
+
+def _lead_perm_filter(q, user):
+    if user.role in (ROLE_ADMIN, ROLE_MANAGER):
+        return q
+    if is_channel_only(user):
+        return q.filter(Lead.source == "partner")
+    return q.filter(Lead.assigned_to == user.id)
+
+def _check_lead_access(lead: Lead, user):
+    if user.role in (ROLE_ADMIN, ROLE_MANAGER):
+        return
+    if is_channel_only(user):
+        if getattr(lead.source, "value", lead.source) != "partner":
+            raise HTTPException(403, "Access denied")
+        return
+    if lead.assigned_to != user.id:
+        raise HTTPException(403, "Access denied")
 
 @router.get("")
 def list_leads(keyword: Optional[str]=Query(None), status: Optional[str]=Query(None),
@@ -16,6 +34,7 @@ def list_leads(keyword: Optional[str]=Query(None), status: Optional[str]=Query(N
                skip: int=Query(0,ge=0), limit: int=Query(100,ge=1,le=500),
                db: Session=Depends(get_db), user=Depends(require_user)):
     q = db.query(Lead)
+    q = _lead_perm_filter(q, user)
     if keyword: q = q.filter(Lead.name.contains(keyword))
     if status: q = q.filter(Lead.status == status)
     if source: q = q.filter(Lead.source == source)
@@ -37,11 +56,17 @@ def list_leads(keyword: Optional[str]=Query(None), status: Optional[str]=Query(N
 def get_lead(lid: int, db: Session=Depends(get_db), user=Depends(require_user)):
     l = db.query(Lead).filter_by(id=lid).first()
     if not l: raise HTTPException(404, "Not found")
+    _check_lead_access(l, user)
     return l
 
 @router.post("", status_code=201)
 def create_lead(data: LeadCreate, db: Session=Depends(get_db), user=Depends(require_user)):
     kwargs = data.model_dump()
+    if user.role == ROLE_SALES:
+        kwargs["assigned_to"] = user.id
+    if is_channel_only(user):
+        kwargs["source"] = "partner"
+        kwargs["assigned_to"] = user.id
     l = Lead(**kwargs)
     db.add(l); db.commit(); db.refresh(l); return l
 
@@ -49,6 +74,7 @@ def create_lead(data: LeadCreate, db: Session=Depends(get_db), user=Depends(requ
 def update_lead(lid: int, data: LeadUpdate, db: Session=Depends(get_db), user=Depends(require_user)):
     l = db.query(Lead).filter_by(id=lid).first()
     if not l: raise HTTPException(404, "Not found")
+    _check_lead_access(l, user)
     for k,v in data.model_dump(exclude_unset=True).items(): setattr(l,k,v)
     db.commit(); db.refresh(l); return l
 
@@ -56,6 +82,7 @@ def update_lead(lid: int, data: LeadUpdate, db: Session=Depends(get_db), user=De
 def delete_lead(lid: int, db: Session=Depends(get_db), admin=Depends(require_admin)):
     l = db.query(Lead).filter_by(id=lid).first()
     if not l: raise HTTPException(404, "Not found")
+    _check_lead_access(l, user)
     db.delete(l); db.commit()
 
 @router.post("/{lid}/convert")
@@ -76,10 +103,11 @@ def convert_lead(lid: int, sales_rep_id: Optional[int]=None, db: Session=Depends
 
 @router.get("/stats/funnel")
 def lead_funnel(db: Session=Depends(get_db), user=Depends(require_user)):
-    total = db.query(Lead).count()
+    q = _lead_perm_filter(db.query(Lead), user)
+    total = q.count()
     stages = {}
     for s in LeadStatus:
-        count = db.query(Lead).filter_by(status=s).count()
+        count = _lead_perm_filter(db.query(Lead), user).filter_by(status=s).count()
         stages[s.value] = count
     return {"total": total, "stages": stages}
 

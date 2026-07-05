@@ -2137,6 +2137,12 @@ function AppLayout(props) {
 
 
   var menuItems = [];
+  var moduleVisibleMap = {
+    'module-business': ['/follow-ups', 'group-customer', 'group-opp', 'group-leads'],
+    'module-channel': ['group-partner'],
+    'module-presales': ['group-presales'],
+    'module-product': ['group-product']
+  };
 
 
 
@@ -2153,6 +2159,7 @@ function AppLayout(props) {
 
 
     var key = item.key;
+    if (moduleVisibleMap[key] && !moduleVisibleMap[key].some(function(k) { return vis[k] !== false; })) return;
 
 
 
@@ -2469,7 +2476,7 @@ function AppLayout(props) {
 
 
 
-        e(Dropdown, { menu: { items: [{ key: 'r', label: '角色：' + (user.role || '-'), disabled: true }, { type: 'divider' }, { key: 'out', icon: IC('LogoutOutlined'), label: '退出登录', danger: true }], onClick: function(i) { if (i.key === 'out') logout(); } }, placement: 'bottomRight' },
+        e(Dropdown, { menu: { items: [{ key: 'r', label: '角色：' + (user.role_label || user.role || '-'), disabled: true }, { type: 'divider' }, { key: 'out', icon: IC('LogoutOutlined'), label: '退出登录', danger: true }], onClick: function(i) { if (i.key === 'out') logout(); } }, placement: 'bottomRight' },
 
 
 

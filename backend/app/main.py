@@ -477,13 +477,14 @@ app.include_router(business_excellence.router, prefix="/api/business-excellence"
 from app.database import get_db
 from app.schemas import ContactCreate, ContactUpdate
 from app.routers.utils import require_user
+from app.permissions import can_view_all_sales_data
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException
 
 def _check_cust_owner(customer_id: int, db: Session, user):
     c = db.query(Customer).filter_by(id=customer_id).first()
     if not c: raise HTTPException(404, "客户不存在")
-    if user.role != 'admin' and c.owner_id != user.id:
+    if not can_view_all_sales_data(user) and c.owner_id != user.id:
         raise HTTPException(403, "没有权限访问该客户")
     return c
 

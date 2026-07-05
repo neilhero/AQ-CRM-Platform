@@ -4,6 +4,16 @@ from typing import Optional
 from sqlalchemy import func
 from app.database import get_db
 from app.models import Opportunity, Customer, ChannelPartner, User, Contact
+from app.permissions import (
+    ROLE_ADMIN,
+    ROLE_CHANNEL_MANAGER,
+    ROLE_MANAGER,
+    ROLE_PRESALES,
+    ROLE_SALES,
+    can_edit_business_record,
+    can_view_all_sales_data,
+    is_channel_only,
+)
 from app.schemas import OpportunityCreate, OpportunityUpdate
 from app.routers.utils import require_user
 
@@ -43,22 +53,27 @@ def _validate_required_opportunity_fields(values):
 
 def _apply_perm_filter(q, user):
     """Apply role-based permission filter to opportunity query."""
-    if user.role == "admin":
+    if can_view_all_sales_data(user):
         return q
-    if user.role == "channel_manager":
+    if is_channel_only(user):
         return q.filter(Opportunity.opp_type == "channel")
     # sales and others: only own opportunities
     return q.filter(Opportunity.sales_rep_id == user.id)
 
 def _check_access(opp, user):
     """Check if user can access this opportunity. Raise 403 if not."""
-    if user.role == "admin":
+    if can_view_all_sales_data(user):
         return
-    if user.role == "channel_manager":
+    if is_channel_only(user):
         if opp.opp_type and opp.opp_type.value != "channel":
             raise HTTPException(403, "Access denied")
         return
     if opp.sales_rep_id != user.id:
+        raise HTTPException(403, "Access denied")
+
+def _check_edit_access(opp, user):
+    is_channel = _raw_value(opp.opp_type) == "channel"
+    if not can_edit_business_record(user, owner_id=opp.sales_rep_id, is_channel=is_channel):
         raise HTTPException(403, "Access denied")
 
 def _contact_dict(contact):
@@ -151,14 +166,18 @@ def get_opp(oid: int, db: Session=Depends(get_db), user=Depends(require_user)):
 
 @router.post("", status_code=201)
 def create_opp(data: OpportunityCreate, db: Session=Depends(get_db), user=Depends(require_user)):
+    if user.role == ROLE_PRESALES:
+        raise HTTPException(403, "售前角色不能新建商机")
     kwargs = data.model_dump()
     _validate_required_opportunity_fields(kwargs)
     if kwargs.get("opp_type") == "channel":
         kwargs["opp_type"] = "channel"
     else:
         kwargs["opp_type"] = "direct"
-    # Force sales_rep_id to current user for non-admin
-    if user.role != "admin":
+    if user.role == ROLE_CHANNEL_MANAGER and kwargs.get("opp_type") != "channel":
+        raise HTTPException(403, "渠道经理只能新建渠道商机")
+    # Sales can only create own opportunities. Admin and manager can assign.
+    if user.role == ROLE_SALES or user.role == ROLE_CHANNEL_MANAGER:
         kwargs["sales_rep_id"] = user.id
     o = Opportunity(**kwargs)
     db.add(o); db.commit(); db.refresh(o); return {"id": o.id, "name": o.name}
@@ -168,6 +187,7 @@ def update_opp(oid: int, data: OpportunityUpdate, db: Session=Depends(get_db), u
     o = db.query(Opportunity).filter_by(id=oid).first()
     if not o: raise HTTPException(404, "Not found")
     _check_access(o, user)
+    _check_edit_access(o, user)
     updates = data.model_dump(exclude_unset=True)
     final_values = {
         field: updates[field] if field in updates else _raw_value(getattr(o, field))
@@ -182,6 +202,7 @@ def delete_opp(oid: int, db: Session=Depends(get_db), user=Depends(require_user)
     o = db.query(Opportunity).filter_by(id=oid).first()
     if not o: raise HTTPException(404, "Not found")
     _check_access(o, user)
+    _check_edit_access(o, user)
     db.delete(o); db.commit()
 
 @router.get("/stats/summary")

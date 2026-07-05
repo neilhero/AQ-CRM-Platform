@@ -20,6 +20,7 @@ from app.models import (
     PresalesRequest,
     User,
 )
+from app.permissions import can_view_all_sales_data, is_channel_only
 from app.routers.utils import require_admin, require_user
 
 router = APIRouter()
@@ -122,9 +123,9 @@ def _check_opp_access(db: Session, opportunity_id: int, user):
     opp = db.query(Opportunity).filter_by(id=opportunity_id).first()
     if not opp:
         raise HTTPException(404, "商机不存在")
-    if user.role == "admin":
+    if can_view_all_sales_data(user):
         return opp
-    if user.role == "channel_manager" and _value(opp.opp_type) == "channel":
+    if is_channel_only(user) and _value(opp.opp_type) == "channel":
         return opp
     if opp.sales_rep_id == user.id:
         return opp
@@ -133,9 +134,9 @@ def _check_opp_access(db: Session, opportunity_id: int, user):
 
 def _accessible_opp_ids(db: Session, user):
     q = db.query(Opportunity.id)
-    if user.role == "admin":
+    if can_view_all_sales_data(user):
         return [row[0] for row in q.all()]
-    if user.role == "channel_manager":
+    if is_channel_only(user):
         return [row[0] for row in q.filter(Opportunity.opp_type == "channel").all()]
     return [row[0] for row in q.filter(Opportunity.sales_rep_id == user.id).all()]
 
@@ -159,6 +160,8 @@ def get_customer_profile(customer_id: int, db: Session = Depends(get_db), user=D
     cust = db.query(Customer).filter_by(id=customer_id).first()
     if not cust:
         raise HTTPException(404, "客户不存在")
+    if not can_view_all_sales_data(user) and cust.owner_id != user.id:
+        raise HTTPException(403, "Access denied")
     profile = db.query(CustomerSecurityProfile).filter_by(customer_id=customer_id).first()
     data = _to_dict(profile) if profile else {"customer_id": customer_id}
     data["customer_name"] = cust.name
@@ -172,6 +175,8 @@ def upsert_customer_profile(customer_id: int, data: CustomerSecurityProfileIn, d
     cust = db.query(Customer).filter_by(id=customer_id).first()
     if not cust:
         raise HTTPException(404, "客户不存在")
+    if not can_view_all_sales_data(user) and cust.owner_id != user.id:
+        raise HTTPException(403, "Access denied")
     profile = db.query(CustomerSecurityProfile).filter_by(customer_id=customer_id).first()
     if not profile:
         profile = CustomerSecurityProfile(customer_id=customer_id)
@@ -191,7 +196,7 @@ def list_channel_registrations(
     user=Depends(require_user),
 ):
     q = db.query(ChannelRegistration)
-    if user.role != "admin":
+    if not can_view_all_sales_data(user):
         opp_ids = _accessible_opp_ids(db, user)
         q = q.filter(or_(ChannelRegistration.created_by == user.id, ChannelRegistration.opportunity_id.in_(opp_ids or [-1])))
     if keyword:
@@ -265,7 +270,7 @@ def list_presales_requests(
     if opportunity_id:
         _check_opp_access(db, opportunity_id, user)
         q = q.filter(PresalesRequest.opportunity_id == opportunity_id)
-    elif user.role != "admin":
+    elif not can_view_all_sales_data(user):
         opp_ids = _accessible_opp_ids(db, user)
         q = q.filter(or_(PresalesRequest.created_by == user.id, PresalesRequest.opportunity_id.in_(opp_ids or [-1])))
     if status:

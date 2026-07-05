@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy import func
 from app.database import get_db
 from app.models import Customer, Opportunity, User
+from app.permissions import can_view_all_sales_data
 from app.schemas import CustomerCreate, CustomerUpdate
 from app.routers.utils import require_user
 
@@ -15,7 +16,7 @@ def list_customers(keyword: Optional[str]=Query(None), industry: Optional[str]=Q
                    skip: int=Query(0,ge=0), limit: int=Query(100,ge=1,le=500),
                    db: Session=Depends(get_db), user=Depends(require_user)):
     q = db.query(Customer)
-    if user.role != 'admin':
+    if not can_view_all_sales_data(user):
         q = q.filter(Customer.owner_id == user.id)
     elif owner_id is not None:
         q = q.filter(Customer.owner_id == owner_id)
@@ -27,7 +28,7 @@ def list_customers(keyword: Optional[str]=Query(None), industry: Optional[str]=Q
 def _check_cust(cid: int, db: Session, user):
     c = db.query(Customer).filter_by(id=cid).first()
     if not c: raise HTTPException(404, "Not found")
-    if user.role != 'admin' and c.owner_id != user.id:
+    if not can_view_all_sales_data(user) and c.owner_id != user.id:
         raise HTTPException(403, "没有权限访问该客户")
     return c
 

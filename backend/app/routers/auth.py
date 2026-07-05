@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.services.auth import authenticate, create_token, hash_password, get_current_user
 from app.models import User
+from app.permissions import ROLE_LABELS, ROLE_MENU_KEYS
 from app.routers.utils import require_user
 
 router = APIRouter()
@@ -28,20 +29,23 @@ def login(req: LoginReq, db: Session = Depends(get_db)):
             "id": user.id,
             "username": user.username,
             "real_name": user.real_name,
-            "role": user.role
+            "role": user.role,
+            "role_label": ROLE_LABELS.get(user.role, user.role)
         }
     }
 
 @router.get("/me")
 def me(user=Depends(require_user)):
-    menus = ["dashboard"]
-    if user.role == "admin":
-        menus = ["dashboard","customers","opportunities","products","channel","contacts","followups","leads","bidding","security-business"]
-    elif user.role == "manager":
-        menus = ["dashboard","customers","opportunities","leads","security-business"]
-    else:
-        menus = ["dashboard","opportunities","leads"]
-    return {"user_id": user.id, "username": user.username, "real_name": user.real_name, "role": user.role, "menus": menus}
+    allowed = ROLE_MENU_KEYS.get(user.role)
+    menus = ["*"] if allowed is None else sorted(allowed)
+    return {
+        "user_id": user.id,
+        "username": user.username,
+        "real_name": user.real_name,
+        "role": user.role,
+        "role_label": ROLE_LABELS.get(user.role, user.role),
+        "menus": menus,
+    }
 
 @router.put("/change-password")
 def change_password(req: ChangePwdReq, db: Session = Depends(get_db), user=Depends(require_user)):

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import StageConfig
 from app.schemas import StageConfigOut, StageConfigUpdate
+from app.permissions import require_admin_role
 from app.routers.utils import require_user
 
 router = APIRouter()
@@ -29,8 +30,7 @@ def list_stages(db: Session = Depends(get_db), user=Depends(require_user)):
 
 @router.put("/{stage_key}")
 def update_stage(stage_key: str, data: StageConfigUpdate, db: Session = Depends(get_db), user=Depends(require_user)):
-    if user.role != "admin":
-        raise HTTPException(403, "仅管理员可修改阶段配置")
+    require_admin_role(user)
     stage = db.query(StageConfig).filter_by(stage_key=stage_key).first()
     if not stage:
         raise HTTPException(404, "阶段不存在")

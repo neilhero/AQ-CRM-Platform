@@ -21,6 +21,7 @@ from app.models import (
     SalesTarget,
     User,
 )
+from app.permissions import ROLE_ADMIN, ROLE_CHANNEL_MANAGER, ROLE_MANAGER, can_view_all_sales_data, is_channel_only
 from app.routers.utils import require_admin, require_user
 
 router = APIRouter()
@@ -123,9 +124,9 @@ def _value(v):
 
 
 def _perm_filter(q, user):
-    if user.role == "admin":
+    if can_view_all_sales_data(user):
         return q
-    if user.role == "channel_manager":
+    if is_channel_only(user):
         return q.filter(Opportunity.opp_type == "channel")
     return q.filter(Opportunity.sales_rep_id == user.id)
 
@@ -253,8 +254,8 @@ def forecast(
 
 @router.get("/users")
 def sales_users(db: Session = Depends(get_db), user=Depends(require_user)):
-    q = db.query(User).filter(User.is_active == True)
-    if user.role not in ("admin", "channel_manager"):
+    q = db.query(User).filter(User.is_active == True, User.role.in_(["sales", "manager", "channel_manager"]))
+    if user.role not in (ROLE_ADMIN, ROLE_MANAGER, ROLE_CHANNEL_MANAGER):
         q = q.filter(User.id == user.id)
     return [{"id": u.id, "username": u.username, "real_name": u.real_name, "role": u.role} for u in q.order_by(User.real_name).all()]
 
@@ -262,7 +263,7 @@ def sales_users(db: Session = Depends(get_db), user=Depends(require_user)):
 @router.get("/targets")
 def list_targets(period_label: Optional[str] = None, db: Session = Depends(get_db), user=Depends(require_user)):
     q = db.query(SalesTarget, User).outerjoin(User, SalesTarget.sales_rep_id == User.id)
-    if user.role != "admin":
+    if not can_view_all_sales_data(user):
         q = q.filter(SalesTarget.sales_rep_id == user.id)
     if period_label:
         q = q.filter(SalesTarget.period_label == period_label)
@@ -333,7 +334,7 @@ def delete_target(target_id: int, db: Session = Depends(get_db), admin=Depends(r
 
 @router.get("/customer-operations")
 def customer_operations(db: Session = Depends(get_db), user=Depends(require_user)):
-    customers = db.query(Customer).all() if user.role == "admin" else db.query(Customer).filter(Customer.owner_id == user.id).all()
+    customers = db.query(Customer).all() if can_view_all_sales_data(user) else db.query(Customer).filter(Customer.owner_id == user.id).all()
     profiles = {p.customer_id: p for p in db.query(CustomerOperationProfile).all()}
     today = date.today()
     items = []
@@ -385,7 +386,7 @@ def upsert_customer_operation(customer_id: int, data: CustomerOperationIn, db: S
     customer = db.query(Customer).filter_by(id=customer_id).first()
     if not customer:
         raise HTTPException(404, "客户不存在")
-    if user.role != "admin" and customer.owner_id != user.id:
+    if not can_view_all_sales_data(user) and customer.owner_id != user.id:
         raise HTTPException(403, "没有权限")
     profile = db.query(CustomerOperationProfile).filter_by(customer_id=customer_id).first()
     if not profile:
