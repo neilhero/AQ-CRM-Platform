@@ -79,6 +79,10 @@ def sales_performance(period: str=Query("month"), db: Session=Depends(get_db), u
         users = db.query(User).filter_by(is_active=True).all()
     else:
         users = [user]
+    users = [
+        u for u in users
+        if (u.role or "").lower() != "admin" and (u.username or "").lower() != "admin"
+    ]
     today = date.today()
     ndays = 30
     if period == "quarter": ndays = 90
