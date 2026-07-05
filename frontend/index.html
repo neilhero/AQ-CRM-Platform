@@ -11541,6 +11541,7 @@ function ProductListPage() {
 
 
   var _s8 = useState(null), dragOverCat = _s8[0], setDragOverCat = _s8[1];
+  var _s9 = useState(null), modalCategory = _s9[0], setModalCategory = _s9[1];
 
 
 
@@ -11572,7 +11573,11 @@ function ProductListPage() {
 
 
 
-  var SUB_CATS = { 'AI安全': ['大模型安全','智能体安全'] };
+  var SUB_CATS = {
+    'AI安全': ['大模型安全','智能体安全'],
+    '数据安全': ['WAAP','WAF','脱敏','漏扫','NGFW'],
+    'AI教育': ['AI教学平台','实训平台']
+  };
 
 
 
@@ -11653,20 +11658,6 @@ function ProductListPage() {
 
 
   useEffect(function() { fetchData(); }, [fetchData]);
-
-
-
-
-
-
-
-  useEffect(function() { api("GET", "/customers?limit=200").then(function(d) { var items = d.items || d || []; setCustomers(items.map(function(c) { return { id: c.id, name: c.name }; })); }); }, []);
-
-
-
-
-
-
 
 
 
@@ -12092,7 +12083,7 @@ function ProductListPage() {
 
 
 
-      e(Button, { type: 'primary', size: 'large', icon: IC('PlusOutlined'), onClick: function() { setEdit(null); form.resetFields(); setOpen(true); } }, '新建产品')
+      e(Button, { type: 'primary', size: 'large', icon: IC('PlusOutlined'), onClick: function() { setEdit(null); setModalCategory(selCat || null); form.resetFields(); form.setFieldsValue({ category: selCat || undefined, sub_category: selSub || undefined }); setOpen(true); } }, '新建产品')
 
 
 
@@ -12276,7 +12267,7 @@ function ProductListPage() {
 
 
 
-              e('div', { style: { fontSize: 16, fontWeight: 700, color: '#1e293b' } }, card.label),
+              e('div', { style: { fontSize: 16, fontWeight: 700, color: '#1e293b' } }, card.label)
 
 
 
@@ -12284,7 +12275,6 @@ function ProductListPage() {
 
 
 
-              e('div', { style: { fontSize: 12, color: '#64748b', marginTop: 2 } }, card.desc)
 
 
 
@@ -12444,7 +12434,7 @@ function ProductListPage() {
 
 
 
-            : e('div', { style: { fontSize: 11, color: '#cbd5e1' } }, '无子分类')
+            : null
 
 
 
@@ -12756,7 +12746,7 @@ function ProductListPage() {
 
 
 
-              e(Button, { size: 'small', type: 'text', icon: IC('EditOutlined'), onClick: function() { setEdit(prod); form.setFieldsValue(prod); setOpen(true); } }),
+              e(Button, { size: 'small', type: 'text', icon: IC('EditOutlined'), onClick: function() { setEdit(prod); setModalCategory(prod.category || null); form.setFieldsValue(prod); setOpen(true); } }),
 
 
 
@@ -12924,7 +12914,7 @@ function ProductListPage() {
 
 
 
-              e(Select, { allowClear: true, placeholder: '选择一级分类', onChange: function() { form.setFieldValue('sub_category', undefined); } },
+              e(Select, { allowClear: true, placeholder: '选择一级分类', onChange: function(value) { setModalCategory(value || null); form.setFieldValue('sub_category', undefined); } },
 
 
 
@@ -12980,7 +12970,7 @@ function ProductListPage() {
 
 
 
-              e(Select, { allowClear: true, placeholder: '选择二级分类' },
+              e(Select, { allowClear: true, disabled: !modalCategory, placeholder: modalCategory ? '选择二级分类' : '请先选择一级分类' },
 
 
 
@@ -12988,7 +12978,7 @@ function ProductListPage() {
 
 
 
-                (SUB_CATS[form.getFieldValue('category')] || []).map(function(item) { return e(Option, { key: item, value: item }, item); })
+                (SUB_CATS[modalCategory] || []).map(function(item) { return e(Option, { key: item, value: item }, item); })
 
 
 
