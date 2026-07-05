@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import Customer, Opportunity
@@ -11,6 +11,17 @@ from app.routers.utils import require_user
 from app.schemas import CustomerCreate, CustomerUpdate
 
 router = APIRouter()
+
+
+def _customer_out(c: Customer):
+    data = {col.name: getattr(c, col.name) for col in c.__table__.columns}
+    owner = getattr(c, "owner", None)
+    owner_name = None
+    if owner:
+        owner_name = owner.real_name or owner.username
+    data["owner_name"] = owner_name
+    data["created_by_name"] = owner_name
+    return data
 
 
 @router.get("")
@@ -24,7 +35,7 @@ def list_customers(
     db: Session = Depends(get_db),
     user=Depends(require_user),
 ):
-    q = scoped_customer_query(db.query(Customer), db, user)
+    q = scoped_customer_query(db.query(Customer).options(joinedload(Customer.owner)), db, user)
     if owner_id is not None:
         q = q.filter(Customer.owner_id == owner_id)
     if keyword:
@@ -33,7 +44,8 @@ def list_customers(
         q = q.filter(Customer.industry == industry)
     if level:
         q = q.filter(Customer.level == level)
-    return q.order_by(Customer.updated_at.desc()).offset(skip).limit(limit).all()
+    rows = q.order_by(Customer.updated_at.desc()).offset(skip).limit(limit).all()
+    return [_customer_out(c) for c in rows]
 
 
 def _check_cust(cid: int, db: Session, user):
@@ -47,7 +59,7 @@ def _check_cust(cid: int, db: Session, user):
 
 @router.get("/{cid}")
 def get_customer(cid: int, db: Session = Depends(get_db), user=Depends(require_user)):
-    return _check_cust(cid, db, user)
+    return _customer_out(_check_cust(cid, db, user))
 
 
 @router.post("", status_code=201)
@@ -58,7 +70,7 @@ def create_customer(data: CustomerCreate, db: Session = Depends(get_db), user=De
     db.add(c)
     db.commit()
     db.refresh(c)
-    return c
+    return _customer_out(c)
 
 
 @router.put("/{cid}")
@@ -68,7 +80,7 @@ def update_customer(cid: int, data: CustomerUpdate, db: Session = Depends(get_db
         setattr(c, k, v)
     db.commit()
     db.refresh(c)
-    return c
+    return _customer_out(c)
 
 
 @router.delete("/{cid}", status_code=204)

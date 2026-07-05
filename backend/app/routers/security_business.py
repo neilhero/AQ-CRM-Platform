@@ -20,7 +20,7 @@ from app.models import (
     PresalesRequest,
     User,
 )
-from app.permissions import ROLE_ADMIN, can_access_customer, can_access_opportunity, scoped_opportunity_query
+from app.permissions import ROLE_ADMIN, ROLE_PRESALES, can_access_customer, can_access_opportunity, scoped_opportunity_query
 from app.routers.utils import require_admin, require_user
 
 router = APIRouter()
@@ -60,19 +60,22 @@ class ChannelRegistrationUpdate(BaseModel):
 
 
 class PresalesRequestIn(BaseModel):
+    customer_id: Optional[int] = None
     opportunity_id: int
     request_type: str
-    title: str
-    owner_id: Optional[int] = None
-    scheduled_date: Optional[date] = None
+    title: Optional[str] = None
+    requester_id: int
+    owner_id: int
+    scheduled_date: datetime
     resource_name: Optional[str] = None
-    details: Optional[str] = None
+    details: str
 
 
 class PresalesRequestUpdate(BaseModel):
     status: Optional[str] = None
+    requester_id: Optional[int] = None
     owner_id: Optional[int] = None
-    scheduled_date: Optional[date] = None
+    scheduled_date: Optional[datetime] = None
     resource_name: Optional[str] = None
     details: Optional[str] = None
     result: Optional[str] = None
@@ -144,6 +147,24 @@ def _enrich_registration(db: Session, reg: ChannelRegistration):
     if reg.duplicate_customer_id:
         cust = db.query(Customer).filter_by(id=reg.duplicate_customer_id).first()
         data["duplicate_customer_name"] = cust.name if cust else None
+    return data
+
+
+def _enrich_presales_request(db: Session, row: PresalesRequest):
+    data = _to_dict(row)
+    opp = db.query(Opportunity).filter_by(id=row.opportunity_id).first()
+    customer = db.query(Customer).filter_by(id=opp.customer_id).first() if opp and opp.customer_id else None
+    requester_id = row.requester_id or row.created_by
+    requester = db.query(User).filter_by(id=requester_id).first() if requester_id else None
+    owner = db.query(User).filter_by(id=row.owner_id).first() if row.owner_id else None
+    creator = db.query(User).filter_by(id=row.created_by).first() if row.created_by else None
+    data["opportunity_name"] = opp.name if opp else None
+    data["customer_id"] = customer.id if customer else None
+    data["customer_name"] = customer.name if customer else None
+    data["requester_id"] = requester_id
+    data["requester_name"] = requester.real_name if requester else None
+    data["owner_name"] = owner.real_name if owner else None
+    data["created_by_name"] = creator.real_name if creator else None
     return data
 
 
@@ -267,29 +288,49 @@ def list_presales_requests(
         q = q.filter(PresalesRequest.opportunity_id == opportunity_id)
     elif user.role != ROLE_ADMIN:
         opp_ids = _accessible_opp_ids(db, user)
-        q = q.filter(or_(PresalesRequest.created_by == user.id, PresalesRequest.opportunity_id.in_(opp_ids or [-1])))
+        q = q.filter(or_(
+            PresalesRequest.created_by == user.id,
+            PresalesRequest.requester_id == user.id,
+            PresalesRequest.owner_id == user.id,
+            PresalesRequest.opportunity_id.in_(opp_ids or [-1]),
+        ))
     if status:
         q = q.filter(PresalesRequest.status == status)
     rows = q.order_by(PresalesRequest.created_at.desc()).limit(200).all()
-    result = []
-    for row in rows:
-        data = _to_dict(row)
-        opp = db.query(Opportunity).filter_by(id=row.opportunity_id).first()
-        owner = db.query(User).filter_by(id=row.owner_id).first() if row.owner_id else None
-        data["opportunity_name"] = opp.name if opp else None
-        data["owner_name"] = owner.real_name if owner else None
-        result.append(data)
-    return result
+    return [_enrich_presales_request(db, row) for row in rows]
+
+
+@router.get("/presales-notifications")
+def list_presales_notifications(db: Session = Depends(get_db), user=Depends(require_user)):
+    q = db.query(PresalesRequest).filter(PresalesRequest.status.in_(["pending", "in_progress"]))
+    if user.role == ROLE_PRESALES:
+        q = q.filter(PresalesRequest.owner_id == user.id)
+    elif user.role != ROLE_ADMIN:
+        q = q.filter(or_(PresalesRequest.created_by == user.id, PresalesRequest.requester_id == user.id))
+    rows = q.order_by(PresalesRequest.created_at.desc()).limit(20).all()
+    items = [_enrich_presales_request(db, row) for row in rows]
+    return {"count": len(items), "items": items}
 
 
 @router.post("/presales-requests", status_code=201)
 def create_presales_request(data: PresalesRequestIn, db: Session = Depends(get_db), user=Depends(require_user)):
-    _check_opp_access(db, data.opportunity_id, user)
-    row = PresalesRequest(**data.model_dump(), created_by=user.id)
+    opp = _check_opp_access(db, data.opportunity_id, user)
+    if data.customer_id and opp.customer_id and data.customer_id != opp.customer_id:
+        raise HTTPException(400, "商机不属于所选客户")
+    requester = db.query(User).filter_by(id=data.requester_id).first()
+    if not requester:
+        raise HTTPException(400, "负责人不存在")
+    presales_user = db.query(User).filter_by(id=data.owner_id).first()
+    if not presales_user or presales_user.role != ROLE_PRESALES:
+        raise HTTPException(400, "请选择有效的售前支持人员")
+    payload = data.model_dump(exclude={"customer_id"})
+    if not payload.get("title"):
+        payload["title"] = f"{opp.name}售前协同"
+    row = PresalesRequest(**payload, created_by=user.id)
     db.add(row)
     db.commit()
     db.refresh(row)
-    return _to_dict(row)
+    return _enrich_presales_request(db, row)
 
 
 @router.put("/presales-requests/{request_id}")
@@ -302,7 +343,7 @@ def update_presales_request(request_id: int, data: PresalesRequestUpdate, db: Se
         setattr(row, k, v)
     db.commit()
     db.refresh(row)
-    return _to_dict(row)
+    return _enrich_presales_request(db, row)
 
 
 @router.get("/bid-radar/subscriptions")

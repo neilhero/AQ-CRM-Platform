@@ -16,6 +16,8 @@ app = FastAPI(title="AnQuan CRM v3.3")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8097", "http://127.0.0.1:8097", "http://121.41.66.121"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 Base.metadata.create_all(bind=engine)
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def ensure_schema_updates():
     with engine.begin() as conn:
@@ -29,6 +31,18 @@ def ensure_schema_updates():
             user_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
             if "manager_id" not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN manager_id INTEGER"))
+            presales_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(presales_requests)")).fetchall()]
+            if "requester_id" not in presales_cols:
+                conn.execute(text("ALTER TABLE presales_requests ADD COLUMN requester_id INTEGER"))
+            asset_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(presales_assets)")).fetchall()]
+            if "product_sub_category" not in asset_cols:
+                conn.execute(text("ALTER TABLE presales_assets ADD COLUMN product_sub_category VARCHAR(128)"))
+            if "file_name" not in asset_cols:
+                conn.execute(text("ALTER TABLE presales_assets ADD COLUMN file_name VARCHAR(256)"))
+            if "file_url" not in asset_cols:
+                conn.execute(text("ALTER TABLE presales_assets ADD COLUMN file_url VARCHAR(512)"))
+            if "file_size" not in asset_cols:
+                conn.execute(text("ALTER TABLE presales_assets ADD COLUMN file_size INTEGER DEFAULT 0"))
 
 ensure_schema_updates()
 

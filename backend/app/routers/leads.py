@@ -77,7 +77,7 @@ def lead_funnel(db: Session = Depends(get_db), user=Depends(require_user)):
 def sales_list(db: Session = Depends(get_db), user=Depends(require_user)):
     users = (
         db.query(User)
-        .filter(User.is_active == True, User.role.in_(["sales", "manager", "channel_manager"]))
+        .filter(User.is_active == True, User.role.in_(["sales", "manager", "channel_manager", "presales"]))
         .order_by(User.id)
         .all()
     )
@@ -174,4 +174,3 @@ def convert_lead(
     l.opportunity_id = opp.id
     db.commit()
     return {"customer_id": cust.id, "opportunity_id": opp.id, "message": "Converted"}
-

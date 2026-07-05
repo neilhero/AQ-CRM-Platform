@@ -1127,7 +1127,7 @@ var Tabs = _a.Tabs, Drawer = _a.Drawer, Badge = _a.Badge, Tooltip = _a.Tooltip;
 
 
 
-var Divider = _a.Divider, Empty = _a.Empty;
+var Divider = _a.Divider, Empty = _a.Empty, Upload = _a.Upload;
 
 
 
@@ -1504,7 +1504,8 @@ async function api(method, path, body) {
 
 
 
-async function downloadFile(path, filename) {
+async function downloadFile(path, filename, options) {
+  options = options || {};
   var token = localStorage.getItem('aq2_token');
   var headers = {};
   if (token) headers['Authorization'] = 'Bearer ' + token;
@@ -1512,13 +1513,30 @@ async function downloadFile(path, filename) {
   if (r.status === 401) {
     localStorage.clear(); window.location.hash = '#/login';
     message.error('请先登录');
-    return;
+    return false;
   }
   if (!r.ok) {
     message.error('下载失败');
-    return;
+    return false;
   }
-  var blob = await r.blob();
+  var blob;
+  var total = Number(r.headers.get('content-length') || 0);
+  if (r.body && r.body.getReader && total && options.onProgress) {
+    var reader = r.body.getReader();
+    var chunks = [];
+    var received = 0;
+    while (true) {
+      var result = await reader.read();
+      if (result.done) break;
+      chunks.push(result.value);
+      received += result.value.length;
+      options.onProgress(Math.min(100, Math.round(received / total * 100)));
+    }
+    blob = new Blob(chunks);
+  } else {
+    blob = await r.blob();
+    if (options.onProgress) options.onProgress(100);
+  }
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
@@ -1527,6 +1545,22 @@ async function downloadFile(path, filename) {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
+  return true;
+}
+
+async function uploadForm(method, path, formData) {
+  var token = localStorage.getItem('aq2_token');
+  var headers = {};
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  var r = await fetch(API_BASE + path, { method: method, headers: headers, body: formData });
+  if (r.status === 401) {
+    localStorage.clear(); window.location.hash = '#/login';
+    throw new Error('未登录');
+  }
+  if (r.status === 204) return null;
+  var d = await r.json().catch(function(){ return {}; });
+  if (!r.ok) { var msg = d.detail; if (Array.isArray(msg)) msg = msg.map(function(e){return e.msg||e.type;}).join(', '); throw new Error(msg || '上传失败'); }
+  return d;
 }
 
 function downloadImportErrors(prev, type) {
@@ -1905,6 +1939,7 @@ function AppLayout(props) {
 
 
   var _mc = useState([]), menuConfig = _mc[0], setMenuConfig = _mc[1];
+  var _ntf = useState({ count: 0, items: [] }), presalesNotice = _ntf[0], setPresalesNotice = _ntf[1];
 
 
 
@@ -1921,6 +1956,14 @@ function AppLayout(props) {
 
 
   useEffect(function() { api('GET','/menu-config').then(function(d){setMenuConfig(d||[]);}).catch(function(){}); }, []);
+  useEffect(function() {
+    function loadNotice() {
+      api('GET','/security-business/presales-notifications').then(function(d){ setPresalesNotice(d || { count: 0, items: [] }); }).catch(function(){});
+    }
+    loadNotice();
+    var timer = setInterval(loadNotice, 60000);
+    return function() { clearInterval(timer); };
+  }, []);
   useEffect(function() {
     api('GET','/industries').then(function(d){
       if (d && d.length) INDUSTRIES = d.map(function(item){ return item.name; });
@@ -2322,6 +2365,16 @@ function AppLayout(props) {
 
 
   var pageTitle = isDetail ? '商机详情' : (isCustDetail ? '客户详情' : (titleMap[hash] || '仪表盘'));
+  var noticeItems = (presalesNotice.items || []).map(function(item) {
+    return {
+      key: 'presales-' + item.id,
+      label: e('div', { style: { minWidth: 240 } },
+        e('div', { style: { fontWeight: 600, color: '#0f172a' } }, item.opportunity_name || '售前申请'),
+        e('div', { style: { fontSize: 12, color: '#64748b', marginTop: 2 } }, (item.customer_name || '-') + ' · ' + (item.requester_name || '-') + ' · ' + (item.scheduled_date ? dayjs(item.scheduled_date).format('MM-DD HH:mm') : '未排期'))
+      )
+    };
+  });
+  if (!noticeItems.length) noticeItems = [{ key: 'empty', label: '暂无售前申请提醒', disabled: true }];
 
 
 
@@ -2465,7 +2518,9 @@ function AppLayout(props) {
 
 
 
-        e(Badge, { dot: true, offset: [-2, 4] }, IC('BellOutlined')),
+        e(Dropdown, { trigger: ['click'], menu: { items: noticeItems, onClick: function(i) { if (i.key !== 'empty') nav('/presales'); } }, placement: 'bottomRight' },
+          e(Badge, { count: presalesNotice.count || 0, overflowCount: 99, offset: [-2, 4] }, e(Button, { type: 'text', icon: IC('BellOutlined') }))
+        ),
 
 
 
@@ -5168,6 +5223,7 @@ function CustomerListPage() {
 
 
     { title: '描述', dataIndex: 'description', ellipsis: true, render: function(v) { return v || '-'; } },
+    { title: '创建人', dataIndex: 'created_by_name', width: 100, render: function(v, r) { return v || r.owner_name || '-'; } },
 
 
 
@@ -9894,6 +9950,7 @@ function OppDetailPage(props) {
 
 
   var _s13 = useState([]), customers = _s13[0], setCustomers = _s13[1];
+  var _du = useState([]), detailUsers = _du[0], setDetailUsers = _du[1];
 
 
 
@@ -9987,7 +10044,12 @@ function OppDetailPage(props) {
 
 
 
-  useEffect(function() { load(); }, [id]);
+  useEffect(function() { load(); api('GET', '/leads/sales/list').then(function(d) { setDetailUsers(d || []); }).catch(function(){}); }, [id]);
+  useEffect(function() {
+    if (!opp || !detailUsers.length || detailPresalesForm.getFieldValue('requester_id')) return;
+    var owner = detailUsers.find(function(u) { return u.id === opp.sales_rep_id && u.role !== 'presales'; });
+    if (owner) detailPresalesForm.setFieldsValue({ requester_id: owner.id });
+  }, [opp, detailUsers.length]);
 
 
 
@@ -10082,8 +10144,10 @@ function OppDetailPage(props) {
 
   function addDetailPresales() {
     detailPresalesForm.validateFields().then(function(v) {
-      if (v.scheduled_date && v.scheduled_date.format) v.scheduled_date = v.scheduled_date.format('YYYY-MM-DD');
+      if (v.scheduled_date && v.scheduled_date.format) v.scheduled_date = v.scheduled_date.format('YYYY-MM-DD HH:mm:ss');
       v.opportunity_id = Number(id);
+      v.customer_id = opp && opp.customer_id;
+      v.requester_id = v.requester_id || (opp && opp.sales_rep_id) || (JSON.parse(localStorage.getItem('aq2_user') || '{}').id);
       return api('POST', '/security-business/presales-requests', v);
     }).then(function() {
       message.success('售前协同申请已创建');
@@ -11087,18 +11151,19 @@ function OppDetailPage(props) {
         e(Form, { form: detailPresalesForm, layout: 'vertical' },
           e(Row, { gutter: 12 },
             e(Col, { span: 5 }, e(Form.Item, { name: 'request_type', label: '类型', rules: [{ required: true, message: '请选择类型' }] }, e(Select, null, Object.keys(detailReqTypeText).map(function(k){ return e(Option, { key: k, value: k }, detailReqTypeText[k]); })))),
-            e(Col, { span: 7 }, e(Form.Item, { name: 'title', label: '标题', rules: [{ required: true, message: '请输入标题' }] }, e(Input, { placeholder: '如：POC 环境申请' }))),
-            e(Col, { span: 5 }, e(Form.Item, { name: 'scheduled_date', label: '排期' }, e(DatePicker, { style: { width: '100%' } }))),
-            e(Col, { span: 5 }, e(Form.Item, { name: 'resource_name', label: '资源' }, e(Input, { placeholder: '工程师/测试资源' }))),
-            e(Col, { span: 2 }, e(Form.Item, { label: ' ' }, e(Button, { type: 'primary', block: true, onClick: addDetailPresales }, '申请')))
+            e(Col, { span: 5 }, e(Form.Item, { name: 'requester_id', label: '负责人', rules: [{ required: true, message: '请选择负责人' }] }, e(Select, { showSearch: true, placeholder: '选择负责人' }, detailUsers.filter(function(u){ return u.role !== 'presales'; }).map(function(u){ return e(Option, { key: u.id, value: u.id }, u.real_name || u.username); })))),
+            e(Col, { span: 5 }, e(Form.Item, { name: 'owner_id', label: '售前支持', rules: [{ required: true, message: '请选择售前支持' }] }, e(Select, { showSearch: true }, detailUsers.filter(function(u){ return u.role === 'presales'; }).map(function(u){ return e(Option, { key: u.id, value: u.id }, u.real_name || u.username); })))),
+            e(Col, { span: 6 }, e(Form.Item, { name: 'scheduled_date', label: '排期', rules: [{ required: true, message: '请选择排期时间' }] }, e(DatePicker, { showTime: { format: 'HH:mm' }, format: 'YYYY-MM-DD HH:mm', style: { width: '100%' } }))),
+            e(Col, { span: 3 }, e(Form.Item, { label: ' ' }, e(Button, { type: 'primary', block: true, onClick: addDetailPresales }, '申请')))
           ),
-          e(Form.Item, { name: 'details', label: '说明' }, e(TextArea, { rows: 2, placeholder: '售前支持、POC、测试资源、方案评审、标书支持或演示记录的需求说明' }))
+          e(Form.Item, { name: 'details', label: '说明', rules: [{ required: true, message: '请填写需求说明' }] }, e(TextArea, { rows: 2, placeholder: '售前支持、POC、测试资源、方案评审、标书支持或演示记录的需求说明' }))
         ),
         e(Table, { rowKey: 'id', size: 'small', pagination: false, dataSource: presalesReqs, columns: [
           { title: '类型', dataIndex: 'request_type', width: 120, render: function(v) { return detailReqTypeText[v] || v; } },
-          { title: '标题', dataIndex: 'title', ellipsis: true },
-          { title: '排期', dataIndex: 'scheduled_date', width: 110, render: function(v) { return v || '-'; } },
-          { title: '资源', dataIndex: 'resource_name', width: 120, render: function(v) { return v || '-'; } },
+          { title: '负责人', dataIndex: 'requester_name', width: 100, render: function(v) { return v || '-'; } },
+          { title: '售前支持', dataIndex: 'owner_name', width: 110, render: function(v) { return v || '-'; } },
+          { title: '排期', dataIndex: 'scheduled_date', width: 130, render: function(v) { return v ? dayjs(v).format('MM-DD HH:mm') : '-'; } },
+          { title: '说明', dataIndex: 'details', ellipsis: true, render: function(v) { return v || '-'; } },
           { title: '状态', dataIndex: 'status', width: 100, render: function(v) { var colors = { pending: 'gold', in_progress: 'cyan', done: 'green' }; return e(Tag, { color: colors[v] || 'default' }, v || '-'); } }
         ] })
       )
@@ -18383,6 +18448,7 @@ function ImportModal(props) {
 
 
 function SecurityBusinessPage(props) {
+  var user = JSON.parse(localStorage.getItem('aq2_user') || '{}');
   var registrationOnly = props && props.registrationOnly;
   var profileOnly = props && props.profileOnly;
   var presalesOnly = props && props.presalesOnly;
@@ -18399,10 +18465,12 @@ function SecurityBusinessPage(props) {
   var _tasks = useState([]), radarTasks = _tasks[0], setRadarTasks = _tasks[1];
   var _loading = useState(false), loading = _loading[0], setLoading = _loading[1];
   var _custId = useState(null), selectedCustomerId = _custId[0], setSelectedCustomerId = _custId[1];
+  var _preCust = useState(null), presalesCustomerId = _preCust[0], setPresalesCustomerId = _preCust[1];
   var profileForm = Form.useForm()[0], regForm = Form.useForm()[0], presalesForm = Form.useForm()[0], subForm = Form.useForm()[0], itemForm = Form.useForm()[0];
   var reqTypeText = { presales_support: '售前支持', poc: 'POC申请', test_resource: '测试资源排期', solution_review: '方案评审', bid_support: '标书支持', demo: '演示记录' };
   var statusColor = { pending: 'gold', protected: 'green', conflict: 'red', rejected: 'default', done: 'green', open: 'blue', in_progress: 'cyan', new: 'blue' };
   function fmtDate(v) { return v && v.format ? v.format('YYYY-MM-DD') : v; }
+  function fmtDateTime(v) { return v && v.format ? v.format('YYYY-MM-DD HH:mm:ss') : v; }
   function loadBasics() {
     api('GET', '/customers?limit=500').then(function(d) { setCustomers(d.items || d || []); }).catch(function(){});
     api('GET', '/opportunities?limit=500').then(function(d) { setOpps(d || []); }).catch(function(){});
@@ -18435,6 +18503,11 @@ function SecurityBusinessPage(props) {
     api('GET', '/security-business/customer-profiles/' + cid).then(function(d) { setProfile(d); profileForm.setFieldsValue(d || {}); }).catch(function(err) { message.error(err.message || '加载客户画像失败'); });
   }
   useEffect(function() { loadBasics(); if (!profileOnly) loadOperational(); }, [profileOnly]);
+  useEffect(function() {
+    if (!users.length || presalesForm.getFieldValue('requester_id')) return;
+    var current = users.find(function(u) { return u.id === user.id && u.role !== 'presales' && u.role !== 'admin'; });
+    if (current) presalesForm.setFieldsValue({ requester_id: current.id });
+  }, [users.length]);
   function saveProfile() {
     if (!selectedCustomerId) return message.warning('请先选择客户');
     profileForm.validateFields().then(function(v) { return api('PUT', '/security-business/customer-profiles/' + selectedCustomerId, v); }).then(function(d) { setProfile(Object.assign({}, profile || {}, d)); message.success('客户360画像已保存'); }).catch(function(err) { message.error(err.message || '保存失败'); });
@@ -18446,7 +18519,7 @@ function SecurityBusinessPage(props) {
     api('PUT', '/security-business/channel-registrations/' + row.id, { status: status, arbitration_result: status === 'protected' ? '仲裁通过，进入保护期' : '仲裁驳回' }).then(function() { message.success('已更新报备状态'); loadOperational(); }).catch(function(err) { message.error(err.message || '更新失败'); });
   }
   function submitPresales() {
-    presalesForm.validateFields().then(function(v) { if (v.scheduled_date) v.scheduled_date = fmtDate(v.scheduled_date); return api('POST', '/security-business/presales-requests', v); }).then(function() { message.success('售前申请已创建'); presalesForm.resetFields(); loadOperational(); }).catch(function(err) { message.error(err.message || '创建失败'); });
+    presalesForm.validateFields().then(function(v) { if (v.scheduled_date) v.scheduled_date = fmtDateTime(v.scheduled_date); return api('POST', '/security-business/presales-requests', v); }).then(function() { message.success('售前申请已创建'); presalesForm.resetFields(); setPresalesCustomerId(null); loadOperational(); }).catch(function(err) { message.error(err.message || '创建失败'); });
   }
   function updatePresales(row, status) {
     api('PUT', '/security-business/presales-requests/' + row.id, { status: status }).then(function() { message.success('售前状态已更新'); loadOperational(); }).catch(function(err) { message.error(err.message || '更新失败'); });
@@ -18490,15 +18563,26 @@ function SecurityBusinessPage(props) {
       { title: '最终客户', dataIndex: 'final_customer_name' }, { title: '渠道伙伴', dataIndex: 'partner_name', width: 160, render: function(v){return v || '-';} }, { title: '区域', dataIndex: 'region', width: 90 }, { title: '保护截止', dataIndex: 'protection_end', width: 110 }, { title: '重复客户', dataIndex: 'duplicate_customer_name', width: 130, render: function(v){return v ? e(Tag,{color:'orange'},v) : '-';} }, { title: '状态', dataIndex: 'status', width: 100, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }, { title: '冲突说明', dataIndex: 'conflict_reason', ellipsis: true }, { title: '操作', width: 170, render: function(_, r){ return e(Space, null, e(Button, { size: 'small', onClick: function(){ arbitrate(r, 'protected'); } }, '通过'), e(Button, { size: 'small', danger: true, onClick: function(){ arbitrate(r, 'rejected'); } }, '驳回')); } }
     ] })
   );
+  var presalesUsers = users.filter(function(u) { return u.role === 'presales'; });
+  var businessUsers = users.filter(function(u) { return u.role !== 'presales'; });
+  var presalesOpps = presalesCustomerId ? opps.filter(function(o) { return o.customer_id === presalesCustomerId; }) : opps;
   var presalesTab = e('div', null,
     e(Card, { title: '售前协同申请', size: 'small', style: { marginBottom: 16 } }, e(Form, { form: presalesForm, layout: 'vertical' },
-      e(Row, { gutter: 12 }, e(Col, { span: 7 }, e(Form.Item, { name: 'opportunity_id', label: '商机', rules: [{ required: true, message: '请选择商机' }] }, e(Select, { showSearch: true }, opps.map(function(o){return e(Option,{key:o.id,value:o.id},o.name);})))) , e(Col, { span: 5 }, e(Form.Item, { name: 'request_type', label: '协同类型', rules: [{ required: true, message: '请选择类型' }] }, e(Select, null, Object.keys(reqTypeText).map(function(k){return e(Option,{key:k,value:k},reqTypeText[k]);})))) , e(Col, { span: 5 }, e(Form.Item, { name: 'owner_id', label: '负责人' }, e(Select, { allowClear: true }, users.map(function(u){return e(Option,{key:u.id,value:u.id},u.real_name);})))) , e(Col, { span: 4 }, e(Form.Item, { name: 'scheduled_date', label: '排期日期' }, e(DatePicker, { style: { width: '100%' } }))), e(Col, { span: 3 }, e(Form.Item, { name: 'resource_name', label: '资源' }, e(Input)))),
-      e(Form.Item, { name: 'title', label: '申请标题', rules: [{ required: true, message: '请输入申请标题' }] }, e(Input)),
-      e(Form.Item, { name: 'details', label: '需求说明' }, e(TextArea, { rows: 2 })),
+      e(Row, { gutter: 12 },
+        e(Col, { span: 6 }, e(Form.Item, { name: 'customer_id', label: '客户', rules: [{ required: true, message: '请选择客户' }] }, e(Select, { showSearch: true, allowClear: true, placeholder: '选择客户', onChange: function(v) { setPresalesCustomerId(v || null); presalesForm.setFieldsValue({ opportunity_id: undefined }); }, filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c){return e(Option,{key:c.id,value:c.id},c.name);})))) ,
+        e(Col, { span: 6 }, e(Form.Item, { name: 'opportunity_id', label: '商机', rules: [{ required: true, message: '请选择商机' }] }, e(Select, { showSearch: true, placeholder: '选择商机', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, presalesOpps.map(function(o){return e(Option,{key:o.id,value:o.id},o.name);})))) ,
+        e(Col, { span: 4 }, e(Form.Item, { name: 'request_type', label: '协同类型', rules: [{ required: true, message: '请选择类型' }] }, e(Select, null, Object.keys(reqTypeText).map(function(k){return e(Option,{key:k,value:k},reqTypeText[k]);})))) ,
+        e(Col, { span: 4 }, e(Form.Item, { name: 'requester_id', label: '负责人', rules: [{ required: true, message: '请选择负责人' }] }, e(Select, { showSearch: true, placeholder: '选择负责人' }, businessUsers.map(function(u){return e(Option,{key:u.id,value:u.id},u.real_name || u.username);})))) ,
+        e(Col, { span: 4 }, e(Form.Item, { name: 'owner_id', label: '售前支持', rules: [{ required: true, message: '请选择售前支持' }] }, e(Select, { showSearch: true, placeholder: '选择售前' }, presalesUsers.map(function(u){return e(Option,{key:u.id,value:u.id},u.real_name || u.username);}))))
+      ),
+      e(Row, { gutter: 12 },
+        e(Col, { span: 6 }, e(Form.Item, { name: 'scheduled_date', label: '排期日期', rules: [{ required: true, message: '请选择排期时间' }] }, e(DatePicker, { showTime: { format: 'HH:mm' }, format: 'YYYY-MM-DD HH:mm', style: { width: '100%' } }))),
+        e(Col, { span: 18 }, e(Form.Item, { name: 'details', label: '需求说明', rules: [{ required: true, message: '请填写需求说明' }] }, e(TextArea, { rows: 2, placeholder: '请说明售前支持内容、客户诉求、期望产出和时间要求' })))
+      ),
       e(Button, { type: 'primary', onClick: submitPresales }, '创建申请')
     )),
     e(Table, { rowKey: 'id', loading: loading, dataSource: presales, pagination: { pageSize: 8 }, columns: [
-      { title: '商机', dataIndex: 'opportunity_name', width: 220, ellipsis: true }, { title: '类型', dataIndex: 'request_type', width: 120, render: function(v){return reqTypeText[v] || v;} }, { title: '标题', dataIndex: 'title', ellipsis: true }, { title: '负责人', dataIndex: 'owner_name', width: 100, render: function(v){return v || '-';} }, { title: '排期', dataIndex: 'scheduled_date', width: 110 }, { title: '状态', dataIndex: 'status', width: 110, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }, { title: '操作', width: 180, render: function(_, r){return e(Space, null, e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'in_progress'); } }, '进行中'), e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'done'); } }, '完成'));} }
+      { title: '客户', dataIndex: 'customer_name', width: 180, ellipsis: true, render: function(v){return v || '-';} }, { title: '商机', dataIndex: 'opportunity_name', width: 220, ellipsis: true }, { title: '类型', dataIndex: 'request_type', width: 120, render: function(v){return reqTypeText[v] || v;} }, { title: '负责人', dataIndex: 'requester_name', width: 100, render: function(v){return v || '-';} }, { title: '售前支持', dataIndex: 'owner_name', width: 110, render: function(v){return v || '-';} }, { title: '排期', dataIndex: 'scheduled_date', width: 130, render: function(v){return v ? dayjs(v).format('MM-DD HH:mm') : '-';} }, { title: '状态', dataIndex: 'status', width: 110, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }, { title: '操作', width: 180, render: function(_, r){return e(Space, null, e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'in_progress'); } }, '进行中'), e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'done'); } }, '完成'));} }
     ] })
   );
   var radarTab = e('div', null,
@@ -18838,6 +18922,7 @@ function SalesGrowthPage(props) {
 }
 
 function BusinessExcellencePage(props) {
+  var user = JSON.parse(localStorage.getItem('aq2_user') || '{}');
   var bidOnly = props && props.bidOnly;
   var partnerCreditOnly = props && props.partnerCreditOnly;
   var assetOnly = props && props.assetOnly;
@@ -18855,6 +18940,12 @@ function BusinessExcellencePage(props) {
   var _productCats = useState([]), productCats = _productCats[0], setProductCats = _productCats[1];
   var _recProductLine = useState(null), recProductLine = _recProductLine[0], setRecProductLine = _recProductLine[1];
   var _editingRecId = useState(null), editingRecId = _editingRecId[0], setEditingRecId = _editingRecId[1];
+  var _assetCategory = useState(null), assetCategory = _assetCategory[0], setAssetCategory = _assetCategory[1];
+  var _assetFile = useState(null), assetFile = _assetFile[0], setAssetFile = _assetFile[1];
+  var assetFileMaxSize = 20 * 1024 * 1024;
+  var assetFileExts = ['.ppt', '.pptx', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.zip', '.rar', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+  var _editingAsset = useState(null), editingAsset = _editingAsset[0], setEditingAsset = _editingAsset[1];
+  var _assetDownloadingId = useState(null), assetDownloadingId = _assetDownloadingId[0], setAssetDownloadingId = _assetDownloadingId[1];
   var _loading = useState(false), loading = _loading[0], setLoading = _loading[1];
   var _period = useState((function(){ var d = new Date(); return d.getFullYear() + 'Q' + (Math.floor(d.getMonth() / 3) + 1); })()), period = _period[0], setPeriod = _period[1];
   var _assetForm = Form.useForm(), assetForm = _assetForm[0];
@@ -18895,6 +18986,9 @@ function BusinessExcellencePage(props) {
     var found = (productCats || []).find(function(item) { return item.key === category; });
     return (found && found.children ? found.children : []).map(function(item) { return item.key || item.label; });
   }
+  function getAssetSubOptions(category) {
+    return getRecommendationSubOptions(category);
+  }
   function saveRec() {
     recForm.validateFields().then(function(v){
       v.priority = 3;
@@ -18933,7 +19027,76 @@ function BusinessExcellencePage(props) {
     }).catch(function(err){ message.error(err.message || '删除失败'); });
   }
   function saveAsset() {
-    assetForm.validateFields().then(function(v){ return api('POST', '/business-excellence/presales-assets', v); }).then(function(){ message.success('资产已保存'); assetForm.resetFields(); loadAll(); }).catch(function(err){ message.error(err.message || '保存失败'); });
+    assetForm.validateFields().then(function(v){
+      if (!editingAsset && !assetFile) {
+        message.warning('请上传资料文件');
+        throw new Error('请上传资料文件');
+      }
+      if (assetFile && assetFile.size > assetFileMaxSize) {
+        message.error('资料文件不能超过20M');
+        throw new Error('资料文件不能超过20M');
+      }
+      var fd = new FormData();
+      Object.keys(v).forEach(function(k) {
+        if (v[k] !== undefined && v[k] !== null && v[k] !== '') fd.append(k, v[k]);
+      });
+      if (assetFile) fd.append('file', assetFile);
+      return uploadForm(editingAsset ? 'PUT' : 'POST', '/business-excellence/presales-assets' + (editingAsset ? '/' + editingAsset.id : ''), fd);
+    }).then(function(){
+      message.success(editingAsset ? '资产已更新' : '资产已保存');
+      assetForm.resetFields();
+      setAssetFile(null);
+      setAssetCategory(null);
+      setEditingAsset(null);
+      loadAll();
+    }).catch(function(err){ if (err && err.errorFields) return; if (err.message !== '请上传资料文件') message.error(err.message || '保存失败'); });
+  }
+  function editAsset(row) {
+    setEditingAsset(row);
+    setAssetFile(null);
+    setAssetCategory(row.product_line || null);
+    assetForm.setFieldsValue({
+      industry: row.industry,
+      product_line: row.product_line,
+      product_sub_category: row.product_sub_category,
+      asset_type: row.asset_type,
+      title: row.title,
+      summary: row.summary
+    });
+  }
+  function cancelEditAsset() {
+    setEditingAsset(null);
+    setAssetFile(null);
+    setAssetCategory(null);
+    assetForm.resetFields();
+  }
+  function deleteAsset(row) {
+    api('DELETE', '/business-excellence/presales-assets/' + row.id).then(function(){
+      message.success('资产已删除');
+      if (editingAsset && editingAsset.id === row.id) cancelEditAsset();
+      loadAll();
+    }).catch(function(err){ message.error(err.message || '删除失败'); });
+  }
+  function downloadAsset(row) {
+    if (!row || !row.id || assetDownloadingId) return;
+    var key = 'asset-download-' + row.id;
+    setAssetDownloadingId(row.id);
+    message.loading({ content: '正在准备下载...', key: key, duration: 0 });
+    downloadFile('/business-excellence/presales-assets/' + row.id + '/download', row.file_name || '售前资料', {
+      onProgress: function(percent) {
+        message.loading({ content: '正在下载 ' + percent + '%', key: key, duration: 0 });
+      }
+    }).then(function(ok) {
+      if (ok === false) {
+        message.error({ content: '下载失败', key: key, duration: 2 });
+      } else {
+        message.success({ content: '下载已开始', key: key, duration: 2 });
+      }
+    }).catch(function(err) {
+      message.error({ content: (err && err.message) || '下载失败', key: key, duration: 2 });
+    }).finally(function() {
+      setAssetDownloadingId(null);
+    });
   }
   function snapshotForecast() {
     api('POST', '/business-excellence/forecast-snapshots', { period_label: period, group_by: 'sales' }).then(function(d){ message.success('已生成预测快照 ' + (d.created || 0) + ' 条'); loadAll(); }).catch(function(err){ message.error(err.message || '快照失败'); });
@@ -19051,26 +19214,71 @@ function BusinessExcellencePage(props) {
       ] })
     )
   );
+  var canEditAsset = user.role === 'admin' || user.role === 'presales';
+  var canDeleteAsset = user.role === 'admin';
   var assetTab = e('div', null,
     e(Card, { size: 'small', title: '售前资产库', style: { marginBottom: 16 } },
       e(Form, { form: assetForm, layout: 'vertical' },
         e(Row, { gutter: 12 },
-          e(Col, { span: 5 }, e(Form.Item, { name: 'title', label: '资产标题', rules: [{ required: true }] }, e(Input))),
-          e(Col, { span: 4 }, e(Form.Item, { name: 'asset_type', label: '类型' }, e(Select, null, e(Option, { value: 'solution' }, '方案'), e(Option, { value: 'bid' }, '标书'), e(Option, { value: 'case' }, '案例'), e(Option, { value: 'poc' }, 'POC')))),
-          e(Col, { span: 4 }, e(Form.Item, { name: 'product_line', label: '产品线' }, e(Input))),
-          e(Col, { span: 4 }, e(Form.Item, { name: 'industry', label: '行业' }, e(Input))),
-          e(Col, { span: 5 }, e(Form.Item, { name: 'url', label: '链接' }, e(Input))),
-          e(Col, { span: 2 }, e(Form.Item, { label: ' ' }, e(Button, { type: 'primary', onClick: saveAsset }, '保存')))
+          e(Col, { span: 4 }, e(Form.Item, { name: 'industry', label: '行业', rules: [{ required: true, message: '请选择行业' }] },
+            e(Select, { placeholder: '选择行业', showSearch: true, allowClear: true },
+              (recIndustries || []).map(function(item) { return e(Option, { key: item, value: item }, item); })
+            )
+          )),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'product_line', label: '一类产品', rules: [{ required: true, message: '请选择一类产品' }] },
+            e(Select, { placeholder: '选择一类产品', allowClear: true, onChange: function(value) { setAssetCategory(value || null); assetForm.setFieldValue('product_sub_category', undefined); } },
+              (productCats || []).map(function(item) { return e(Option, { key: item.key, value: item.key }, item.label || item.key); })
+            )
+          )),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'product_sub_category', label: '二类产品' },
+            e(Select, { placeholder: assetCategory ? '选择二类产品' : '先选一类产品', allowClear: true, disabled: !assetCategory },
+              getAssetSubOptions(assetCategory).map(function(item) { return e(Option, { key: item, value: item }, item); })
+            )
+          )),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'asset_type', label: '资产类型', rules: [{ required: true, message: '请选择资产类型' }] }, e(Select, { placeholder: '选择资产类型' }, e(Option, { value: 'solution' }, '方案'), e(Option, { value: 'bid' }, '标书'), e(Option, { value: 'case' }, '案例'), e(Option, { value: 'poc' }, 'POC'), e(Option, { value: 'training' }, '培训资料')))),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'title', label: '资产标题' }, e(Input, { placeholder: '可留空，默认使用文件名' }))),
+          e(Col, { span: 4 }, e(Form.Item, { label: '资料上传（大小≤20M）', required: true },
+            e(Upload, {
+              beforeUpload: function(file) {
+                var name = file.name || '';
+                var ext = name.indexOf('.') >= 0 ? name.slice(name.lastIndexOf('.')).toLowerCase() : '';
+                if (assetFileExts.indexOf(ext) < 0) {
+                  message.error('仅支持PPT、PDF、Word、Excel、图片、压缩包等格式');
+                  return Upload.LIST_IGNORE || false;
+                }
+                if (file.size > assetFileMaxSize) {
+                  message.error('资料文件不能超过20M');
+                  return Upload.LIST_IGNORE || false;
+                }
+                setAssetFile(file);
+                return false;
+              },
+              onRemove: function() { setAssetFile(null); },
+              maxCount: 1,
+              fileList: assetFile ? [assetFile] : [],
+              accept: '.ppt,.pptx,.pdf,.doc,.docx,.xls,.xlsx,.csv,.zip,.rar,.jpg,.jpeg,.png,.gif,.bmp,.webp'
+            }, e(Button, { icon: IC('UploadOutlined'), style: { width: '100%' } }, assetFile ? '更换资料' : (editingAsset && editingAsset.file_name ? '更换资料' : '上传资料')))
+          ))
         ),
-        e(Form.Item, { name: 'summary', label: '摘要' }, e(TextArea, { rows: 2 }))
+        e(Form.Item, { name: 'summary', label: '资产说明' }, e(TextArea, { rows: 3, placeholder: '说明资料适用场景、使用方法、注意事项等' })),
+        e(Space, null,
+          canEditAsset ? e(Button, { type: 'primary', onClick: saveAsset }, editingAsset ? '更新资产' : '保存') : null,
+          editingAsset ? e(Button, { onClick: cancelEditAsset }, '取消编辑') : null,
+          editingAsset && editingAsset.file_name ? e(Tag, { color: 'blue' }, '当前资料：' + editingAsset.file_name) : null
+        )
       )
     ),
     e(Table, { rowKey: 'id', size: 'small', dataSource: assets, pagination: { pageSize: 8 }, columns: [
-      { title: '标题', dataIndex: 'title', ellipsis: true },
-      { title: '类型', dataIndex: 'asset_type', width: 90 },
-      { title: '产品线', dataIndex: 'product_line', width: 130 },
-      { title: '行业', dataIndex: 'industry', width: 90 },
-      { title: '链接', dataIndex: 'url', width: 160, render: function(v){ return v ? e('a', { href: v, target: '_blank' }, '打开') : '-'; } }
+      { title: '行业', dataIndex: 'industry', width: 100, render: function(v){ return v ? e(Tag, { color: 'blue' }, v) : '-'; } },
+      { title: '一类产品', dataIndex: 'product_line', width: 130 },
+      { title: '二类产品', dataIndex: 'product_sub_category', width: 130, render: function(v){ return v || '-'; } },
+      { title: '资产类型', dataIndex: 'asset_type', width: 100, render: function(v){ return ({solution:'方案', bid:'标书', case:'案例', poc:'POC', training:'培训资料'})[v] || v || '-'; } },
+      { title: '资产标题', dataIndex: 'title', ellipsis: true },
+      { title: '资料', dataIndex: 'file_url', width: 260, render: function(v, r){ return v ? e(Button, { type: 'link', size: 'small', loading: assetDownloadingId === r.id, disabled: !!assetDownloadingId && assetDownloadingId !== r.id, onClick: function(){ downloadAsset(r); }, style: { whiteSpace: 'normal', height: 'auto', lineHeight: 1.45, textAlign: 'left', padding: 0, maxWidth: 240, wordBreak: 'break-all' } }, r.file_name || '下载资料') : '-'; } },
+      { title: '操作', width: canDeleteAsset ? 130 : 70, render: function(_, r){ return e(Space, null,
+        canEditAsset ? e(Button, { type: 'link', size: 'small', onClick: function(){ editAsset(r); } }, '编辑') : null,
+        canDeleteAsset ? e(Popconfirm, { title: '删除该售前资产？', onConfirm: function(){ deleteAsset(r); } }, e(Button, { type: 'link', size: 'small', danger: true }, '删除')) : null
+      ); } }
     ] })
   );
   var forecastTab = e('div', null,

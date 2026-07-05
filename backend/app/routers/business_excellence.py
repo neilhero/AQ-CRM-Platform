@@ -1,8 +1,12 @@
+import os
 import re
+import uuid
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -42,11 +46,18 @@ from app.models import (
     User,
     now_cst,
 )
-from app.permissions import can_access_customer, can_access_opportunity, scoped_customer_query
+from app.permissions import ROLE_ADMIN, ROLE_PRESALES, can_access_customer, can_access_opportunity, scoped_customer_query
 from app.routers.sales_growth import _date_range, forecast as forecast_summary
 from app.routers.utils import require_admin, require_user
 
 router = APIRouter()
+UPLOAD_ROOT = Path(__file__).resolve().parents[2] / "uploads" / "presales-assets"
+UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+ALLOWED_ASSET_EXTS = {
+    ".ppt", ".pptx", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv", ".zip", ".rar",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp",
+}
+MAX_ASSET_FILE_SIZE = 20 * 1024 * 1024
 
 
 class CustomerIdentityIn(BaseModel):
@@ -88,7 +99,7 @@ class RegistrationExtendIn(BaseModel):
 
 class PresalesScheduleIn(BaseModel):
     owner_id: Optional[int] = None
-    scheduled_date: Optional[date] = None
+    scheduled_date: Optional[datetime] = None
     resource_name: Optional[str] = None
     notes: Optional[str] = None
 
@@ -161,6 +172,7 @@ class PresalesAssetIn(BaseModel):
     title: str
     asset_type: str = "solution"
     product_line: Optional[str] = None
+    product_sub_category: Optional[str] = None
     industry: Optional[str] = None
     url: Optional[str] = None
     summary: Optional[str] = None
@@ -187,6 +199,35 @@ def _normalize_name(name: str):
     for suffix in ["有限责任公司", "股份有限公司", "有限公司", "集团公司", "集团", "信息中心", "数据中心", "采购中心"]:
         text = text.replace(suffix, "")
     return text
+
+
+def _ensure_asset_editable(user, allow_delete: bool = False):
+    if allow_delete:
+        if user.role != ROLE_ADMIN:
+            raise HTTPException(403, "只有管理员可以删除售前资产")
+        return
+    if user.role not in {ROLE_ADMIN, ROLE_PRESALES}:
+        raise HTTPException(403, "只有管理员和售前可以维护售前资产")
+
+
+async def _save_asset_file(file: UploadFile):
+    if not file or not file.filename:
+        return None
+    original_name = os.path.basename(file.filename)
+    ext = Path(original_name).suffix.lower()
+    if ext not in ALLOWED_ASSET_EXTS:
+        raise HTTPException(400, "仅支持 PPT、PDF、Word、Excel、CSV、压缩包和图片格式")
+    safe_name = f"{uuid.uuid4().hex}{ext}"
+    target = UPLOAD_ROOT / safe_name
+    content = await file.read()
+    if len(content) > MAX_ASSET_FILE_SIZE:
+        raise HTTPException(400, "资料文件不能超过20M")
+    target.write_bytes(content)
+    return {
+        "file_name": original_name,
+        "file_url": f"/uploads/presales-assets/{safe_name}",
+        "file_size": len(content),
+    }
 
 
 def _check_customer(db: Session, cid: int, user):
@@ -641,13 +682,96 @@ def list_presales_assets(keyword: Optional[str] = None, db: Session = Depends(ge
     return [_to_dict(r) for r in q.order_by(PresalesAsset.created_at.desc()).limit(200).all()]
 
 
+@router.get("/presales-assets/{asset_id}/download")
+def download_presales_asset(asset_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
+    row = db.query(PresalesAsset).filter_by(id=asset_id).first()
+    if not row or not row.file_url:
+        raise HTTPException(404, "资料不存在")
+    stored_name = os.path.basename(row.file_url)
+    path = UPLOAD_ROOT / stored_name
+    if not path.exists() or not path.is_file():
+        raise HTTPException(404, "资料文件不存在")
+    return FileResponse(path, filename=row.file_name or stored_name, media_type="application/octet-stream")
+
+
 @router.post("/presales-assets", status_code=201)
-def create_presales_asset(data: PresalesAssetIn, db: Session = Depends(get_db), user=Depends(require_user)):
-    row = PresalesAsset(**data.model_dump(), created_by=user.id)
+async def create_presales_asset(
+    title: Optional[str] = Form(None),
+    asset_type: str = Form(...),
+    product_line: str = Form(...),
+    product_sub_category: Optional[str] = Form(None),
+    industry: str = Form(...),
+    summary: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    _ensure_asset_editable(user)
+    file_data = await _save_asset_file(file)
+    row = PresalesAsset(
+        title=(title or (file_data and file_data["file_name"]) or "未命名资料").strip(),
+        asset_type=asset_type,
+        product_line=product_line,
+        product_sub_category=product_sub_category,
+        industry=industry,
+        summary=summary,
+        tags=tags,
+        created_by=user.id,
+        **(file_data or {}),
+    )
     db.add(row)
     db.commit()
     db.refresh(row)
     return _to_dict(row)
+
+
+@router.put("/presales-assets/{asset_id}")
+async def update_presales_asset(
+    asset_id: int,
+    title: Optional[str] = Form(None),
+    asset_type: Optional[str] = Form(None),
+    product_line: Optional[str] = Form(None),
+    product_sub_category: Optional[str] = Form(None),
+    industry: Optional[str] = Form(None),
+    summary: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    _ensure_asset_editable(user)
+    row = db.query(PresalesAsset).filter_by(id=asset_id).first()
+    if not row:
+        raise HTTPException(404, "售前资产不存在")
+    for key, value in {
+        "title": title,
+        "asset_type": asset_type,
+        "product_line": product_line,
+        "product_sub_category": product_sub_category,
+        "industry": industry,
+        "summary": summary,
+        "tags": tags,
+    }.items():
+        if value is not None:
+            setattr(row, key, value)
+    file_data = await _save_asset_file(file) if file and file.filename else None
+    if file_data:
+        for key, value in file_data.items():
+            setattr(row, key, value)
+    db.commit()
+    db.refresh(row)
+    return _to_dict(row)
+
+
+@router.delete("/presales-assets/{asset_id}", status_code=204)
+def delete_presales_asset(asset_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
+    _ensure_asset_editable(user, allow_delete=True)
+    row = db.query(PresalesAsset).filter_by(id=asset_id).first()
+    if not row:
+        raise HTTPException(404, "售前资产不存在")
+    db.delete(row)
+    db.commit()
 
 
 @router.post("/bid-radar/items/{item_id}/parse-score")
