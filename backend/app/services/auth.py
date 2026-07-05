@@ -18,9 +18,8 @@ def verify_password(password: str, hashed: str) -> bool:
     try:
         parts = hashed.split("$")
         if len(parts) == 3 and hashed.startswith("pbkdf2:sha256:"):
-            algo, iters_str, rest = parts[0], parts[1], parts[2]
-            iters = int(iters_str)
-            salt, stored = rest.split("$")
+            prefix, salt, stored = parts
+            iters = int(prefix.rsplit(":", 1)[1])
             dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), iters)
             return dk.hex() == stored
         return hashlib.sha256(password.encode()).hexdigest() == hashed
