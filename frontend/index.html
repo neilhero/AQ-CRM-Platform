@@ -18847,6 +18847,9 @@ function BusinessExcellencePage(props) {
   var _assets = useState([]), assets = _assets[0], setAssets = _assets[1];
   var _bids = useState([]), bids = _bids[0], setBids = _bids[1];
   var _accuracy = useState([]), accuracy = _accuracy[0], setAccuracy = _accuracy[1];
+  var _recIndustries = useState([]), recIndustries = _recIndustries[0], setRecIndustries = _recIndustries[1];
+  var _productCats = useState([]), productCats = _productCats[0], setProductCats = _productCats[1];
+  var _recProductLine = useState(null), recProductLine = _recProductLine[0], setRecProductLine = _recProductLine[1];
   var _loading = useState(false), loading = _loading[0], setLoading = _loading[1];
   var _period = useState((function(){ var d = new Date(); return d.getFullYear() + 'Q' + (Math.floor(d.getMonth() / 3) + 1); })()), period = _period[0], setPeriod = _period[1];
   var _assetForm = Form.useForm(), assetForm = _assetForm[0];
@@ -18862,7 +18865,9 @@ function BusinessExcellencePage(props) {
       api('GET', '/business-excellence/industry-product-recommendations'),
       api('GET', '/business-excellence/presales-assets'),
       api('GET', '/security-business/bid-radar/items'),
-      api('GET', '/business-excellence/forecast-accuracy?period_label=' + encodeURIComponent(period))
+      api('GET', '/business-excellence/forecast-accuracy?period_label=' + encodeURIComponent(period)),
+      api('GET', '/industries'),
+      api('GET', '/products/categories')
     ]).then(function(res) {
       setDash(res[0] || null);
       setDupes(res[1] || []);
@@ -18873,14 +18878,23 @@ function BusinessExcellencePage(props) {
       setAssets(res[6] || []);
       setBids(res[7] || []);
       setAccuracy(res[8] || []);
+      setRecIndustries((res[9] || []).map(function(item) { return item.name || item; }));
+      setProductCats(res[10] || []);
     }).catch(function(err) { message.error(err.message || '经营驾驶舱数据加载失败'); }).finally(function(){ setLoading(false); });
   }
   useEffect(function(){ loadAll(); }, []);
   function seedRecs() {
     api('POST', '/business-excellence/industry-product-recommendations/seed').then(function(d){ message.success('已补充推荐产品 ' + (d.created || 0) + ' 条'); loadAll(); }).catch(function(err){ message.error(err.message || '生成失败'); });
   }
+  function getRecommendationSubOptions(category) {
+    var found = (productCats || []).find(function(item) { return item.key === category; });
+    return (found && found.children ? found.children : []).map(function(item) { return item.key || item.label; });
+  }
   function saveRec() {
-    recForm.validateFields().then(function(v){ return api('POST', '/business-excellence/industry-product-recommendations', v); }).then(function(){ message.success('推荐已保存'); recForm.resetFields(); loadAll(); }).catch(function(err){ message.error(err.message || '保存失败'); });
+    recForm.validateFields().then(function(v){
+      v.priority = 3;
+      return api('POST', '/business-excellence/industry-product-recommendations', v);
+    }).then(function(){ message.success('推荐已保存'); recForm.resetFields(); setRecProductLine(null); loadAll(); }).catch(function(err){ message.error(err.message || '保存失败'); });
   }
   function saveAsset() {
     assetForm.validateFields().then(function(v){ return api('POST', '/business-excellence/presales-assets', v); }).then(function(){ message.success('资产已保存'); assetForm.resetFields(); loadAll(); }).catch(function(err){ message.error(err.message || '保存失败'); });
@@ -18947,24 +18961,50 @@ function BusinessExcellencePage(props) {
     ] })
   );
   var matrixTab = e('div', null,
-    e(Card, { size: 'small', title: '行业推荐产品', extra: e(Button, { size: 'small', onClick: seedRecs }, '生成默认推荐'), style: { marginBottom: 16 } },
-      e(Form, { form: recForm, layout: 'vertical' },
-        e(Row, { gutter: 12 },
-          e(Col, { span: 4 }, e(Form.Item, { name: 'industry', label: '行业', rules: [{ required: true }] }, e(Input))),
-          e(Col, { span: 5 }, e(Form.Item, { name: 'product_line', label: '产品线', rules: [{ required: true }] }, e(Input))),
-          e(Col, { span: 3 }, e(Form.Item, { name: 'priority', label: '优先级' }, e(InputNumber, { min: 1, max: 5, style: { width: '100%' } }))),
-          e(Col, { span: 8 }, e(Form.Item, { name: 'scenario', label: '场景' }, e(Input))),
-          e(Col, { span: 4 }, e(Form.Item, { label: ' ' }, e(Button, { type: 'primary', onClick: saveRec }, '保存')))
+    e('div', { className: 'section-card', style: { marginBottom: 18, padding: 0, overflow: 'hidden' } },
+      e('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' } },
+        e('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+          e('span', { style: { fontSize: 22 } }, '\uD83C\uDFAF'),
+          e('span', { style: { fontSize: 18, fontWeight: 800, color: '#0f172a' } }, '行业推荐产品')
+        ),
+        e(Button, { type: 'primary', size: 'large', onClick: seedRecs }, '生成默认推荐')
+      ),
+      e('div', { style: { padding: 20 } },
+        e(Form, { form: recForm, layout: 'vertical' },
+          e(Row, { gutter: 16 },
+            e(Col, { span: 6 }, e(Form.Item, { name: 'industry', label: '行业', rules: [{ required: true, message: '请选择行业' }] },
+              e(Select, { placeholder: '选择行业', showSearch: true, allowClear: true },
+                (recIndustries || []).map(function(item) { return e(Option, { key: item, value: item }, item); })
+              )
+            )),
+            e(Col, { span: 6 }, e(Form.Item, { name: 'product_line', label: '一级产品大类', rules: [{ required: true, message: '请选择一级产品大类' }] },
+              e(Select, { placeholder: '选择一级产品大类', allowClear: true, onChange: function(value) { setRecProductLine(value || null); recForm.setFieldValue('product_sub_category', undefined); } },
+                (productCats || []).map(function(item) { return e(Option, { key: item.key, value: item.key }, item.label || item.key); })
+              )
+            )),
+            e(Col, { span: 6 }, e(Form.Item, { name: 'product_sub_category', label: '二级分类（可选）' },
+              e(Select, { placeholder: recProductLine ? '选择二级分类' : '请先选择一级产品大类', allowClear: true, disabled: !recProductLine },
+                getRecommendationSubOptions(recProductLine).map(function(item) { return e(Option, { key: item, value: item }, item); })
+              )
+            )),
+            e(Col, { span: 6 }, e(Form.Item, { name: 'scenario', label: '业务场景' }, e(Input, { placeholder: '如：等保整改、数据治理、AI安全监管' })))
+          ),
+          e(Row, { gutter: 16, align: 'bottom' },
+            e(Col, { span: 20 }, e(Form.Item, { name: 'pitch', label: '推荐话术' }, e(TextArea, { rows: 3, placeholder: '面向该行业客户时，建议销售如何介绍产品价值、切入点和组合方案...' }))),
+            e(Col, { span: 4 }, e(Form.Item, { label: ' ' }, e(Button, { type: 'primary', size: 'large', block: true, onClick: saveRec }, '保存')))
+          )
         )
       )
     ),
-    e(Table, { rowKey: 'id', size: 'small', dataSource: recs, pagination: { pageSize: 8 }, columns: [
-      { title: '行业', dataIndex: 'industry', width: 100 },
-      { title: '产品线', dataIndex: 'product_line', width: 150 },
-      { title: '优先级', dataIndex: 'priority', width: 80 },
-      { title: '场景', dataIndex: 'scenario', ellipsis: true },
-      { title: '话术', dataIndex: 'pitch', ellipsis: true }
-    ] })
+    e('div', { className: 'section-card', style: { padding: 0, overflow: 'hidden' } },
+      e(Table, { rowKey: 'id', size: 'middle', dataSource: recs, pagination: { pageSize: 8 }, columns: [
+        { title: '行业', dataIndex: 'industry', width: 110 },
+        { title: '一级产品大类', dataIndex: 'product_line', width: 150, render: function(v){ return v ? e(Tag, { color: ({'AI安全':'purple','数据安全':'green','AI教育':'orange'})[v] || 'blue', style: { borderRadius: 5 } }, v) : '-'; } },
+        { title: '二级分类', dataIndex: 'product_sub_category', width: 140, render: function(v){ return v ? e(Tag, { color: 'blue', style: { borderRadius: 5 } }, v) : '-'; } },
+        { title: '业务场景', dataIndex: 'scenario', ellipsis: true },
+        { title: '推荐话术', dataIndex: 'pitch', ellipsis: true }
+      ] })
+    )
   );
   var assetTab = e('div', null,
     e(Card, { size: 'small', title: '售前资产库', style: { marginBottom: 16 } },
@@ -19020,7 +19060,7 @@ function BusinessExcellencePage(props) {
   }
   if (recommendationOnly) {
     return e('div', null,
-      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '推荐产品'), e('p', { className: 'page-desc' }, '按行业、场景和优先级维护产品推荐关系，支撑销售选型和方案组合')),
+      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '推荐产品'), e('p', { className: 'page-desc' }, '按行业、业务场景和产品分类维护推荐关系，支撑销售选型和方案组合')),
       matrixTab
     );
   }

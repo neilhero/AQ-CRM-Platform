@@ -23,6 +23,9 @@ def ensure_schema_updates():
             product_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(products)")).fetchall()]
             if "sort_order" not in product_cols:
                 conn.execute(text("ALTER TABLE products ADD COLUMN sort_order INTEGER DEFAULT 0"))
+            recommendation_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(industry_product_recommendations)")).fetchall()]
+            if "product_sub_category" not in recommendation_cols:
+                conn.execute(text("ALTER TABLE industry_product_recommendations ADD COLUMN product_sub_category VARCHAR(128)"))
 
 ensure_schema_updates()
 

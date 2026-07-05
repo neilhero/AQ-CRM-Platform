@@ -132,6 +132,7 @@ class CompetitorInstallIn(BaseModel):
 class RecommendationIn(BaseModel):
     industry: str
     product_line: str
+    product_sub_category: Optional[str] = None
     priority: int = 3
     scenario: Optional[str] = None
     pitch: Optional[str] = None
@@ -523,20 +524,20 @@ def create_recommendation(data: RecommendationIn, db: Session = Depends(get_db),
 @router.post("/industry-product-recommendations/seed")
 def seed_recommendations(db: Session = Depends(get_db), admin=Depends(require_admin)):
     seeds = [
-        ("党政", "等保密评服务", 1, "等保整改、密评合规、信创适配"),
-        ("公安", "视频专网安全", 1, "视频专网、边界防护、数据安全治理"),
-        ("网信", "数据安全", 1, "数据分类分级、重要数据保护、AI安全监管"),
-        ("能源", "工控安全", 1, "工控边界、态势感知、等保整改"),
-        ("金融", "数据安全", 1, "数据防泄漏、零信任、终端安全"),
-        ("运营商", "安全运营", 1, "云网安全、态势感知、数据安全"),
-        ("教育", "AI安全", 2, "大模型应用防护、内容安全、信创安全"),
+        ("党政", "数据安全", "DLP", 3, "等保整改、密评合规、信创适配"),
+        ("公安", "数据安全", "NGFW", 3, "视频专网、边界防护、数据安全治理"),
+        ("网信", "AI安全", "大模型安全", 3, "数据分类分级、重要数据保护、AI安全监管"),
+        ("能源/电力", "数据安全", "NGFW", 3, "工控边界、态势感知、等保整改"),
+        ("金融", "数据安全", "DLP", 3, "数据防泄漏、零信任、终端安全"),
+        ("运营商", "数据安全", "WAAP", 3, "云网安全、态势感知、数据安全"),
+        ("教育", "AI安全", "大模型安全", 3, "大模型应用防护、内容安全、信创安全"),
     ]
     created = 0
-    for industry, line, priority, scenario in seeds:
+    for industry, line, sub_category, priority, scenario in seeds:
         exists = db.query(IndustryProductRecommendation).filter_by(industry=industry, product_line=line).first()
         if exists:
             continue
-        db.add(IndustryProductRecommendation(industry=industry, product_line=line, priority=priority, scenario=scenario, pitch=f"{industry}行业优先推荐{line}"))
+        db.add(IndustryProductRecommendation(industry=industry, product_line=line, product_sub_category=sub_category, priority=priority, scenario=scenario, pitch=f"{industry}行业优先推荐{line}" + (f" / {sub_category}" if sub_category else "")))
         created += 1
     db.commit()
     return {"created": created}

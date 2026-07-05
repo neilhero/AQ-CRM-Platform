@@ -540,6 +540,7 @@ class IndustryProductRecommendation(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     industry = Column(String(64), nullable=False, index=True)
     product_line = Column(String(128), nullable=False, index=True)
+    product_sub_category = Column(String(128), nullable=True, index=True)
     priority = Column(Integer, default=3, index=True)
     scenario = Column(Text)
     pitch = Column(Text)
