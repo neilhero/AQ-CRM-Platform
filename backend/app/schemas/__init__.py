@@ -45,15 +45,15 @@ class OpportunityOut(BaseModel):
 
 class ProductCreate(BaseModel):
     name: str; category: Optional[str]=None; sub_category: Optional[str]=None
-    description: Optional[str]=None; unit_price: Optional[float]=0.0
+    description: Optional[str]=None; unit_price: Optional[float]=0.0; sort_order: Optional[int]=0
 
 class ProductUpdate(BaseModel):
     name: Optional[str]=None; category: Optional[str]=None; sub_category: Optional[str]=None
-    description: Optional[str]=None; unit_price: Optional[float]=None; is_active: Optional[bool]=None
+    description: Optional[str]=None; unit_price: Optional[float]=None; sort_order: Optional[int]=None; is_active: Optional[bool]=None
 
 class ProductOut(BaseModel):
     id: int; name: str; category: Optional[str]=None; sub_category: Optional[str]=None
-    description: Optional[str]=None; unit_price: Optional[float]=0.0; is_active: Optional[bool]=True
+    description: Optional[str]=None; unit_price: Optional[float]=0.0; sort_order: Optional[int]=0; is_active: Optional[bool]=True
     created_at: Optional[datetime]=None
     class Config: from_attributes=True
 

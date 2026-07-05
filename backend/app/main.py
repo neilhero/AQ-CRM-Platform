@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
-from app.models import User, Customer, ChannelPartner, Contact, Product, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, AuditChange, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask, SalesTarget, CustomerOperationProfile, OpportunityReview, PartnerGrowthRecord, CustomerIdentity, ChannelRegistrationRule, ChannelRegistrationGovernance, PresalesSlaRule, PresalesSlaTracking, BidConversion, CustomerDecisionNode, CustomerDecisionEdge, CustomerCompetitorInstall, IndustryProductRecommendation, PocRecord, ForecastSnapshot, PresalesAsset, BidScoreCriterion
+from app.models import User, Customer, ChannelPartner, Contact, Product, ProductSubCategory, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, AuditChange, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask, SalesTarget, CustomerOperationProfile, OpportunityReview, PartnerGrowthRecord, CustomerIdentity, ChannelRegistrationRule, ChannelRegistrationGovernance, PresalesSlaRule, PresalesSlaTracking, BidConversion, CustomerDecisionNode, CustomerDecisionEdge, CustomerCompetitorInstall, IndustryProductRecommendation, PocRecord, ForecastSnapshot, PresalesAsset, BidScoreCriterion
 from datetime import date, datetime, timezone, timedelta
 import hashlib, os, json, re
+from sqlalchemy import text
 
 CST = timezone(timedelta(hours=8))
 
@@ -15,6 +16,15 @@ app = FastAPI(title="AnQuan CRM v3.3")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8097", "http://127.0.0.1:8097", "http://121.41.66.121"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 Base.metadata.create_all(bind=engine)
+
+def ensure_schema_updates():
+    with engine.begin() as conn:
+        if engine.dialect.name == "sqlite":
+            product_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(products)")).fetchall()]
+            if "sort_order" not in product_cols:
+                conn.execute(text("ALTER TABLE products ADD COLUMN sort_order INTEGER DEFAULT 0"))
+
+ensure_schema_updates()
 
 AUDIT_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -198,6 +208,17 @@ def seed():
             ]
             for p in prods: db.add(p)
             db.commit()
+        default_product_sub_categories = {
+            "AI安全": ["大模型安全", "智能体安全"],
+            "数据安全": ["WAAP", "WAF", "脱敏", "漏扫", "NGFW", "DLP"],
+            "AI教育": ["AI教学平台", "实训平台", "平台"],
+        }
+        for category, names in default_product_sub_categories.items():
+            for idx, name in enumerate(names):
+                exists = db.query(ProductSubCategory).filter_by(category=category, name=name).first()
+                if not exists:
+                    db.add(ProductSubCategory(category=category, name=name, sort_order=idx))
+        db.commit()
         if db.query(ChannelPartner).count() == 0:
             chs = [
                 ChannelPartner(name="北京网安科技", contact_person="王雷", contact_phone="【手机号已脱敏】", level="金牌", region="华北"),

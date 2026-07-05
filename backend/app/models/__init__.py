@@ -126,6 +126,16 @@ class Product(Base):
     sub_category = Column(String(128), index=True)
     description = Column(Text)
     unit_price = Column(Float, default=0.0)
+    sort_order = Column(Integer, default=0, index=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=now_cst)
+
+class ProductSubCategory(Base):
+    __tablename__ = "product_sub_categories"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    category = Column(String(128), nullable=False, index=True)
+    name = Column(String(128), nullable=False, index=True)
+    sort_order = Column(Integer, default=0, index=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=now_cst)
 
