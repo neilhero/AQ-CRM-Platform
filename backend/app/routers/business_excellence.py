@@ -521,6 +521,28 @@ def create_recommendation(data: RecommendationIn, db: Session = Depends(get_db),
     return _to_dict(row)
 
 
+@router.put("/industry-product-recommendations/{recommendation_id}")
+def update_recommendation(recommendation_id: int, data: RecommendationIn, db: Session = Depends(get_db), admin=Depends(require_admin)):
+    row = db.query(IndustryProductRecommendation).filter_by(id=recommendation_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Recommendation not found")
+    for key, value in data.model_dump().items():
+        setattr(row, key, value)
+    db.commit()
+    db.refresh(row)
+    return _to_dict(row)
+
+
+@router.delete("/industry-product-recommendations/{recommendation_id}")
+def delete_recommendation(recommendation_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
+    row = db.query(IndustryProductRecommendation).filter_by(id=recommendation_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Recommendation not found")
+    row.is_active = False
+    db.commit()
+    return {"ok": True}
+
+
 @router.post("/industry-product-recommendations/seed")
 def seed_recommendations(db: Session = Depends(get_db), admin=Depends(require_admin)):
     seeds = [

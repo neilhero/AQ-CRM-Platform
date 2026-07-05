@@ -18850,6 +18850,7 @@ function BusinessExcellencePage(props) {
   var _recIndustries = useState([]), recIndustries = _recIndustries[0], setRecIndustries = _recIndustries[1];
   var _productCats = useState([]), productCats = _productCats[0], setProductCats = _productCats[1];
   var _recProductLine = useState(null), recProductLine = _recProductLine[0], setRecProductLine = _recProductLine[1];
+  var _editingRecId = useState(null), editingRecId = _editingRecId[0], setEditingRecId = _editingRecId[1];
   var _loading = useState(false), loading = _loading[0], setLoading = _loading[1];
   var _period = useState((function(){ var d = new Date(); return d.getFullYear() + 'Q' + (Math.floor(d.getMonth() / 3) + 1); })()), period = _period[0], setPeriod = _period[1];
   var _assetForm = Form.useForm(), assetForm = _assetForm[0];
@@ -18893,8 +18894,39 @@ function BusinessExcellencePage(props) {
   function saveRec() {
     recForm.validateFields().then(function(v){
       v.priority = 3;
-      return api('POST', '/business-excellence/industry-product-recommendations', v);
-    }).then(function(){ message.success('推荐已保存'); recForm.resetFields(); setRecProductLine(null); loadAll(); }).catch(function(err){ message.error(err.message || '保存失败'); });
+      return editingRecId
+        ? api('PUT', '/business-excellence/industry-product-recommendations/' + editingRecId, v)
+        : api('POST', '/business-excellence/industry-product-recommendations', v);
+    }).then(function(){
+      message.success(editingRecId ? '推荐已更新' : '推荐已保存');
+      recForm.resetFields();
+      setRecProductLine(null);
+      setEditingRecId(null);
+      loadAll();
+    }).catch(function(err){ message.error(err.message || '保存失败'); });
+  }
+  function editRec(row) {
+    setEditingRecId(row.id);
+    setRecProductLine(row.product_line || null);
+    recForm.setFieldsValue({
+      industry: row.industry,
+      product_line: row.product_line,
+      product_sub_category: row.product_sub_category,
+      scenario: row.scenario,
+      pitch: row.pitch
+    });
+  }
+  function cancelEditRec() {
+    setEditingRecId(null);
+    setRecProductLine(null);
+    recForm.resetFields();
+  }
+  function deleteRec(row) {
+    api('DELETE', '/business-excellence/industry-product-recommendations/' + row.id).then(function(){
+      message.success('推荐已删除');
+      if (editingRecId === row.id) cancelEditRec();
+      loadAll();
+    }).catch(function(err){ message.error(err.message || '删除失败'); });
   }
   function saveAsset() {
     assetForm.validateFields().then(function(v){ return api('POST', '/business-excellence/presales-assets', v); }).then(function(){ message.success('资产已保存'); assetForm.resetFields(); loadAll(); }).catch(function(err){ message.error(err.message || '保存失败'); });
@@ -18966,8 +18998,7 @@ function BusinessExcellencePage(props) {
         e('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
           e('span', { style: { fontSize: 22 } }, '\uD83C\uDFAF'),
           e('span', { style: { fontSize: 18, fontWeight: 800, color: '#0f172a' } }, '行业推荐产品')
-        ),
-        e(Button, { type: 'primary', size: 'large', onClick: seedRecs }, '生成默认推荐')
+        )
       ),
       e('div', { style: { padding: 20 } },
         e(Form, { form: recForm, layout: 'vertical' },
@@ -18990,19 +19021,29 @@ function BusinessExcellencePage(props) {
             e(Col, { span: 6 }, e(Form.Item, { name: 'scenario', label: '业务场景' }, e(Input, { placeholder: '如：等保整改、数据治理、AI安全监管' })))
           ),
           e(Row, { gutter: 16, align: 'bottom' },
-            e(Col, { span: 20 }, e(Form.Item, { name: 'pitch', label: '推荐话术' }, e(TextArea, { rows: 3, placeholder: '面向该行业客户时，建议销售如何介绍产品价值、切入点和组合方案...' }))),
-            e(Col, { span: 4 }, e(Form.Item, { label: ' ' }, e(Button, { type: 'primary', size: 'large', block: true, onClick: saveRec }, '保存')))
+            e(Col, { span: 22 }, e(Form.Item, { name: 'pitch', label: '推荐话术' }, e(TextArea, { rows: 5, placeholder: '面向该行业客户时，建议销售如何介绍产品价值、切入点和组合方案...' }))),
+            e(Col, { span: 2 }, e(Form.Item, { label: ' ' }, e(Space, { direction: 'vertical', size: 8, style: { width: '100%' } },
+              e(Button, { type: 'primary', size: 'middle', style: { width: '100%', minWidth: 72, height: 36 }, onClick: saveRec }, editingRecId ? '更新' : '保存'),
+              editingRecId ? e(Button, { size: 'small', style: { width: '100%' }, onClick: cancelEditRec }, '取消') : null
+            )))
           )
         )
       )
     ),
     e('div', { className: 'section-card', style: { padding: 0, overflow: 'hidden' } },
       e(Table, { rowKey: 'id', size: 'middle', dataSource: recs, pagination: { pageSize: 8 }, columns: [
+        { title: '序号', width: 72, render: function(_, r, index){ return index + 1; } },
         { title: '行业', dataIndex: 'industry', width: 110 },
         { title: '一级产品大类', dataIndex: 'product_line', width: 150, render: function(v){ return v ? e(Tag, { color: ({'AI安全':'purple','数据安全':'green','AI教育':'orange'})[v] || 'blue', style: { borderRadius: 5 } }, v) : '-'; } },
         { title: '二级分类', dataIndex: 'product_sub_category', width: 140, render: function(v){ return v ? e(Tag, { color: 'blue', style: { borderRadius: 5 } }, v) : '-'; } },
         { title: '业务场景', dataIndex: 'scenario', ellipsis: true },
-        { title: '推荐话术', dataIndex: 'pitch', ellipsis: true }
+        { title: '推荐话术', dataIndex: 'pitch', ellipsis: true },
+        { title: '操作', width: 110, fixed: 'right', render: function(_, r){ return e(Space, null,
+          e(Button, { size: 'small', type: 'link', onClick: function(){ editRec(r); } }, '编辑'),
+          e(Popconfirm, { title: '删除这条推荐？', onConfirm: function(){ deleteRec(r); } },
+            e(Button, { size: 'small', type: 'link', danger: true }, '删除')
+          )
+        ); } }
       ] })
     )
   );
