@@ -11731,7 +11731,7 @@ function ProductListPage() {
           e('span', { style: { fontSize: 18, fontWeight: 800, color: '#0f172a' } }, category),
           e('span', { style: { fontSize: 13, color: '#94a3b8' } }, rows.length + ' \u6b3e')
         ),
-        category !== CAT_NONE ? e(Button, { size: 'small', onClick: function() { openSubManager(category); } }, TXT.manageSub) : null
+        null
       ),
       e('div', { onDragOver: onDragOver, onDrop: category === CAT_NONE ? null : onDropCat(category, null), style: { padding: 16, minHeight: 82 } },
         rows.length ? rows.map(function(prod) { return renderProductRow(prod, meta); }) : e('div', { style: { textAlign: 'center', color: '#94a3b8', padding: '28px 0' } }, TXT.emptyCat),
@@ -11747,8 +11747,8 @@ function ProductListPage() {
         e('p', { className: 'page-subtitle' }, '\u5171 ' + (data.length || 0) + ' ' + TXT.productCount + ' \u00B7 ' + TXT.pageSub)
       ),
       e('div', { style: { display: 'flex', gap: 10 } },
-        e(Button, { icon: IC('SettingOutlined'), onClick: function() { openSubManager(selCat || MAIN_CATS[0]); } }, TXT.manageSub),
-        e(Button, { type: 'primary', size: 'large', icon: IC('PlusOutlined'), onClick: function() { setEdit(null); setModalCategory(selCat || null); form.resetFields(); form.setFieldsValue({ category: selCat || undefined, sub_category: selSub || undefined }); setOpen(true); } }, TXT.newProduct)
+        e(Button, { type: 'primary', size: 'large', icon: IC('PlusOutlined'), onClick: function() { setEdit(null); setModalCategory(selCat || null); form.resetFields(); form.setFieldsValue({ category: selCat || undefined, sub_category: selSub || undefined }); setOpen(true); } }, TXT.newProduct),
+        e(Button, { type: 'primary', size: 'large', icon: IC('SettingOutlined'), onClick: function() { openSubManager(selCat || MAIN_CATS[0]); } }, TXT.manageSub)
       )
     ),
     e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 } },

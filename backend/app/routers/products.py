@@ -86,7 +86,11 @@ def create_sub_category(data: dict=Body(...), db: Session=Depends(get_db), admin
         raise HTTPException(400, "Category and name required")
     exists = db.query(ProductSubCategory).filter_by(category=category, name=name).first()
     if exists:
-        raise HTTPException(400, "Sub category exists")
+        if exists.is_active:
+            raise HTTPException(400, "Sub category exists")
+        exists.is_active = True
+        db.commit(); db.refresh(exists)
+        return {"id": exists.id, "category": exists.category, "name": exists.name, "sort_order": exists.sort_order}
     max_order = db.query(func.max(ProductSubCategory.sort_order)).filter(ProductSubCategory.category == category).scalar()
     row = ProductSubCategory(category=category, name=name, sort_order=int(max_order or 0) + 1)
     db.add(row); db.commit(); db.refresh(row)
@@ -114,14 +118,16 @@ def update_sub_category(sub_id: int, data: dict=Body(...), db: Session=Depends(g
     db.commit(); db.refresh(row)
     return {"id": row.id, "category": row.category, "name": row.name, "sort_order": row.sort_order}
 
-@router.delete("/sub-categories/{sub_id}", status_code=204)
+@router.delete("/sub-categories/{sub_id}")
 def delete_sub_category(sub_id: int, db: Session=Depends(get_db), admin=Depends(require_admin)):
     row = db.query(ProductSubCategory).filter_by(id=sub_id).first()
     if not row:
         raise HTTPException(404, "Not found")
     for product in db.query(Product).filter(Product.category == row.category, Product.sub_category == row.name).all():
         product.sub_category = None
-    db.delete(row); db.commit()
+    row.is_active = False
+    db.commit()
+    return {"deleted": True}
 
 @router.put("/reorder")
 def reorder_products(data: dict=Body(...), db: Session=Depends(get_db), admin=Depends(require_admin)):
