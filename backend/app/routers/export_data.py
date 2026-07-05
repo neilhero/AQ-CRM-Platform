@@ -7,7 +7,7 @@ import io
 
 from app.database import get_db
 from app.models import Customer
-from app.permissions import can_view_all_sales_data
+from app.permissions import scoped_customer_query
 from app.routers.utils import require_user
 
 router = APIRouter()
@@ -21,9 +21,7 @@ def export_customers(
     db: Session = Depends(get_db),
     user=Depends(require_user),
 ):
-    q = db.query(Customer)
-    if not can_view_all_sales_data(user):
-        q = q.filter(Customer.owner_id == user.id)
+    q = scoped_customer_query(db.query(Customer), db, user)
     if ids:
         selected_ids = [int(x) for x in ids.split(",") if x.strip().isdigit()]
         q = q.filter(Customer.id.in_(selected_ids or [-1]))

@@ -21,7 +21,15 @@ from app.models import (
     SalesTarget,
     User,
 )
-from app.permissions import ROLE_ADMIN, ROLE_CHANNEL_MANAGER, ROLE_MANAGER, can_view_all_sales_data, is_channel_only
+from app.permissions import (
+    ROLE_ADMIN,
+    ROLE_CHANNEL_MANAGER,
+    ROLE_MANAGER,
+    can_access_customer,
+    managed_user_ids,
+    scoped_customer_query,
+    scoped_opportunity_query,
+)
 from app.routers.utils import require_admin, require_user
 
 router = APIRouter()
@@ -123,16 +131,12 @@ def _value(v):
     return v.value if hasattr(v, "value") else v
 
 
-def _perm_filter(q, user):
-    if can_view_all_sales_data(user):
-        return q
-    if is_channel_only(user):
-        return q.filter(Opportunity.opp_type == "channel")
-    return q.filter(Opportunity.sales_rep_id == user.id)
+def _perm_filter(q, db: Session, user):
+    return scoped_opportunity_query(q, db, user)
 
 
 def _check_opp_access(db: Session, opportunity_id: int, user):
-    opp = _perm_filter(db.query(Opportunity).filter(Opportunity.id == opportunity_id), user).first()
+    opp = _perm_filter(db.query(Opportunity).filter(Opportunity.id == opportunity_id), db, user).first()
     if not opp:
         raise HTTPException(403, "没有权限")
     return opp
@@ -223,6 +227,7 @@ def forecast(
             .outerjoin(Customer, Opportunity.customer_id == Customer.id)
             .outerjoin(ChannelPartner, Opportunity.channel_partner_id == ChannelPartner.id)
             .outerjoin(User, Opportunity.sales_rep_id == User.id),
+            db,
             user,
         )
         .filter(Opportunity.is_closed == False)
@@ -255,16 +260,18 @@ def forecast(
 @router.get("/users")
 def sales_users(db: Session = Depends(get_db), user=Depends(require_user)):
     q = db.query(User).filter(User.is_active == True, User.role.in_(["sales", "manager", "channel_manager"]))
-    if user.role not in (ROLE_ADMIN, ROLE_MANAGER, ROLE_CHANNEL_MANAGER):
-        q = q.filter(User.id == user.id)
+    visible_ids = managed_user_ids(db, user)
+    if visible_ids is not None:
+        q = q.filter(User.id.in_(visible_ids or [-1]))
     return [{"id": u.id, "username": u.username, "real_name": u.real_name, "role": u.role} for u in q.order_by(User.real_name).all()]
 
 
 @router.get("/targets")
 def list_targets(period_label: Optional[str] = None, db: Session = Depends(get_db), user=Depends(require_user)):
     q = db.query(SalesTarget, User).outerjoin(User, SalesTarget.sales_rep_id == User.id)
-    if not can_view_all_sales_data(user):
-        q = q.filter(SalesTarget.sales_rep_id == user.id)
+    visible_ids = managed_user_ids(db, user)
+    if visible_ids is not None:
+        q = q.filter(SalesTarget.sales_rep_id.in_(visible_ids or [-1]))
     if period_label:
         q = q.filter(SalesTarget.period_label == period_label)
     return [_target_dict(t, u) for t, u in q.order_by(SalesTarget.period_label.desc(), User.real_name).all()]
@@ -334,14 +341,14 @@ def delete_target(target_id: int, db: Session = Depends(get_db), admin=Depends(r
 
 @router.get("/customer-operations")
 def customer_operations(db: Session = Depends(get_db), user=Depends(require_user)):
-    customers = db.query(Customer).all() if can_view_all_sales_data(user) else db.query(Customer).filter(Customer.owner_id == user.id).all()
+    customers = scoped_customer_query(db.query(Customer), db, user).all()
     profiles = {p.customer_id: p for p in db.query(CustomerOperationProfile).all()}
     today = date.today()
     items = []
     alerts = []
     for customer in customers:
         profile = profiles.get(customer.id)
-        opps = db.query(Opportunity).filter(Opportunity.customer_id == customer.id).all()
+        opps = _perm_filter(db.query(Opportunity).filter(Opportunity.customer_id == customer.id), db, user).all()
         amount = sum(o.amount or 0 for o in opps)
         latest_follow = (
             db.query(func.max(FollowUp.created_at))
@@ -386,7 +393,7 @@ def upsert_customer_operation(customer_id: int, data: CustomerOperationIn, db: S
     customer = db.query(Customer).filter_by(id=customer_id).first()
     if not customer:
         raise HTTPException(404, "客户不存在")
-    if not can_view_all_sales_data(user) and customer.owner_id != user.id:
+    if not can_access_customer(db, user, customer_id):
         raise HTTPException(403, "没有权限")
     profile = db.query(CustomerOperationProfile).filter_by(customer_id=customer_id).first()
     if not profile:
@@ -402,7 +409,7 @@ def upsert_customer_operation(customer_id: int, data: CustomerOperationIn, db: S
 @router.get("/opportunity-reviews")
 def list_reviews(opportunity_id: Optional[int] = None, db: Session = Depends(get_db), user=Depends(require_user)):
     q = db.query(OpportunityReview, Opportunity, User).join(Opportunity, OpportunityReview.opportunity_id == Opportunity.id).outerjoin(User, OpportunityReview.reviewer_id == User.id)
-    q = _perm_filter(q, user)
+    q = _perm_filter(q, db, user)
     if opportunity_id:
         q = q.filter(OpportunityReview.opportunity_id == opportunity_id)
     rows = []

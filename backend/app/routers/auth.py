@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.services.auth import authenticate, create_token, hash_password, get_current_user
 from app.models import User
-from app.permissions import ROLE_LABELS, ROLE_MENU_KEYS
+from app.permissions import ROLE_LABELS
 from app.routers.utils import require_user
 
 router = APIRouter()
@@ -36,15 +36,13 @@ def login(req: LoginReq, db: Session = Depends(get_db)):
 
 @router.get("/me")
 def me(user=Depends(require_user)):
-    allowed = ROLE_MENU_KEYS.get(user.role)
-    menus = ["*"] if allowed is None else sorted(allowed)
     return {
         "user_id": user.id,
         "username": user.username,
         "real_name": user.real_name,
         "role": user.role,
         "role_label": ROLE_LABELS.get(user.role, user.role),
-        "menus": menus,
+        "menus": ["*"],
     }
 
 @router.put("/change-password")

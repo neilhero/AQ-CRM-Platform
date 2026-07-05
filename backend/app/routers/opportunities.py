@@ -1,21 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
 from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
+from sqlalchemy.orm import Session
+
 from app.database import get_db
-from app.models import Opportunity, Customer, ChannelPartner, User, Contact
+from app.models import ChannelPartner, Contact, Customer, Opportunity, User
 from app.permissions import (
-    ROLE_ADMIN,
     ROLE_CHANNEL_MANAGER,
     ROLE_MANAGER,
     ROLE_PRESALES,
     ROLE_SALES,
     can_edit_business_record,
-    can_view_all_sales_data,
-    is_channel_only,
+    managed_user_ids,
+    scoped_opportunity_query,
 )
-from app.schemas import OpportunityCreate, OpportunityUpdate
 from app.routers.utils import require_user
+from app.schemas import OpportunityCreate, OpportunityUpdate
 
 router = APIRouter()
 
@@ -28,8 +29,10 @@ REQUIRED_OPPORTUNITY_FIELDS = {
 VALID_STAGES = {"1", "2", "3", "4", "5"}
 VALID_PROBABILITIES = {"HIGH", "MID_HIGH", "MID", "LOW"}
 
+
 def _raw_value(value):
     return value.value if hasattr(value, "value") else value
+
 
 def _validate_required_opportunity_fields(values):
     missing = []
@@ -51,30 +54,22 @@ def _validate_required_opportunity_fields(values):
     if probability not in VALID_PROBABILITIES:
         raise HTTPException(400, "概率不合法")
 
-def _apply_perm_filter(q, user):
-    """Apply role-based permission filter to opportunity query."""
-    if can_view_all_sales_data(user):
-        return q
-    if is_channel_only(user):
-        return q.filter(Opportunity.opp_type == "channel")
-    # sales and others: only own opportunities
-    return q.filter(Opportunity.sales_rep_id == user.id)
 
-def _check_access(opp, user):
-    """Check if user can access this opportunity. Raise 403 if not."""
-    if can_view_all_sales_data(user):
-        return
-    if is_channel_only(user):
-        if opp.opp_type and opp.opp_type.value != "channel":
-            raise HTTPException(403, "Access denied")
-        return
-    if opp.sales_rep_id != user.id:
+def _apply_perm_filter(q, db: Session, user):
+    return scoped_opportunity_query(q, db, user)
+
+
+def _check_access(opp, db: Session, user):
+    allowed = scoped_opportunity_query(db.query(Opportunity), db, user).filter(Opportunity.id == opp.id).first()
+    if not allowed:
         raise HTTPException(403, "Access denied")
 
-def _check_edit_access(opp, user):
+
+def _check_edit_access(opp, db: Session, user):
     is_channel = _raw_value(opp.opp_type) == "channel"
-    if not can_edit_business_record(user, owner_id=opp.sales_rep_id, is_channel=is_channel):
+    if not can_edit_business_record(user, owner_id=opp.sales_rep_id, is_channel=is_channel, db=db):
         raise HTTPException(403, "Access denied")
+
 
 def _contact_dict(contact):
     return {
@@ -88,23 +83,34 @@ def _contact_dict(contact):
         "notes": contact.notes,
     }
 
+
 def _contact_person_text(contacts):
     return ";;".join(
         "|".join([c.name or "", c.position or "", c.phone or "", c.email or ""])
         for c in contacts
     )
 
+
 @router.get("")
-def list_opps(keyword: Optional[str]=Query(None), stage: Optional[str]=Query(None),
-              opp_type: Optional[str]=Query(None), sales_rep_id: Optional[int]=Query(None),
-              skip: int=Query(0,ge=0), limit: int=Query(100,ge=1,le=500),
-              db: Session=Depends(get_db), user=Depends(require_user)):
-    q = db.query(Opportunity)
-    q = _apply_perm_filter(q, user)
-    if keyword: q = q.filter(Opportunity.name.contains(keyword))
-    if stage: q = q.filter(Opportunity.stage == stage)
-    if opp_type: q = q.filter(Opportunity.opp_type == opp_type)
-    if sales_rep_id: q = q.filter(Opportunity.sales_rep_id == sales_rep_id)
+def list_opps(
+    keyword: Optional[str] = Query(None),
+    stage: Optional[str] = Query(None),
+    opp_type: Optional[str] = Query(None),
+    sales_rep_id: Optional[int] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    q = _apply_perm_filter(db.query(Opportunity), db, user)
+    if keyword:
+        q = q.filter(Opportunity.name.contains(keyword))
+    if stage:
+        q = q.filter(Opportunity.stage == stage)
+    if opp_type:
+        q = q.filter(Opportunity.opp_type == opp_type)
+    if sales_rep_id:
+        q = q.filter(Opportunity.sales_rep_id == sales_rep_id)
     results = q.order_by(Opportunity.updated_at.desc()).offset(skip).limit(limit).all()
     out = []
     for o in results:
@@ -124,11 +130,27 @@ def list_opps(keyword: Optional[str]=Query(None), stage: Optional[str]=Query(Non
         out.append(d)
     return out
 
+
+@router.get("/stats/summary")
+def stats(db: Session = Depends(get_db), user=Depends(require_user)):
+    q = _apply_perm_filter(db.query(Opportunity), db, user)
+    total = q.count()
+    active = q.filter(Opportunity.is_closed == False).count()
+    total_amt = (
+        _apply_perm_filter(db.query(func.sum(Opportunity.amount)), db, user)
+        .filter(Opportunity.is_closed == False)
+        .scalar()
+        or 0
+    )
+    return {"total": total, "active": active, "total_amount": round(total_amt, 1)}
+
+
 @router.get("/{oid}")
-def get_opp(oid: int, db: Session=Depends(get_db), user=Depends(require_user)):
+def get_opp(oid: int, db: Session = Depends(get_db), user=Depends(require_user)):
     o = db.query(Opportunity).filter_by(id=oid).first()
-    if not o: raise HTTPException(404, "Not found")
-    _check_access(o, user)
+    if not o:
+        raise HTTPException(404, "Not found")
+    _check_access(o, db, user)
     d = {c.name: getattr(o, c.name) for c in o.__table__.columns}
     if o.customer_id:
         cust = db.query(Customer).filter_by(id=o.customer_id).first()
@@ -139,10 +161,7 @@ def get_opp(oid: int, db: Session=Depends(get_db), user=Depends(require_user)):
             .order_by(Contact.id.desc())
             .all()
         )
-        d["customer_contacts"] = [
-            _contact_dict(c)
-            for c in contacts
-        ]
+        d["customer_contacts"] = [_contact_dict(c) for c in contacts]
         if not d.get("key_person"):
             key_contacts = [c for c in contacts if c.role_type == "key_person"]
             if key_contacts:
@@ -164,52 +183,54 @@ def get_opp(oid: int, db: Session=Depends(get_db), user=Depends(require_user)):
     d["probability"] = o.probability.value if o.probability else None
     return d
 
+
 @router.post("", status_code=201)
-def create_opp(data: OpportunityCreate, db: Session=Depends(get_db), user=Depends(require_user)):
+def create_opp(data: OpportunityCreate, db: Session = Depends(get_db), user=Depends(require_user)):
     if user.role == ROLE_PRESALES:
         raise HTTPException(403, "售前角色不能新建商机")
     kwargs = data.model_dump()
     _validate_required_opportunity_fields(kwargs)
-    if kwargs.get("opp_type") == "channel":
-        kwargs["opp_type"] = "channel"
-    else:
-        kwargs["opp_type"] = "direct"
+    kwargs["opp_type"] = "channel" if kwargs.get("opp_type") == "channel" else "direct"
     if user.role == ROLE_CHANNEL_MANAGER and kwargs.get("opp_type") != "channel":
         raise HTTPException(403, "渠道经理只能新建渠道商机")
-    # Sales can only create own opportunities. Admin and manager can assign.
-    if user.role == ROLE_SALES or user.role == ROLE_CHANNEL_MANAGER:
+    if user.role in (ROLE_SALES, ROLE_CHANNEL_MANAGER):
         kwargs["sales_rep_id"] = user.id
+    elif user.role == ROLE_MANAGER and kwargs.get("sales_rep_id") not in (managed_user_ids(db, user) or []):
+        raise HTTPException(403, "只能分配给自己或管辖销售")
     o = Opportunity(**kwargs)
-    db.add(o); db.commit(); db.refresh(o); return {"id": o.id, "name": o.name}
+    db.add(o)
+    db.commit()
+    db.refresh(o)
+    return {"id": o.id, "name": o.name}
+
 
 @router.put("/{oid}")
-def update_opp(oid: int, data: OpportunityUpdate, db: Session=Depends(get_db), user=Depends(require_user)):
+def update_opp(oid: int, data: OpportunityUpdate, db: Session = Depends(get_db), user=Depends(require_user)):
     o = db.query(Opportunity).filter_by(id=oid).first()
-    if not o: raise HTTPException(404, "Not found")
-    _check_access(o, user)
-    _check_edit_access(o, user)
+    if not o:
+        raise HTTPException(404, "Not found")
+    _check_access(o, db, user)
+    _check_edit_access(o, db, user)
     updates = data.model_dump(exclude_unset=True)
     final_values = {
         field: updates[field] if field in updates else _raw_value(getattr(o, field))
         for field in REQUIRED_OPPORTUNITY_FIELDS
     }
     _validate_required_opportunity_fields(final_values)
-    for k,v in updates.items(): setattr(o,k,v)
-    db.commit(); db.refresh(o); return {"message": "updated"}
+    for k, v in updates.items():
+        setattr(o, k, v)
+    db.commit()
+    db.refresh(o)
+    return {"message": "updated"}
+
 
 @router.delete("/{oid}", status_code=204)
-def delete_opp(oid: int, db: Session=Depends(get_db), user=Depends(require_user)):
+def delete_opp(oid: int, db: Session = Depends(get_db), user=Depends(require_user)):
     o = db.query(Opportunity).filter_by(id=oid).first()
-    if not o: raise HTTPException(404, "Not found")
-    _check_access(o, user)
-    _check_edit_access(o, user)
-    db.delete(o); db.commit()
+    if not o:
+        raise HTTPException(404, "Not found")
+    _check_access(o, db, user)
+    _check_edit_access(o, db, user)
+    db.delete(o)
+    db.commit()
 
-@router.get("/stats/summary")
-def stats(db: Session=Depends(get_db), user=Depends(require_user)):
-    q = db.query(Opportunity)
-    q = _apply_perm_filter(q, user)
-    total = q.count()
-    active = q.filter(Opportunity.is_closed == False).count()
-    total_amt = _apply_perm_filter(db.query(func.sum(Opportunity.amount)), user).filter(Opportunity.is_closed == False).scalar() or 0
-    return {"total": total, "active": active, "total_amount": round(total_amt,1)}

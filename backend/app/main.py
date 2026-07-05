@@ -26,6 +26,9 @@ def ensure_schema_updates():
             recommendation_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(industry_product_recommendations)")).fetchall()]
             if "product_sub_category" not in recommendation_cols:
                 conn.execute(text("ALTER TABLE industry_product_recommendations ADD COLUMN product_sub_category VARCHAR(128)"))
+            user_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
+            if "manager_id" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN manager_id INTEGER"))
 
 ensure_schema_updates()
 
@@ -477,14 +480,14 @@ app.include_router(business_excellence.router, prefix="/api/business-excellence"
 from app.database import get_db
 from app.schemas import ContactCreate, ContactUpdate
 from app.routers.utils import require_user
-from app.permissions import can_view_all_sales_data
+from app.permissions import can_access_customer
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException
 
 def _check_cust_owner(customer_id: int, db: Session, user):
     c = db.query(Customer).filter_by(id=customer_id).first()
     if not c: raise HTTPException(404, "客户不存在")
-    if not can_view_all_sales_data(user) and c.owner_id != user.id:
+    if not can_access_customer(db, user, customer_id):
         raise HTTPException(403, "没有权限访问该客户")
     return c
 

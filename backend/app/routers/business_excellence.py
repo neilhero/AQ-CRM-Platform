@@ -42,7 +42,7 @@ from app.models import (
     User,
     now_cst,
 )
-from app.permissions import can_view_all_sales_data, is_channel_only
+from app.permissions import can_access_customer, can_access_opportunity, scoped_customer_query
 from app.routers.sales_growth import _date_range, forecast as forecast_summary
 from app.routers.utils import require_admin, require_user
 
@@ -193,7 +193,7 @@ def _check_customer(db: Session, cid: int, user):
     row = db.query(Customer).filter_by(id=cid).first()
     if not row:
         raise HTTPException(404, "客户不存在")
-    if not can_view_all_sales_data(user) and row.owner_id != user.id:
+    if not can_access_customer(db, user, cid):
         raise HTTPException(403, "没有权限")
     return row
 
@@ -202,11 +202,7 @@ def _check_opp(db: Session, oid: int, user):
     opp = db.query(Opportunity).filter_by(id=oid).first()
     if not opp:
         raise HTTPException(404, "商机不存在")
-    if can_view_all_sales_data(user):
-        return opp
-    if is_channel_only(user) and _value(opp.opp_type) == "channel":
-        return opp
-    if opp.sales_rep_id == user.id:
+    if can_access_opportunity(db, user, oid):
         return opp
     raise HTTPException(403, "没有权限")
 
@@ -223,7 +219,7 @@ def _active_rule(db: Session):
 
 @router.get("/customer-duplicates")
 def customer_duplicates(db: Session = Depends(get_db), user=Depends(require_user)):
-    customers = db.query(Customer).all() if can_view_all_sales_data(user) else db.query(Customer).filter(Customer.owner_id == user.id).all()
+    customers = scoped_customer_query(db.query(Customer), db, user).all()
     identities = {i.customer_id: i for i in db.query(CustomerIdentity).all()}
     buckets = {}
     for c in customers:
@@ -675,7 +671,7 @@ def parse_bid_score(item_id: int, db: Session = Depends(get_db), user=Depends(re
 
 @router.get("/customer-maturity-scores")
 def customer_maturity_scores(db: Session = Depends(get_db), user=Depends(require_user)):
-    customers = db.query(Customer).all() if can_view_all_sales_data(user) else db.query(Customer).filter(Customer.owner_id == user.id).all()
+    customers = scoped_customer_query(db.query(Customer), db, user).all()
     rows = []
     for c in customers:
         profile = db.query(CustomerSecurityProfile).filter_by(customer_id=c.id).first()

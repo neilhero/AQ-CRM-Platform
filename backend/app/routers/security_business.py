@@ -20,7 +20,7 @@ from app.models import (
     PresalesRequest,
     User,
 )
-from app.permissions import can_view_all_sales_data, is_channel_only
+from app.permissions import ROLE_ADMIN, can_access_customer, can_access_opportunity, scoped_opportunity_query
 from app.routers.utils import require_admin, require_user
 
 router = APIRouter()
@@ -123,22 +123,14 @@ def _check_opp_access(db: Session, opportunity_id: int, user):
     opp = db.query(Opportunity).filter_by(id=opportunity_id).first()
     if not opp:
         raise HTTPException(404, "商机不存在")
-    if can_view_all_sales_data(user):
-        return opp
-    if is_channel_only(user) and _value(opp.opp_type) == "channel":
-        return opp
-    if opp.sales_rep_id == user.id:
+    if can_access_opportunity(db, user, opportunity_id):
         return opp
     raise HTTPException(403, "无权访问该商机")
 
 
 def _accessible_opp_ids(db: Session, user):
-    q = db.query(Opportunity.id)
-    if can_view_all_sales_data(user):
-        return [row[0] for row in q.all()]
-    if is_channel_only(user):
-        return [row[0] for row in q.filter(Opportunity.opp_type == "channel").all()]
-    return [row[0] for row in q.filter(Opportunity.sales_rep_id == user.id).all()]
+    q = scoped_opportunity_query(db.query(Opportunity.id), db, user)
+    return [row[0] for row in q.all()]
 
 
 def _enrich_registration(db: Session, reg: ChannelRegistration):
@@ -160,7 +152,7 @@ def get_customer_profile(customer_id: int, db: Session = Depends(get_db), user=D
     cust = db.query(Customer).filter_by(id=customer_id).first()
     if not cust:
         raise HTTPException(404, "客户不存在")
-    if not can_view_all_sales_data(user) and cust.owner_id != user.id:
+    if not can_access_customer(db, user, customer_id):
         raise HTTPException(403, "Access denied")
     profile = db.query(CustomerSecurityProfile).filter_by(customer_id=customer_id).first()
     data = _to_dict(profile) if profile else {"customer_id": customer_id}
@@ -175,7 +167,7 @@ def upsert_customer_profile(customer_id: int, data: CustomerSecurityProfileIn, d
     cust = db.query(Customer).filter_by(id=customer_id).first()
     if not cust:
         raise HTTPException(404, "客户不存在")
-    if not can_view_all_sales_data(user) and cust.owner_id != user.id:
+    if not can_access_customer(db, user, customer_id):
         raise HTTPException(403, "Access denied")
     profile = db.query(CustomerSecurityProfile).filter_by(customer_id=customer_id).first()
     if not profile:
@@ -196,9 +188,12 @@ def list_channel_registrations(
     user=Depends(require_user),
 ):
     q = db.query(ChannelRegistration)
-    if not can_view_all_sales_data(user):
+    if user.role != ROLE_ADMIN:
         opp_ids = _accessible_opp_ids(db, user)
-        q = q.filter(or_(ChannelRegistration.created_by == user.id, ChannelRegistration.opportunity_id.in_(opp_ids or [-1])))
+        if opp_ids:
+            q = q.filter(or_(ChannelRegistration.created_by == user.id, ChannelRegistration.opportunity_id.in_(opp_ids)))
+        else:
+            q = q.filter(ChannelRegistration.created_by == user.id)
     if keyword:
         q = q.filter(ChannelRegistration.final_customer_name.contains(keyword))
     if status:
@@ -270,7 +265,7 @@ def list_presales_requests(
     if opportunity_id:
         _check_opp_access(db, opportunity_id, user)
         q = q.filter(PresalesRequest.opportunity_id == opportunity_id)
-    elif not can_view_all_sales_data(user):
+    elif user.role != ROLE_ADMIN:
         opp_ids = _accessible_opp_ids(db, user)
         q = q.filter(or_(PresalesRequest.created_by == user.id, PresalesRequest.opportunity_id.in_(opp_ids or [-1])))
     if status:

@@ -65,6 +65,7 @@ class User(Base):
     password_hash = Column(String(256), nullable=False)
     real_name = Column(String(64), nullable=False)
     role = Column(String(32), default="sales")
+    manager_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     email = Column(String(128))
     phone = Column(String(32))
     is_active = Column(Boolean, default=True)
