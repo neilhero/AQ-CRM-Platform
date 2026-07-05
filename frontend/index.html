@@ -222,7 +222,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 
 
-.sidebar-menu .ant-menu-item:hover,.sidebar-menu .ant-menu-submenu-title:hover{color:#e2e8f0;background:var(--sidebar-hover)}
+.sidebar-menu .ant-menu-item:hover,.sidebar-menu .ant-menu-submenu-title:hover{color:#e2e8f0!important;background:var(--sidebar-hover)!important}
+.sidebar-menu .ant-menu-item:hover .ant-menu-title-content,.sidebar-menu .ant-menu-submenu-title:hover .ant-menu-title-content,.sidebar-menu .ant-menu-item:hover .anticon,.sidebar-menu .ant-menu-submenu-title:hover .anticon,.sidebar-menu .ant-menu-item:hover svg,.sidebar-menu .ant-menu-submenu-title:hover svg{color:#e2e8f0!important}
 
 
 
@@ -2087,10 +2088,8 @@ function AppLayout(props) {
 
     { key: 'module-presales', label: '售前', disabled: true, className: 'sidebar-module-title' },
 
-    { key: 'group-presales', icon: IC('ToolOutlined'), label: '售前协同', children: [
-      { key: '/presales', label: '售前协同' },
-      { key: '/presales/assets', label: '售前资产' }
-    ] },
+    { key: '/presales', icon: IC('ToolOutlined'), label: '售前协同' },
+    { key: '/presales/assets', icon: IC('FolderOpenOutlined'), label: '售前资产' },
 
 
 
@@ -2109,10 +2108,8 @@ function AppLayout(props) {
 
     { key: 'module-product', label: '产品', disabled: true, className: 'sidebar-module-title' },
 
-    { key: 'group-product', icon: IC('AppstoreOutlined'), label: '产品管理', children: [
-      { key: '/products', label: '产品管理' },
-      { key: '/products/recommendations', label: '推荐产品' }
-    ] },
+    { key: '/products', icon: IC('AppstoreOutlined'), label: '产品管理' },
+    { key: '/products/recommendations', icon: IC('BulbOutlined'), label: '推荐产品' },
 
 
 
@@ -2140,8 +2137,8 @@ function AppLayout(props) {
   var moduleVisibleMap = {
     'module-business': ['/follow-ups', 'group-customer', 'group-opp', 'group-leads'],
     'module-channel': ['group-partner'],
-    'module-presales': ['group-presales'],
-    'module-product': ['group-product']
+    'module-presales': ['/presales', '/presales/assets'],
+    'module-product': ['/products', '/products/recommendations']
   };
 
 
@@ -2274,9 +2271,9 @@ function AppLayout(props) {
   if (hash === '/dashboard' || hash === '/business-excellence') { selKey = hash; openKeys = ['group-dashboard']; }
   if (hash.startsWith('/customers')) { selKey = (hash === '/customers/profile' || hash === '/customers/operations') ? hash : '/customers'; openKeys = ['group-customer']; }
   if (hash.startsWith('/leads')) { selKey = hash; openKeys = ['group-leads']; }
-  if (hash.startsWith('/presales')) { selKey = hash; openKeys = ['group-presales']; }
+  if (hash.startsWith('/presales')) { selKey = hash; openKeys = []; }
   if (hash.startsWith('/opportunities')) { selKey = hash; openKeys = ['group-opp']; }
-  if (hash.startsWith('/products')) { selKey = hash === '/products/recommendations' ? '/products/recommendations' : '/products'; openKeys = ['group-product']; }
+  if (hash.startsWith('/products')) { selKey = hash === '/products/recommendations' ? '/products/recommendations' : '/products'; openKeys = []; }
 
 
 
