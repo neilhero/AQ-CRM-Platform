@@ -1464,7 +1464,16 @@ async function api(method, path, body) {
 
 
 
-  var d = await r.json();
+  var raw = await r.text();
+  var d = {};
+  if (raw) {
+    try {
+      d = JSON.parse(raw);
+    } catch (err) {
+      if (!r.ok) throw new Error(raw || '请求失败');
+      d = raw;
+    }
+  }
 
 
 
@@ -1472,7 +1481,7 @@ async function api(method, path, body) {
 
 
 
-  if (!r.ok) { var msg = d.detail; if (Array.isArray(msg)) msg = msg.map(function(e){return e.msg||e.type;}).join(', '); throw new Error(msg || '请求失败'); }
+  if (!r.ok) { var msg = d.detail || d.message || (typeof d === 'string' ? d : null); if (Array.isArray(msg)) msg = msg.map(function(e){return e.msg||e.type;}).join(', '); throw new Error(msg || '请求失败'); }
 
 
 
@@ -5028,7 +5037,7 @@ function CustomerListPage() {
 
 
 
-  useEffect(function() { api("GET", "/customers?limit=200").then(function(d) { var items = d.items || d || []; setCustomers(items.map(function(c) { return { id: c.id, name: c.name }; })); }); }, []);
+  useEffect(function() { api("GET", "/customers?limit=200").then(function(d) { var items = d.items || d || []; setCustomers(items.map(function(c) { return { id: c.id, name: c.name }; })); }).catch(function(){}); }, []);
 
 
 
@@ -7311,7 +7320,7 @@ function OppListPage(props) {
 
 
 
-  useEffect(function() { api("GET", "/customers?limit=200").then(function(d) { var items = d.items || d || []; setCustomers(items.map(function(c) { return { id: c.id, name: c.name }; })); }); }, []);
+  useEffect(function() { var path = oppType === 'channel' ? "/channel-partners?status=active&limit=500" : "/customers?limit=200"; api("GET", path).then(function(d) { var items = d.items || d || []; setCustomers(items.map(function(c) { return { id: c.id, name: c.name }; })); }).catch(function(){}); }, [oppType]);
 
 
 
@@ -7363,6 +7372,11 @@ function OppListPage(props) {
 
 
       var u = JSON.parse(localStorage.getItem('aq2_user') || '{}'); if (u.id) v.sales_rep_id = u.id;
+      if (oppType === 'channel') {
+        v.customer_id = undefined;
+      } else {
+        v.channel_partner_id = undefined;
+      }
 
 
 
@@ -8314,7 +8328,9 @@ function OppListPage(props) {
 
 
 
-          e(Col, { span: 12 }, e(Form.Item, { name: 'customer_id', label: '关联客户' }, e(Select, { showSearch: true, allowClear: true, placeholder: '搜索客户...', filterOption: function(input, option) { return (option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); })))),
+          oppType === 'channel'
+            ? e(Col, { span: 12 }, e(Form.Item, { name: 'channel_partner_id', label: e('span', null, '关联渠道', e('span', { style: { marginLeft: 8, color: '#8aa0bd', fontSize: 12, fontWeight: 400 } }, '如列表没有，请到渠道管理新建')) }, e(Select, { showSearch: true, allowClear: true, placeholder: '搜索渠道...', notFoundContent: '暂无渠道，请到渠道管理新建', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); }))))
+            : e(Col, { span: 12 }, e(Form.Item, { name: 'customer_id', label: '关联客户' }, e(Select, { showSearch: true, allowClear: true, placeholder: '搜索客户...', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); })))),
 
 
 
@@ -8322,7 +8338,7 @@ function OppListPage(props) {
 
 
 
-          e(Col, { span: 12 }, e(Form.Item, { name: 'end_customer_name', label: '终端客户' }, e(Input, { placeholder: '最终使用方' }))),
+          e(Col, { span: 12 }, e(Form.Item, { name: 'end_customer_name', label: '最终客户' }, e(Input, { placeholder: '最终使用方' }))),
 
 
 
@@ -12480,7 +12496,7 @@ function PartnerArchivePage() {
 
 
 
-    { title: '伙伴名称', dataIndex: 'name', key: 'name', width: 180, sorter: function(a,b) { return a.name.localeCompare(b.name); } },
+    { title: '渠道名称', dataIndex: 'name', key: 'name', width: 180, sorter: function(a,b) { return a.name.localeCompare(b.name); } },
 
 
 
@@ -12512,7 +12528,7 @@ function PartnerArchivePage() {
 
 
 
-    { title: '联系人', dataIndex: 'contact_person', key: 'contact_person', width: 100, ellipsis: true },
+    { title: '主联系人', dataIndex: 'contact_person', key: 'contact_person', width: 100, ellipsis: true },
 
 
 
@@ -12536,7 +12552,7 @@ function PartnerArchivePage() {
 
 
 
-    { title: '联系人', dataIndex: 'contact_count', key: 'contact_count', width: 70, align: 'center' },
+    { title: '创建人', dataIndex: 'created_by_name', key: 'created_by_name', width: 90, align: 'center', render: function(v) { return v || '-'; } },
 
 
 
@@ -12632,15 +12648,7 @@ function PartnerArchivePage() {
 
 
 
-      e('div', null, e('h1', { className: 'page-title' }, '🤝  渠道档案'), e('p', { className: 'page-desc' }, '管理渠道伙伴基本信息与合作等级')),
-
-
-
-
-
-
-
-      e(Button, { type: 'primary', icon: IC('PlusOutlined'), onClick: function() { openDrawer(null); } }, '添加伙伴')
+      e('div', null, e('h1', { className: 'page-title' }, '🤝  渠道档案'), e('p', { className: 'page-desc' }, '管理渠道基本信息'))
 
 
 
@@ -12656,7 +12664,8 @@ function PartnerArchivePage() {
 
 
 
-    e('div', { style: { display: 'flex', gap: 12, marginBottom: 16 } },
+    e('div', { style: { display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' } },
+      e(Button, { type: 'primary', icon: IC('PlusOutlined'), onClick: function() { openDrawer(null); } }, '增加渠道'),
 
 
 
@@ -12760,7 +12769,7 @@ function PartnerArchivePage() {
 
 
 
-    e(Drawer, { title: ed ? '编辑伙伴' : '添加伙伴', open: dr, onClose: function() { setDr(false); }, width: 600, destroyOnClose: true,
+    e(Drawer, { title: ed ? '编辑渠道' : '增加渠道', open: dr, onClose: function() { setDr(false); }, width: 600, destroyOnClose: true,
 
 
 
@@ -12792,7 +12801,7 @@ function PartnerArchivePage() {
 
 
 
-          e(Form.Item, { name: 'name', label: '伙伴名称', rules: [{ required: true, message: '请输入' }] }, e(Input, { placeholder: '公司全称' })),
+          e(Form.Item, { name: 'name', label: '渠道名称', rules: [{ required: true, message: '请输入' }] }, e(Input, { placeholder: '公司全称' })),
 
 
 

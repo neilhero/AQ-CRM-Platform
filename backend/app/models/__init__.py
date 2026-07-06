@@ -100,6 +100,8 @@ class ChannelPartner(Base):
     region = Column(String(32), index=True)
     status = Column(String(16), default="active", index=True)
     created_at = Column(DateTime, default=now_cst)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    creator = relationship("User")
     opportunities = relationship("Opportunity", back_populates="channel_partner")
     contacts = relationship("Contact", back_populates="channel_partner")
 

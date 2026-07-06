@@ -43,6 +43,9 @@ def ensure_schema_updates():
                 conn.execute(text("ALTER TABLE presales_assets ADD COLUMN file_url VARCHAR(512)"))
             if "file_size" not in asset_cols:
                 conn.execute(text("ALTER TABLE presales_assets ADD COLUMN file_size INTEGER DEFAULT 0"))
+            partner_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(channel_partners)")).fetchall()]
+            if "created_by" not in partner_cols:
+                conn.execute(text("ALTER TABLE channel_partners ADD COLUMN created_by INTEGER"))
 
 ensure_schema_updates()
 
