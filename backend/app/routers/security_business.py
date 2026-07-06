@@ -20,7 +20,7 @@ from app.models import (
     PresalesRequest,
     User,
 )
-from app.permissions import ROLE_ADMIN, ROLE_PRESALES, can_access_customer, can_access_opportunity, scoped_opportunity_query
+from app.permissions import ROLE_ADMIN, ROLE_MANAGER, ROLE_PRESALES, can_access_customer, can_access_opportunity, scoped_opportunity_query
 from app.routers.utils import require_admin, require_user
 
 router = APIRouter()
@@ -42,18 +42,21 @@ class CustomerSecurityProfileIn(BaseModel):
 
 class ChannelRegistrationIn(BaseModel):
     opportunity_id: Optional[int] = None
-    partner_id: Optional[int] = None
+    partner_id: int
     final_customer_name: str
     region: Optional[str] = None
     protection_start: Optional[date] = None
-    protection_days: Optional[int] = 90
+    protection_days: Optional[int] = 60
     notes: Optional[str] = None
 
 
 class ChannelRegistrationUpdate(BaseModel):
+    partner_id: Optional[int] = None
+    final_customer_name: Optional[str] = None
     status: Optional[str] = None
     region: Optional[str] = None
     protection_end: Optional[date] = None
+    protection_days: Optional[int] = None
     conflict_reason: Optional[str] = None
     arbitration_result: Optional[str] = None
     notes: Optional[str] = None
@@ -136,6 +139,27 @@ def _accessible_opp_ids(db: Session, user):
     return [row[0] for row in q.all()]
 
 
+def _check_partner_access(db: Session, partner_id: int, user):
+    partner = db.query(ChannelPartner).filter_by(id=partner_id).first()
+    if not partner:
+        raise HTTPException(404, "渠道不存在")
+    if user.role != ROLE_ADMIN and partner.created_by != user.id:
+        raise HTTPException(403, "无权访问该渠道")
+    return partner
+
+
+def _can_manage_registration(reg: ChannelRegistration, user):
+    return user.role == ROLE_ADMIN or reg.created_by == user.id
+
+
+def _check_registration_manage_access(reg: ChannelRegistration, user):
+    if not reg:
+        raise HTTPException(404, "报备不存在")
+    if not _can_manage_registration(reg, user):
+        raise HTTPException(403, "无权操作该报备")
+    return reg
+
+
 def _enrich_registration(db: Session, reg: ChannelRegistration):
     data = _to_dict(reg)
     if reg.partner_id:
@@ -209,12 +233,13 @@ def list_channel_registrations(
     user=Depends(require_user),
 ):
     q = db.query(ChannelRegistration)
-    if user.role != ROLE_ADMIN:
-        opp_ids = _accessible_opp_ids(db, user)
-        if opp_ids:
-            q = q.filter(or_(ChannelRegistration.created_by == user.id, ChannelRegistration.opportunity_id.in_(opp_ids)))
-        else:
-            q = q.filter(ChannelRegistration.created_by == user.id)
+    if user.role == ROLE_MANAGER:
+        q = q.filter(or_(
+            ChannelRegistration.created_by == user.id,
+            ChannelRegistration.status.in_(["pending", "conflict"]),
+        ))
+    elif user.role != ROLE_ADMIN:
+        q = q.filter(ChannelRegistration.created_by == user.id)
     if keyword:
         q = q.filter(ChannelRegistration.final_customer_name.contains(keyword))
     if status:
@@ -228,10 +253,11 @@ def create_channel_registration(data: ChannelRegistrationIn, db: Session = Depen
     name = (data.final_customer_name or "").strip()
     if not name:
         raise HTTPException(400, "最终客户不能为空")
+    _check_partner_access(db, data.partner_id, user)
     if data.opportunity_id:
         _check_opp_access(db, data.opportunity_id, user)
     start = data.protection_start or date.today()
-    end = start + timedelta(days=max(data.protection_days or 90, 1))
+    end = start + timedelta(days=max(data.protection_days or 60, 1))
     duplicate = db.query(Customer).filter(Customer.name == name).first()
     conflict = (
         db.query(ChannelRegistration)
@@ -262,17 +288,55 @@ def create_channel_registration(data: ChannelRegistrationIn, db: Session = Depen
 
 
 @router.put("/channel-registrations/{registration_id}")
-def update_channel_registration(registration_id: int, data: ChannelRegistrationUpdate, db: Session = Depends(get_db), admin=Depends(require_admin)):
+def update_channel_registration(registration_id: int, data: ChannelRegistrationUpdate, db: Session = Depends(get_db), user=Depends(require_user)):
     reg = db.query(ChannelRegistration).filter_by(id=registration_id).first()
     if not reg:
         raise HTTPException(404, "报备不存在")
-    for k, v in data.model_dump(exclude_unset=True).items():
+    patch = data.model_dump(exclude_unset=True)
+    review_fields = {"status", "arbitration_result", "conflict_reason"}
+    is_review_only = set(patch.keys()).issubset(review_fields)
+    if not _can_manage_registration(reg, user) and not (user.role in (ROLE_ADMIN, ROLE_MANAGER) and is_review_only):
+        raise HTTPException(403, "无权操作该报备")
+    if "partner_id" in patch and patch["partner_id"] is not None:
+        _check_partner_access(db, patch["partner_id"], user)
+    if "final_customer_name" in patch and patch["final_customer_name"] is not None:
+        patch["final_customer_name"] = patch["final_customer_name"].strip()
+        if not patch["final_customer_name"]:
+            raise HTTPException(400, "最终客户不能为空")
+    protection_days = patch.pop("protection_days", None)
+    for k, v in patch.items():
         setattr(reg, k, v)
+    if protection_days is not None:
+        start = reg.protection_start or date.today()
+        reg.protection_end = start + timedelta(days=max(protection_days or 60, 1))
     if data.arbitration_result:
-        reg.arbitrator_id = admin.id
+        reg.arbitrator_id = user.id
     db.commit()
     db.refresh(reg)
     return _enrich_registration(db, reg)
+
+
+@router.delete("/channel-registrations/{registration_id}", status_code=204)
+def delete_channel_registration(registration_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
+    reg = db.query(ChannelRegistration).filter_by(id=registration_id).first()
+    _check_registration_manage_access(reg, user)
+    db.delete(reg)
+    db.commit()
+
+
+@router.get("/channel-registration-notifications")
+def list_channel_registration_notifications(db: Session = Depends(get_db), user=Depends(require_user)):
+    if user.role not in (ROLE_ADMIN, ROLE_MANAGER):
+        return {"count": 0, "items": []}
+    rows = (
+        db.query(ChannelRegistration)
+        .filter(ChannelRegistration.status.in_(["pending", "conflict"]))
+        .order_by(ChannelRegistration.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    items = [_enrich_registration(db, row) for row in rows]
+    return {"count": len(items), "items": items}
 
 
 @router.get("/presales-requests")

@@ -251,6 +251,19 @@ def seed():
             for ch in chs: db.add(ch)
             db.commit()
         if db.query(CommissionRule).count() == 0:
+            existing_partner_ids = {row[0] for row in db.query(ChannelPartner.id).all()}
+            if existing_partner_ids and not all(pid in existing_partner_ids for pid in (1, 2, 3)):
+                seed_partners = db.query(ChannelPartner).order_by(ChannelPartner.id).limit(3).all()
+                seed_rates = [15, 10, 8]
+                seed_cycles = ["\u5b63\u5ea6", "\u6708\u5ea6", "\u5b63\u5ea6"]
+                for idx, partner in enumerate(seed_partners):
+                    db.add(CommissionRule(
+                        partner_id=partner.id,
+                        rate_percent=seed_rates[idx],
+                        settlement_cycle=seed_cycles[idx],
+                    ))
+                db.commit()
+        if db.query(CommissionRule).count() == 0:
             crs = [
                 CommissionRule(partner_id=1, rate_percent=15, settlement_cycle="季度"),
                 CommissionRule(partner_id=2, rate_percent=10, settlement_cycle="月度"),
@@ -277,8 +290,8 @@ def seed():
                 MenuConfig(menu_key="/leads/bid-conversion", label="招标转化", is_visible=True, sort_order=53, parent_key="group-leads"),
                 MenuConfig(menu_key="group-partner", label="渠道管理", is_visible=True, sort_order=6),
                 MenuConfig(menu_key="/partners", label="渠道档案", is_visible=True, sort_order=61, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/performance", label="渠道绩效", is_visible=True, sort_order=62, parent_key="group-partner"),
-                MenuConfig(menu_key="/partners/growth", label="渠道成长", is_visible=True, sort_order=63, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/performance", label="渠道业绩", is_visible=True, sort_order=62, parent_key="group-partner"),
+                MenuConfig(menu_key="/partners/growth", label="渠道培训", is_visible=True, sort_order=63, parent_key="group-partner"),
                 MenuConfig(menu_key="/partners/registration", label="项目报备", is_visible=True, sort_order=64, parent_key="group-partner"),
                 MenuConfig(menu_key="/partners/commission", label="返点管理", is_visible=True, sort_order=65, parent_key="group-partner"),
                 MenuConfig(menu_key="/partners/credit", label="渠道伙伴信用", is_visible=False, sort_order=66, parent_key="group-partner"),
@@ -424,9 +437,9 @@ def seed():
             registration_menu.sort_order = 64
         partner_growth_menu = db.query(MenuConfig).filter_by(menu_key="/partners/growth").first()
         if not partner_growth_menu:
-            db.add(MenuConfig(menu_key="/partners/growth", label="渠道成长", is_visible=True, sort_order=63, parent_key="group-partner"))
+            db.add(MenuConfig(menu_key="/partners/growth", label="渠道培训", is_visible=True, sort_order=63, parent_key="group-partner"))
         else:
-            partner_growth_menu.label = "渠道成长"
+            partner_growth_menu.label = "渠道培训"
             partner_growth_menu.parent_key = "group-partner"
             partner_growth_menu.sort_order = 63
         partner_credit_menu = db.query(MenuConfig).filter_by(menu_key="/partners/credit").first()
@@ -439,9 +452,9 @@ def seed():
             partner_credit_menu.is_visible = False
         partner_performance_menu = db.query(MenuConfig).filter_by(menu_key="/partners/performance").first()
         if not partner_performance_menu:
-            db.add(MenuConfig(menu_key="/partners/performance", label="渠道绩效", is_visible=True, sort_order=62, parent_key="group-partner"))
+            db.add(MenuConfig(menu_key="/partners/performance", label="渠道业绩", is_visible=True, sort_order=62, parent_key="group-partner"))
         else:
-            partner_performance_menu.label = "渠道绩效"
+            partner_performance_menu.label = "渠道业绩"
             partner_performance_menu.parent_key = "group-partner"
             partner_performance_menu.sort_order = 62
             partner_performance_menu.is_visible = True

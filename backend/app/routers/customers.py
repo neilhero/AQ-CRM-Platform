@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
+from app.company_validation import customer_owner_name, find_duplicate_customer, validate_company_name_format
 from app.models import Customer, Opportunity
 from app.permissions import can_access_customer, scoped_customer_query, scoped_opportunity_query
 from app.routers.utils import require_user
@@ -64,9 +65,15 @@ def get_customer(cid: int, db: Session = Depends(get_db), user=Depends(require_u
 
 @router.post("", status_code=201)
 def create_customer(data: CustomerCreate, db: Session = Depends(get_db), user=Depends(require_user)):
-    if db.query(Customer).filter_by(name=data.name).first():
-        raise HTTPException(400, "Name exists")
-    c = Customer(**data.model_dump(), owner_id=user.id)
+    format_ok, format_message, normalized = validate_company_name_format(data.name)
+    if not format_ok:
+        raise HTTPException(400, format_message)
+    existing = find_duplicate_customer(db, normalized)
+    if existing:
+        raise HTTPException(400, f"该客户已由{customer_owner_name(existing)}建过，请勿重复创建。")
+    payload = data.model_dump()
+    payload["name"] = normalized
+    c = Customer(**payload, owner_id=user.id)
     db.add(c)
     db.commit()
     db.refresh(c)
@@ -76,7 +83,16 @@ def create_customer(data: CustomerCreate, db: Session = Depends(get_db), user=De
 @router.put("/{cid}")
 def update_customer(cid: int, data: CustomerUpdate, db: Session = Depends(get_db), user=Depends(require_user)):
     c = _check_cust(cid, db, user)
-    for k, v in data.model_dump(exclude_unset=True).items():
+    payload = data.model_dump(exclude_unset=True)
+    if "name" in payload:
+        format_ok, format_message, normalized = validate_company_name_format(payload.get("name"))
+        if not format_ok:
+            raise HTTPException(400, format_message)
+        existing = find_duplicate_customer(db, normalized, exclude_id=cid)
+        if existing:
+            raise HTTPException(400, f"该客户已由{customer_owner_name(existing)}建过，请勿重复创建。")
+        payload["name"] = normalized
+    for k, v in payload.items():
         setattr(c, k, v)
     db.commit()
     db.refresh(c)

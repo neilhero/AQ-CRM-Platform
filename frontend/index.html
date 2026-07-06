@@ -1939,7 +1939,7 @@ function AppLayout(props) {
 
 
 
-  var hash = window.location.hash.slice(1) || '/dashboard';
+  var hash = (window.location.hash.slice(1) || '/dashboard').split('?')[0];
 
 
 
@@ -1949,6 +1949,27 @@ function AppLayout(props) {
 
   var _mc = useState([]), menuConfig = _mc[0], setMenuConfig = _mc[1];
   var _ntf = useState({ count: 0, items: [] }), presalesNotice = _ntf[0], setPresalesNotice = _ntf[1];
+  var noticeReadKey = 'aq_notice_read_' + (user.id || user.username || 'guest');
+  function noticeKey(item) {
+    return (item.notice_type || 'notice') + '-' + item.id;
+  }
+  function getReadNotices() {
+    try { return JSON.parse(localStorage.getItem(noticeReadKey) || '[]'); } catch(ex) { return []; }
+  }
+  function saveReadNotices(keys) {
+    localStorage.setItem(noticeReadKey, JSON.stringify(Array.from(new Set(keys || []))));
+  }
+  function applyUnreadNotices(items) {
+    var read = getReadNotices();
+    return (items || []).filter(function(item) { return read.indexOf(noticeKey(item)) < 0; });
+  }
+  function markNoticeRead(keys) {
+    saveReadNotices(getReadNotices().concat(keys || []));
+    setPresalesNotice(function(prev) {
+      var nextItems = applyUnreadNotices(prev.items || []);
+      return { count: nextItems.length, items: nextItems };
+    });
+  }
 
 
 
@@ -1967,7 +1988,19 @@ function AppLayout(props) {
   useEffect(function() { api('GET','/menu-config').then(function(d){setMenuConfig(d||[]);}).catch(function(){}); }, []);
   useEffect(function() {
     function loadNotice() {
-      api('GET','/security-business/presales-notifications').then(function(d){ setPresalesNotice(d || { count: 0, items: [] }); }).catch(function(){});
+      Promise.all([
+        api('GET','/security-business/presales-notifications').catch(function(){ return { count: 0, items: [] }; }),
+        api('GET','/security-business/channel-registration-notifications').catch(function(){ return { count: 0, items: [] }; })
+      ]).then(function(res){
+        var presales = res[0] || { count: 0, items: [] };
+        var registrations = res[1] || { count: 0, items: [] };
+        var mergedItems = (registrations.items || []).map(function(item) { return Object.assign({ notice_type: 'registration' }, item); }).concat((presales.items || []).map(function(item) { return Object.assign({ notice_type: 'presales' }, item); }));
+        var unreadItems = applyUnreadNotices(mergedItems);
+        setPresalesNotice({
+          count: unreadItems.length,
+          items: unreadItems
+        });
+      }).catch(function(){});
     }
     loadNotice();
     var timer = setInterval(loadNotice, 60000);
@@ -2132,8 +2165,8 @@ function AppLayout(props) {
 
     { key: 'group-partner', icon: IC('TeamOutlined'), label: '渠道管理', className: 'business-section-item', children: [
       { key: '/partners', label: '渠道档案' },
-      { key: '/partners/performance', label: '渠道绩效' },
-      { key: '/partners/growth', label: '渠道成长' },
+      { key: '/partners/performance', label: '渠道业绩' },
+      { key: '/partners/growth', label: '渠道培训' },
       { key: '/partners/registration', label: '项目报备' },
       { key: '/partners/commission', label: '返点管理' }
     ] },
@@ -2365,7 +2398,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/business-excellence': '经营驾驶舱', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/leads/bid-conversion': '招标转化', '/presales': '售前协同', '/presales/assets': '售前资产', '/security-business': '网安业务', '/sales-growth': '销售增长', '/products': '产品管理', '/products/recommendations': '推荐产品', '/partners': '渠道档案', '/partners/registration': '项目报备', '/partners/growth': '渠道成长', '/partners/credit': '渠道信用', '/partners/performance': '渠道绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/business-excellence': '经营驾驶舱', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/leads/bid-conversion': '招标转化', '/presales': '售前协同', '/presales/assets': '售前资产', '/security-business': '网安业务', '/sales-growth': '销售增长', '/products': '产品管理', '/products/recommendations': '推荐产品', '/partners': '渠道档案', '/partners/registration': '项目报备', '/partners/growth': '渠道培训', '/partners/credit': '渠道信用', '/partners/performance': '渠道业绩', '/partners/commission': '返点管理' };
 
 
 
@@ -2375,6 +2408,15 @@ function AppLayout(props) {
 
   var pageTitle = isDetail ? '商机详情' : (isCustDetail ? '客户详情' : (titleMap[hash] || '仪表盘'));
   var noticeItems = (presalesNotice.items || []).map(function(item) {
+    if (item.notice_type === 'registration') {
+      return {
+        key: 'registration-' + item.id,
+        label: e('div', { style: { minWidth: 240 } },
+          e('div', { style: { fontWeight: 600, color: '#0f172a' } }, '项目报备待审核'),
+          e('div', { style: { fontSize: 12, color: '#64748b', marginTop: 2 } }, (item.final_customer_name || '-') + ' · ' + (item.partner_name || '-') + ' · ' + (item.created_at ? dayjs(item.created_at).format('MM-DD HH:mm') : ''))
+        )
+      };
+    }
     return {
       key: 'presales-' + item.id,
       label: e('div', { style: { minWidth: 240 } },
@@ -2383,7 +2425,7 @@ function AppLayout(props) {
       )
     };
   });
-  if (!noticeItems.length) noticeItems = [{ key: 'empty', label: '暂无售前申请提醒', disabled: true }];
+  if (!noticeItems.length) noticeItems = [{ key: 'empty', label: '暂无提醒', disabled: true }];
 
 
 
@@ -2527,7 +2569,7 @@ function AppLayout(props) {
 
 
 
-        e(Dropdown, { trigger: ['click'], menu: { items: noticeItems, onClick: function(i) { if (i.key !== 'empty') nav('/presales'); } }, placement: 'bottomRight' },
+        e(Dropdown, { trigger: ['click'], menu: { items: noticeItems, onClick: function(i) { if (i.key === 'empty') return; markNoticeRead([i.key]); nav(String(i.key).indexOf('registration-') === 0 ? '/partners/registration' : '/presales'); } }, placement: 'bottomRight' },
           e(Badge, { count: presalesNotice.count || 0, overflowCount: 99, offset: [-2, 4] }, e(Button, { type: 'text', icon: IC('BellOutlined') }))
         ),
 
@@ -4821,7 +4863,12 @@ function CustomerListPage() {
 
 
 
-    if (!nm || !nm.trim() || nm.trim().length < 4) { setNameCheck(null); return; }
+    if (!nm || !nm.trim()) { setNameCheck(null); return Promise.resolve(null); }
+    if (nm.trim().length < 4) {
+      var shortResult = { valid: false, format_valid: false, exists: false, message: '公司名不完整，请填写完整公司名。' };
+      setNameCheck(shortResult);
+      return Promise.resolve(shortResult);
+    }
 
 
 
@@ -4837,7 +4884,7 @@ function CustomerListPage() {
 
 
 
-    api('GET', '/utils/validate-company?name=' + encodeURIComponent(nm.trim()))
+    return api('GET', '/utils/validate-company?name=' + encodeURIComponent(nm.trim()))
 
 
 
@@ -4853,7 +4900,7 @@ function CustomerListPage() {
 
 
 
-      .catch(function() { setNameCheck(null); })
+      .catch(function() { setNameCheck(null); return null; })
 
 
 
@@ -5071,7 +5118,7 @@ function CustomerListPage() {
 
 
 
-    if (nameCheck && !nameCheck.valid && !edit) { message.error(nameCheck.message || '公司名称不合法'); return; }
+    if (nameCheck && !nameCheck.valid && !edit) { message.error(nameCheck.message || '公司名不完整，请填写完整公司名。'); return; }
 
 
 
@@ -5095,7 +5142,12 @@ function CustomerListPage() {
 
 
 
-      else { return api('POST', '/customers', v).then(function() { message.success('已创建'); }); }
+      else {
+        return doValidate(v.name).then(function(check) {
+          if (check && !check.valid) throw new Error(check.message || '公司名不完整，请填写完整公司名。');
+          return api('POST', '/customers', v).then(function() { message.success('已创建'); });
+        });
+      }
 
 
 
@@ -7064,7 +7116,9 @@ function OppListPage(props) {
 
 
 
-  var _s5 = useState({ stage: undefined, industry: undefined, keyword: undefined, sales_rep_id: undefined });
+  var _oppHashParams = new URLSearchParams((window.location.hash.split('?')[1] || ''));
+  var _initialChannelPartnerId = _oppHashParams.get('channel_partner_id');
+  var _s5 = useState({ stage: undefined, industry: undefined, keyword: undefined, sales_rep_id: undefined, channel_partner_id: _initialChannelPartnerId ? Number(_initialChannelPartnerId) : undefined });
 
 
 
@@ -7241,6 +7295,7 @@ function OppListPage(props) {
 
 
     if (f.sales_rep_id) params.set('sales_rep_id', f.sales_rep_id);
+    if (f.channel_partner_id) params.set('channel_partner_id', f.channel_partner_id);
 
 
 
@@ -8330,7 +8385,7 @@ function OppListPage(props) {
 
           oppType === 'channel'
             ? e(Col, { span: 12 }, e(Form.Item, { name: 'channel_partner_id', label: e('span', null, '关联渠道', e('span', { style: { marginLeft: 8, color: '#8aa0bd', fontSize: 12, fontWeight: 400 } }, '如列表没有，请到渠道管理新建')) }, e(Select, { showSearch: true, allowClear: true, placeholder: '搜索渠道...', notFoundContent: '暂无渠道，请到渠道管理新建', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); }))))
-            : e(Col, { span: 12 }, e(Form.Item, { name: 'customer_id', label: '关联客户' }, e(Select, { showSearch: true, allowClear: true, placeholder: '搜索客户...', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); })))),
+            : e(Col, { span: 12 }, e(Form.Item, { name: 'customer_id', label: '最终客户' }, e(Select, { showSearch: true, allowClear: true, placeholder: '选择客户...', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); })))),
 
 
 
@@ -8338,7 +8393,7 @@ function OppListPage(props) {
 
 
 
-          e(Col, { span: 12 }, e(Form.Item, { name: 'end_customer_name', label: '最终客户' }, e(Input, { placeholder: '最终使用方' }))),
+          oppType === 'channel' ? e(Col, { span: 12 }, e(Form.Item, { name: 'end_customer_name', label: '最终客户' }, e(Input, { placeholder: '最终使用方' }))) : null,
 
 
 
@@ -13185,7 +13240,7 @@ function PartnerArchivePage() {
 
 
 
-function PartnerPerformancePage() {
+function PartnerPerformancePageLegacy() {
 
 
 
@@ -13265,7 +13320,7 @@ function PartnerPerformancePage() {
 
 
 
-      e('div', null, e('h1', { className: 'page-title' }, '📊  渠道绩效'), e('p', { className: 'page-desc' }, '渠道伙伴商机转化与业绩排行')),
+      e('div', null, e('h1', { className: 'page-title' }, '📊  渠道业绩'), e('p', { className: 'page-desc' }, '渠道商机转化与业绩排行')),
 
 
 
@@ -13503,6 +13558,51 @@ function PartnerPerformancePage() {
 
 
 
+
+
+function PartnerPerformancePage() {
+  var _s_d = useState([]), data = _s_d[0], setData = _s_d[1];
+
+  function fetchData() {
+    api('GET', '/dashboard/partner-performance?period=all')
+      .then(function(d) { setData(d || []); })
+      .catch(function() { setData([]); });
+  }
+
+  useEffect(function() { fetchData(); }, []);
+
+  function goChannelOpps(partnerId) {
+    window.location.hash = '#/opportunities/channel?channel_partner_id=' + partnerId;
+  }
+
+  var levelColor = { '金牌': '#f59e0b', '银牌': '#94a3b8', '铜牌': '#cd7f32', 'Register': '#64748b' };
+  var columns = [
+    { title: 'ID', key: 'row_index', width: 80, fixed: 'left', render: function(_, __, idx) { return e('span', { style: { color: '#64748b', fontWeight: 600 } }, idx + 1); } },
+    { title: '渠道名称', dataIndex: 'partner_name', key: 'partner_name', width: 220, fixed: 'left', render: function(v) { return e('span', { style: { fontWeight: 700, color: '#0f172a' } }, v || '-'); } },
+    { title: '等级', dataIndex: 'level', key: 'level', width: 110, render: function(v) { return v ? e(Tag, { color: levelColor[v] || '#64748b' }, v) : '-'; } },
+    { title: '区域', dataIndex: 'region', key: 'region', width: 110, render: function(v) { return v ? e(Tag, { color: 'blue' }, v) : '-'; } },
+    { title: e('span', { style: { whiteSpace: 'nowrap' } }, '已完成业绩（万）'), dataIndex: 'completed_amount', key: 'completed_amount', width: 170, sorter: function(a, b) { return (a.completed_amount || 0) - (b.completed_amount || 0); }, defaultSortOrder: 'descend', render: function(v) { return e('span', { style: { fontWeight: 700, color: '#059669' } }, (v || 0).toFixed ? (v || 0).toFixed(1) : v); } },
+    { title: '商机数（个）', dataIndex: 'opp_count', key: 'opp_count', width: 120, render: function(v, r) { return e(Button, { type: 'link', style: { padding: 0, fontWeight: 700 }, onClick: function() { goChannelOpps(r.partner_id); } }, String(v || 0)); } },
+    { title: '商机总额（万）', dataIndex: 'total_amount', key: 'total_amount', width: 150, sorter: function(a, b) { return (a.total_amount || 0) - (b.total_amount || 0); }, render: function(v) { return e('span', { style: { fontWeight: 700, color: '#4f46e5' } }, (v || 0).toFixed ? (v || 0).toFixed(1) : v); } },
+    { title: '销售', dataIndex: 'sales_names', key: 'sales_names', ellipsis: true, render: function(v) { return v || '-'; } }
+  ];
+
+  return e('div', { className: 'page-fade-in' },
+    e('div', { className: 'section-card' },
+      e('div', { className: 'card-header' }, e('h3', null, '🏆  渠道业绩')),
+      e('div', { className: 'card-body' },
+        e(Table, {
+          rowKey: 'partner_id',
+          columns: columns,
+          dataSource: data,
+          pagination: { pageSize: 10, showTotal: function(total) { return '共 ' + total + ' 个渠道'; } },
+          locale: { emptyText: '暂无渠道业绩数据' },
+          scroll: { x: 980 }
+        })
+      )
+    )
+  );
+}
 
 
 // ===================== COMMISSION RULES PAGE =====================
@@ -14104,6 +14204,93 @@ function CommissionRulesPage() {
 
 
 
+
+function CommissionRulesPage() {
+  var _s_r2 = useState([]), rules = _s_r2[0], setRules = _s_r2[1];
+  var _s_p2 = useState([]), partners = _s_p2[0], setPartners = _s_p2[1];
+  var _s_rl2 = useState(true), rl = _s_rl2[0], setRl = _s_rl2[1];
+  var _s_rm2 = useState(false), rm = _s_rm2[0], setRm = _s_rm2[1];
+  var _s_re2 = useState(null), re = _s_re2[0], setRe = _s_re2[1];
+  var _f_r2 = Form.useForm(), rf = _f_r2[0];
+
+  function fetchRules() {
+    setRl(true);
+    Promise.all([
+      api('GET', '/commissions').catch(function() { return []; }),
+      api('GET', '/commissions/partners').catch(function() { return []; })
+    ]).then(function(res) {
+      setRules(res[0] || []);
+      setPartners(res[1] || []);
+      setRl(false);
+    }).catch(function() { setRl(false); });
+  }
+
+  useEffect(fetchRules, []);
+
+  function openModal(item) {
+    setRe(item || null);
+    if (item) {
+      rf.setFieldsValue(Object.assign({}, item, { effective_from: item.effective_from ? dayjs(item.effective_from) : null }));
+    } else {
+      rf.resetFields();
+      rf.setFieldsValue({ settlement_cycle: '季度' });
+    }
+    setRm(true);
+  }
+
+  function saveRule() {
+    rf.validateFields().then(function(v) {
+      v.effective_from = v.effective_from && v.effective_from.format ? v.effective_from.format('YYYY-MM-DD') : (v.effective_from || null);
+      var p = re ? api('PUT', '/commissions/' + re.id, v) : api('POST', '/commissions', v);
+      p.then(function() { message.success(re ? '已更新' : '已创建'); setRm(false); fetchRules(); })
+       .catch(function(err) { message.error(err.message || '保存失败'); });
+    }).catch(function() {});
+  }
+
+  function delRule(rid) {
+    api('DELETE', '/commissions/' + rid).then(function() { message.success('已删除'); fetchRules(); }).catch(function(err) { message.error(err.message || '删除失败'); });
+  }
+
+  var partnerOptions = partners.length ? partners : (function() {
+    var seen = {};
+    return rules.map(function(r) {
+      if (seen[r.partner_id]) return null;
+      seen[r.partner_id] = true;
+      return { id: r.partner_id, name: r.partner_name };
+    }).filter(Boolean);
+  })();
+
+  var cols = [
+    { title: '渠道', dataIndex: 'partner_name', key: 'partner_name', width: 220 },
+    { title: '返点比例', dataIndex: 'rate_percent', key: 'rate_percent', width: 100, render: function(v) { return e(Tag, { color: 'green' }, v + '%'); } },
+    { title: '结算周期', dataIndex: 'settlement_cycle', key: 'settlement_cycle', width: 100, render: function(v) { return v || '季度'; } },
+    { title: '生效日期', dataIndex: 'effective_from', key: 'effective_from', width: 120, render: function(v) { return v || '-'; } },
+    { title: '备注', dataIndex: 'notes', key: 'notes', ellipsis: true },
+    { title: '操作', key: 'actions', width: 120, render: function(_, r) {
+      return e('div', { style: { display: 'flex', gap: 4 } },
+        e(Button, { size: 'small', type: 'link', onClick: function() { openModal(r); } }, '编辑'),
+        e(Popconfirm, { title: '删除此返点规则？', onConfirm: function() { delRule(r.id); } },
+          e(Button, { size: 'small', type: 'link', danger: true }, '删除')));
+    } }
+  ];
+
+  return e('div', { className: 'page-fade-in' },
+    e('div', { className: 'page-header' },
+      e('div', null, e('h1', { className: 'page-title' }, '💰  返点管理'), e('p', { className: 'page-desc' }, '渠道返点比例与结算规则')),
+      e(Button, { type: 'primary', icon: IC('PlusOutlined'), onClick: function() { openModal(null); } }, '添加规则')),
+    e(Table, { columns: cols, dataSource: rules, rowKey: 'id', loading: rl, size: 'middle', pagination: false }),
+    e(Modal, { title: re ? '编辑返点规则' : '添加返点规则', open: rm, onOk: saveRule, onCancel: function() { setRm(false); }, destroyOnClose: true, width: 480 },
+      e(Form, { form: rf, layout: 'vertical' },
+        e(Form.Item, { name: 'partner_id', label: '渠道', rules: [{ required: true, message: '请选择渠道' }] },
+          e(Select, { showSearch: true, placeholder: '选择渠道', filterOption: function(input, option) { return String(option.children || '').toLowerCase().indexOf(input.toLowerCase()) >= 0; } },
+            partnerOptions.map(function(p) { return e(Option, { key: p.id, value: p.id }, p.name); }))),
+        e(Row, { gutter: 12 },
+          e(Col, { span: 12 }, e(Form.Item, { name: 'rate_percent', label: '返点比例(%)', rules: [{ required: true, type: 'number', min: 0, max: 100 }] }, e(InputNumber, { style: { width: '100%' }, min: 0, max: 100, placeholder: '如：5' }))),
+          e(Col, { span: 12 }, e(Form.Item, { name: 'settlement_cycle', label: '结算周期' }, e(Select, null, e(Option, { value: '月度' }, '月度'), e(Option, { value: '季度' }, '季度'), e(Option, { value: '年度' }, '年度'))))),
+        e(Form.Item, { name: 'effective_from', label: '生效日期' }, e(DatePicker, { style: { width: '100%' } })),
+        e(Form.Item, { name: 'notes', label: '备注' }, e(TextArea, { rows: 2, placeholder: '返点说明...' }))))
+  );
+}
 
 // ===================== LEAD LIST PAGE (v3.0) =====================
 
@@ -18468,6 +18655,7 @@ function SecurityBusinessPage(props) {
   var _u = useState([]), users = _u[0], setUsers = _u[1];
   var _profile = useState(null), profile = _profile[0], setProfile = _profile[1];
   var _regs = useState([]), regs = _regs[0], setRegs = _regs[1];
+  var _regEdit = useState(null), regEdit = _regEdit[0], setRegEdit = _regEdit[1];
   var _presales = useState([]), presales = _presales[0], setPresales = _presales[1];
   var _subs = useState([]), subs = _subs[0], setSubs = _subs[1];
   var _items = useState([]), radarItems = _items[0], setRadarItems = _items[1];
@@ -18522,7 +18710,28 @@ function SecurityBusinessPage(props) {
     profileForm.validateFields().then(function(v) { return api('PUT', '/security-business/customer-profiles/' + selectedCustomerId, v); }).then(function(d) { setProfile(Object.assign({}, profile || {}, d)); message.success('客户360画像已保存'); }).catch(function(err) { message.error(err.message || '保存失败'); });
   }
   function submitRegistration() {
-    regForm.validateFields().then(function(v) { if (v.protection_start) v.protection_start = fmtDate(v.protection_start); return api('POST', '/security-business/channel-registrations', v); }).then(function() { message.success('报备已提交'); regForm.resetFields(); loadOperational(); }).catch(function(err) { message.error(err.message || '报备失败'); });
+    regForm.validateFields().then(function(v) {
+      v.protection_days = v.protection_days || 60;
+      var method = regEdit ? 'PUT' : 'POST';
+      var path = regEdit ? '/security-business/channel-registrations/' + regEdit.id : '/security-business/channel-registrations';
+      return api(method, path, v);
+    }).then(function() { message.success(regEdit ? '报备已更新' : '报备已提交'); setRegEdit(null); regForm.resetFields(); regForm.setFieldsValue({ protection_days: 60 }); loadOperational(); }).catch(function(err) { message.error(err.message || '报备失败'); });
+  }
+  function editRegistration(row) {
+    var days = 60;
+    if (row.protection_start && row.protection_end) {
+      days = Math.max(dayjs(row.protection_end).diff(dayjs(row.protection_start), 'day'), 1);
+    }
+    setRegEdit(row);
+    regForm.setFieldsValue({ final_customer_name: row.final_customer_name, region: row.region, partner_id: row.partner_id, protection_days: days, notes: row.notes });
+  }
+  function cancelRegistrationEdit() {
+    setRegEdit(null);
+    regForm.resetFields();
+    regForm.setFieldsValue({ protection_days: 60 });
+  }
+  function deleteRegistration(row) {
+    api('DELETE', '/security-business/channel-registrations/' + row.id).then(function() { message.success('报备已删除'); loadOperational(); }).catch(function(err) { message.error(err.message || '删除失败'); });
   }
   function arbitrate(row, status) {
     api('PUT', '/security-business/channel-registrations/' + row.id, { status: status, arbitration_result: status === 'protected' ? '仲裁通过，进入保护期' : '仲裁驳回' }).then(function() { message.success('已更新报备状态'); loadOperational(); }).catch(function(err) { message.error(err.message || '更新失败'); });
@@ -18562,7 +18771,7 @@ function SecurityBusinessPage(props) {
       ))
     )
   );
-  var registrationTab = e('div', null,
+  var registrationTabLegacy = e('div', null,
     e(Card, { title: '渠道项目报备', size: 'small', style: { marginBottom: 16 } }, e(Form, { form: regForm, layout: 'vertical' },
       e(Row, { gutter: 12 }, e(Col, { span: 6 }, e(Form.Item, { name: 'opportunity_id', label: '关联渠道商机' }, e(Select, { allowClear: true, showSearch: true }, opps.filter(function(o){return o.opp_type === 'channel';}).map(function(o){return e(Option,{key:o.id,value:o.id},o.name);})))) , e(Col, { span: 6 }, e(Form.Item, { name: 'partner_id', label: '渠道伙伴' }, e(Select, { allowClear: true, showSearch: true }, partners.map(function(p){return e(Option,{key:p.id,value:p.id},p.name);})))) , e(Col, { span: 5 }, e(Form.Item, { name: 'final_customer_name', label: '最终客户', rules: [{ required: true, message: '请输入最终客户' }] }, e(Input))), e(Col, { span: 4 }, e(Form.Item, { name: 'region', label: '区域归属' }, e(Input, { placeholder: '华东/华南' }))), e(Col, { span: 3 }, e(Form.Item, { name: 'protection_days', label: '保护期' }, e(InputNumber, { min: 1, style: { width: '100%' }, placeholder: '90' })))),
       e(Form.Item, { name: 'notes', label: '报备说明' }, e(TextArea, { rows: 2 })),
@@ -18570,6 +18779,45 @@ function SecurityBusinessPage(props) {
     )),
     e(Table, { rowKey: 'id', loading: loading, dataSource: regs, pagination: { pageSize: 8 }, columns: [
       { title: '最终客户', dataIndex: 'final_customer_name' }, { title: '渠道伙伴', dataIndex: 'partner_name', width: 160, render: function(v){return v || '-';} }, { title: '区域', dataIndex: 'region', width: 90 }, { title: '保护截止', dataIndex: 'protection_end', width: 110 }, { title: '重复客户', dataIndex: 'duplicate_customer_name', width: 130, render: function(v){return v ? e(Tag,{color:'orange'},v) : '-';} }, { title: '状态', dataIndex: 'status', width: 100, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }, { title: '冲突说明', dataIndex: 'conflict_reason', ellipsis: true }, { title: '操作', width: 170, render: function(_, r){ return e(Space, null, e(Button, { size: 'small', onClick: function(){ arbitrate(r, 'protected'); } }, '通过'), e(Button, { size: 'small', danger: true, onClick: function(){ arbitrate(r, 'rejected'); } }, '驳回')); } }
+    ] })
+  );
+  var registrationTab = e('div', null,
+    e(Card, { title: '渠道项目报备', size: 'small', style: { marginBottom: 16 } }, e(Form, { form: regForm, layout: 'vertical', initialValues: { protection_days: 60 } },
+      e(Row, { gutter: 12 },
+        e(Col, { span: 5 }, e(Form.Item, { name: 'final_customer_name', label: '最终客户', rules: [{ required: true, message: '请输入最终客户' }] }, e(Input, { placeholder: '请输入最终客户名称' }))),
+        e(Col, { span: 5 }, e(Form.Item, { name: 'region', label: '客户归属区域' }, e(Input, { placeholder: '华东/华南' }))),
+        e(Col, { span: 8 }, e(Form.Item, { name: 'partner_id', label: '渠道', rules: [{ required: true, message: '请选择渠道' }] }, e(Select, { showSearch: true, placeholder: '选择渠道', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, partners.map(function(p){return e(Option,{key:p.id,value:p.id},p.name);})))) ,
+        e(Col, { span: 4 }, e(Form.Item, { name: 'protection_days', label: '保护期（天）' }, e(InputNumber, { min: 1, style: { width: '100%' }, placeholder: '60' })))
+      ),
+      e(Form.Item, { name: 'notes', label: '报备说明' }, e(TextArea, { rows: 2 })),
+      e(Space, null,
+        e(Button, { type: 'primary', onClick: submitRegistration }, regEdit ? '更新报备' : '提交报备'),
+        regEdit ? e(Button, { onClick: cancelRegistrationEdit }, '取消编辑') : null
+      )
+    )),
+    e(Table, { rowKey: 'id', loading: loading, dataSource: regs, pagination: { pageSize: 8 }, columns: [
+      { title: '最终客户', dataIndex: 'final_customer_name' },
+      { title: '客户归属区域', dataIndex: 'region', width: 130, render: function(v){return v || '-';} },
+      { title: '渠道', dataIndex: 'partner_name', width: 280, render: function(v){return e('span', { style: { whiteSpace: 'nowrap' } }, v || '-');} },
+      { title: '保护截止', dataIndex: 'protection_end', width: 120, render: function(v){return v || '-';} },
+      { title: '报备说明', dataIndex: 'notes', ellipsis: true, render: function(v){return v || '-';} },
+      { title: '操作', width: 300, render: function(_, r){
+        var canOwn = user.role === 'admin' || Number(r.created_by) === Number(user.id);
+        var canReview = user.role === 'admin' || user.role === 'manager';
+        var isApproved = r.status === 'protected';
+        var isRejected = r.status === 'rejected';
+        var statusText = isApproved ? '已通过' : (isRejected ? '已驳回' : '待审批');
+        var statusStyle = isApproved
+          ? { color: '#16a34a', borderColor: '#86efac', background: '#f0fdf4' }
+          : (isRejected ? { color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2' } : { color: '#d97706', borderColor: '#fcd34d', background: '#fffbeb' });
+        return e(Space, null,
+          e(Button, { size: 'small', style: statusStyle }, statusText),
+          canOwn ? e(Button, { size: 'small', onClick: function(){ editRegistration(r); } }, '编辑') : null,
+          canOwn ? e(Popconfirm, { title: '确认删除此报备？', onConfirm: function(){ deleteRegistration(r); } }, e(Button, { size: 'small', danger: true }, '删除')) : null,
+          canReview ? e(Button, { size: 'small', onClick: function(){ arbitrate(r, 'protected'); } }, '通过') : null,
+          canReview ? e(Button, { size: 'small', danger: true, onClick: function(){ arbitrate(r, 'rejected'); } }, '驳回') : null
+        );
+      } }
     ] })
   );
   var presalesUsers = users.filter(function(u) { return u.role === 'presales'; });
@@ -18624,7 +18872,7 @@ function SecurityBusinessPage(props) {
     return e('div', null,
       e('div', { style: { marginBottom: 16 } },
         e('h1', { className: 'page-title' }, '项目报备'),
-        e('p', { className: 'page-desc' }, '渠道项目报备、保护期管理、重复客户识别与撞单仲裁')
+        e('p', { className: 'page-desc' }, '渠道项目报备与保护期管理')
       ),
       registrationTab
     );
@@ -18728,7 +18976,7 @@ function SalesGrowthPage(props) {
       if (v.expiry_date) v.expiry_date = fmtDate(v.expiry_date);
       return api('POST', '/sales-growth/partner-growth/records', v);
     }).then(function() {
-      message.success('伙伴成长记录已保存');
+      message.success('渠道培训记录已保存');
       recordForm.resetFields();
       loadGrowth();
     }).catch(function(err) { message.error(err.message || '保存失败'); });
@@ -18860,14 +19108,13 @@ function SalesGrowthPage(props) {
     ] })
   );
   var partnerTab = e('div', null,
-    e(Card, { title: '伙伴成长记录', size: 'small', style: { marginBottom: 16 } },
+    e(Card, { title: '渠道培训记录', size: 'small', style: { marginBottom: 16 } },
       e(Form, { form: recordForm, layout: 'vertical' },
         e(Row, { gutter: 12 },
-          e(Col, { span: 5 }, e(Form.Item, { name: 'partner_id', label: '伙伴', rules: [{ required: true }] }, e(Select, { showSearch: true }, partners.map(function(p){ return e(Option, { key: p.id, value: p.id }, p.name); })))),
+          e(Col, { span: 5 }, e(Form.Item, { name: 'partner_id', label: '渠道', rules: [{ required: true }] }, e(Select, { showSearch: true }, partners.map(function(p){ return e(Option, { key: p.id, value: p.id }, p.name); })))),
           e(Col, { span: 4 }, e(Form.Item, { name: 'record_type', label: '类型', rules: [{ required: true }] }, e(Select, null, e(Option, { value: 'certification' }, '认证人员'), e(Option, { value: 'training' }, '培训记录'), e(Option, { value: 'violation' }, '违规记录')))),
           e(Col, { span: 5 }, e(Form.Item, { name: 'title', label: '标题', rules: [{ required: true }] }, e(Input))),
-          e(Col, { span: 4 }, e(Form.Item, { name: 'person_name', label: '人员' }, e(Input))),
-          e(Col, { span: 3 }, e(Form.Item, { name: 'score', label: '分值' }, e(InputNumber, { style: { width: '100%' } }))),
+          e(Col, { span: 4 }, e(Form.Item, { name: 'person_name', label: '渠道人员' }, e(Input))),
           e(Col, { span: 3 }, e(Form.Item, { name: 'record_date', label: '日期' }, e(DatePicker, { style: { width: '100%' } })))
         ),
         e(Form.Item, { name: 'notes', label: '备注' }, e(TextArea, { rows: 2 })),
@@ -18875,21 +19122,18 @@ function SalesGrowthPage(props) {
       )
     ),
     e(Table, { rowKey: 'partner_id', loading: loading, dataSource: partnerSummary, pagination: false, style: { marginBottom: 16 }, columns: [
-      { title: '伙伴', dataIndex: 'partner_name', ellipsis: true },
+      { title: '渠道', dataIndex: 'partner_name', ellipsis: true },
       { title: '等级', dataIndex: 'level', width: 90 },
       { title: '授权区域', dataIndex: 'authorized_region', width: 100 },
-      { title: '累计业绩', dataIndex: 'cumulative_performance', width: 110, render: function(v){ return (v || 0) + '万'; } },
-      { title: '赢单业绩', dataIndex: 'won_performance', width: 110, render: function(v){ return (v || 0) + '万'; } },
-      { title: '返点测算', dataIndex: 'estimated_rebate', width: 110, render: function(v, r){ return (v || 0) + '万（' + (r.rebate_rate || 0) + '%）'; } },
       { title: '认证', dataIndex: 'certified_people', width: 80 },
       { title: '培训', dataIndex: 'training_count', width: 80 },
       { title: '违规', dataIndex: 'violation_count', width: 80 }
     ] }),
     e(Table, { rowKey: 'id', size: 'small', dataSource: partnerRecords, pagination: { pageSize: 6 }, columns: [
-      { title: '伙伴', dataIndex: 'partner_name', width: 160 },
+      { title: '渠道', dataIndex: 'partner_name', width: 160 },
       { title: '类型', dataIndex: 'record_type', width: 100, render: function(v){ return ({ certification: '认证', training: '培训', violation: '违规' }[v] || v); } },
       { title: '标题', dataIndex: 'title', ellipsis: true },
-      { title: '人员', dataIndex: 'person_name', width: 100 },
+      { title: '渠道人员', dataIndex: 'person_name', width: 100 },
       { title: '日期', dataIndex: 'record_date', width: 110 },
       { title: '备注', dataIndex: 'notes', ellipsis: true }
     ] })
@@ -18913,7 +19157,7 @@ function SalesGrowthPage(props) {
   }
   if (partnerOnly) {
     return e('div', null,
-      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '渠道成长'), e('p', { className: 'page-desc' }, '围绕伙伴认证、培训、违规、业绩和返点测算，管理渠道能力成长')),
+      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '渠道培训'), e('p', { className: 'page-desc' }, '围绕渠道认证、培训、违规')),
       partnerTab
     );
   }
