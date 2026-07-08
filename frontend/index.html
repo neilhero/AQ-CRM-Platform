@@ -7552,7 +7552,31 @@ function OppListPage(props) {
 
 
 
-    { title: '客户', dataIndex: 'customer_name', width: 150, ellipsis: true,
+    oppType === 'channel' ? { title: '关联渠道', dataIndex: 'channel_partner_name', width: 150, ellipsis: true,
+
+
+
+
+
+
+
+      render: function(v) { return v || '-'; }
+
+
+
+
+
+
+
+    } : null,
+
+
+
+
+
+
+
+    { title: oppType === 'channel' ? '最终客户' : '客户', dataIndex: 'customer_name', width: 150, ellipsis: true,
 
 
 
@@ -7800,7 +7824,7 @@ function OppListPage(props) {
 
 
 
-  ];
+  ].filter(Boolean);
 
 
 
