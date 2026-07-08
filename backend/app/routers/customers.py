@@ -68,11 +68,14 @@ def create_customer(data: CustomerCreate, db: Session = Depends(get_db), user=De
     format_ok, format_message, normalized = validate_company_name_format(data.name)
     if not format_ok:
         raise HTTPException(400, format_message)
+    if not data.industry or not data.industry.strip():
+        raise HTTPException(400, "请选择所属行业")
     existing = find_duplicate_customer(db, normalized)
     if existing:
         raise HTTPException(400, f"该客户已由{customer_owner_name(existing)}建过，请勿重复创建。")
     payload = data.model_dump()
     payload["name"] = normalized
+    payload["industry"] = data.industry.strip()
     c = Customer(**payload, owner_id=user.id)
     db.add(c)
     db.commit()
@@ -92,6 +95,10 @@ def update_customer(cid: int, data: CustomerUpdate, db: Session = Depends(get_db
         if existing:
             raise HTTPException(400, f"该客户已由{customer_owner_name(existing)}建过，请勿重复创建。")
         payload["name"] = normalized
+    if "industry" in payload:
+        if not payload.get("industry") or not str(payload.get("industry")).strip():
+            raise HTTPException(400, "请选择所属行业")
+        payload["industry"] = str(payload["industry"]).strip()
     for k, v in payload.items():
         setattr(c, k, v)
     db.commit()

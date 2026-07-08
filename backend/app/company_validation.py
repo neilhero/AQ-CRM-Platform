@@ -65,6 +65,8 @@ def validate_company_name_format(name: Optional[str]) -> tuple[bool, str, str]:
         return False, "请填写完整公司名。", normalized
     if len(normalized) < 4:
         return False, "公司名不完整，请填写完整公司名。", normalized
+    if re.search(r"[A-Za-z]", normalized):
+        return False, "公司名不完整，请填写中文公司全称，例如：杭州安泉数智科技有限公司。", normalized
     lowered = normalized.lower()
     if any(word in lowered for word in INVALID_NAME_WORDS):
         return False, "公司名不完整，请填写真实、完整的公司全称。", normalized

@@ -346,6 +346,16 @@ class BidRadarFollowTask(Base):
     notes = Column(Text)
     created_at = Column(DateTime, default=now_cst)
 
+class BiddingDataSource(Base):
+    __tablename__ = "bidding_data_sources"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(128), nullable=False, unique=True, index=True)
+    search_url = Column(String(512), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    sort_order = Column(Integer, default=0, index=True)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=now_cst)
+
 class SalesTarget(Base):
     __tablename__ = "sales_targets"
     id = Column(Integer, primary_key=True, autoincrement=True)
