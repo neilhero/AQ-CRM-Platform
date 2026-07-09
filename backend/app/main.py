@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
-from app.models import User, Customer, ChannelPartner, Contact, Product, ProductSubCategory, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, AuditChange, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask, SalesTarget, CustomerOperationProfile, OpportunityReview, PartnerGrowthRecord, CustomerIdentity, ChannelRegistrationRule, ChannelRegistrationGovernance, PresalesSlaRule, PresalesSlaTracking, BidConversion, CustomerDecisionNode, CustomerDecisionEdge, CustomerCompetitorInstall, IndustryProductRecommendation, PocRecord, ForecastSnapshot, PresalesAsset, BidScoreCriterion
+from app.models import User, Customer, ChannelPartner, Contact, Product, ProductSubCategory, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, AuditChange, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask, BiddingDataSource, SalesTarget, CustomerOperationProfile, OpportunityReview, PartnerGrowthRecord, CustomerIdentity, ChannelRegistrationRule, ChannelRegistrationGovernance, PresalesSlaRule, PresalesSlaTracking, BidConversion, CustomerDecisionNode, CustomerDecisionEdge, CustomerCompetitorInstall, IndustryProductRecommendation, PocRecord, ForecastSnapshot, PresalesAsset, BidScoreCriterion
 from datetime import date, datetime, timezone, timedelta
 import hashlib, os, json, re
 from sqlalchemy import text
@@ -251,6 +251,19 @@ def seed():
             for ch in chs: db.add(ch)
             db.commit()
         if db.query(CommissionRule).count() == 0:
+            existing_partner_ids = {row[0] for row in db.query(ChannelPartner.id).all()}
+            if existing_partner_ids and not all(pid in existing_partner_ids for pid in (1, 2, 3)):
+                seed_partners = db.query(ChannelPartner).order_by(ChannelPartner.id).limit(3).all()
+                seed_rates = [15, 10, 8]
+                seed_cycles = ["\u5b63\u5ea6", "\u6708\u5ea6", "\u5b63\u5ea6"]
+                for idx, partner in enumerate(seed_partners):
+                    db.add(CommissionRule(
+                        partner_id=partner.id,
+                        rate_percent=seed_rates[idx],
+                        settlement_cycle=seed_cycles[idx],
+                    ))
+                db.commit()
+        if db.query(CommissionRule).count() == 0:
             crs = [
                 CommissionRule(partner_id=1, rate_percent=15, settlement_cycle="季度"),
                 CommissionRule(partner_id=2, rate_percent=10, settlement_cycle="月度"),
@@ -262,7 +275,7 @@ def seed():
             menus = [
                 MenuConfig(menu_key="group-dashboard", label="仪表盘", is_visible=True, sort_order=1),
                 MenuConfig(menu_key="/dashboard", label="仪表盘", is_visible=True, sort_order=11, parent_key="group-dashboard"),
-                MenuConfig(menu_key="/business-excellence", label="经营驾驶舱", is_visible=True, sort_order=12, parent_key="group-dashboard"),
+                MenuConfig(menu_key="/business-excellence", label="经营驾驶舱", is_visible=False, sort_order=12, parent_key="group-dashboard"),
                 MenuConfig(menu_key="/follow-ups", label="今日待跟进", is_visible=True, sort_order=2),
                 MenuConfig(menu_key="group-customer", label="客户管理", is_visible=True, sort_order=3),
                 MenuConfig(menu_key="/customers", label="客户管理", is_visible=True, sort_order=31, parent_key="group-customer"),
@@ -303,12 +316,11 @@ def seed():
             dashboard_menu.sort_order = 11
         business_cockpit_menu = db.query(MenuConfig).filter_by(menu_key="/business-excellence").first()
         if not business_cockpit_menu:
-            db.add(MenuConfig(menu_key="/business-excellence", label="经营驾驶舱", is_visible=True, sort_order=12, parent_key="group-dashboard"))
+            db.add(MenuConfig(menu_key="/business-excellence", label="经营驾驶舱", is_visible=False, sort_order=12, parent_key="group-dashboard"))
         else:
             business_cockpit_menu.label = "经营驾驶舱"
             business_cockpit_menu.parent_key = "group-dashboard"
             business_cockpit_menu.sort_order = 12
-            business_cockpit_menu.is_visible = True
         db.commit()
         customer_group_menu = db.query(MenuConfig).filter_by(menu_key="group-customer").first()
         if not customer_group_menu:
@@ -458,12 +470,11 @@ def seed():
             growth_menu.sort_order = 56
         excellence_menu = db.query(MenuConfig).filter_by(menu_key="/business-excellence").first()
         if not excellence_menu:
-            db.add(MenuConfig(menu_key="/business-excellence", label="经营驾驶舱", is_visible=True, sort_order=12, parent_key="group-dashboard"))
+            db.add(MenuConfig(menu_key="/business-excellence", label="经营驾驶舱", is_visible=False, sort_order=12, parent_key="group-dashboard"))
         else:
             excellence_menu.label = "经营驾驶舱"
             excellence_menu.parent_key = "group-dashboard"
             excellence_menu.sort_order = 12
-            excellence_menu.is_visible = True
         db.commit()
     finally:
         db.close()

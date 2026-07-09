@@ -142,6 +142,35 @@ def _check_opp_access(db: Session, opportunity_id: int, user):
     return opp
 
 
+def _scoped_partner_query(db: Session, user):
+    q = db.query(ChannelPartner)
+    if user.role != ROLE_ADMIN:
+        q = q.filter(ChannelPartner.created_by == user.id)
+    return q
+
+
+def _check_partner_access(db: Session, partner_id: int, user):
+    partner = _scoped_partner_query(db, user).filter(ChannelPartner.id == partner_id).first()
+    if not partner:
+        raise HTTPException(403, "无权访问该渠道")
+    return partner
+
+
+def _check_partner_record_access(db: Session, record_id: int, user):
+    row = (
+        db.query(PartnerGrowthRecord, ChannelPartner)
+        .join(ChannelPartner, PartnerGrowthRecord.partner_id == ChannelPartner.id)
+        .filter(PartnerGrowthRecord.id == record_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(404, "记录不存在")
+    record, partner = row
+    if user.role != ROLE_ADMIN and partner.created_by != user.id:
+        raise HTTPException(403, "无权访问该渠道记录")
+    return record
+
+
 def _date_range(period_label: Optional[str]):
     today = date.today()
     label = period_label or f"{today.year}Q{(today.month - 1) // 3 + 1}"
@@ -475,8 +504,9 @@ def delete_review(review_id: int, db: Session = Depends(get_db), admin=Depends(r
 
 @router.get("/partner-growth/summary")
 def partner_growth_summary(db: Session = Depends(get_db), user=Depends(require_user)):
-    partners = db.query(ChannelPartner).order_by(ChannelPartner.name).all()
-    records = db.query(PartnerGrowthRecord).all()
+    partners = _scoped_partner_query(db, user).order_by(ChannelPartner.name).all()
+    partner_ids = [p.id for p in partners]
+    records = db.query(PartnerGrowthRecord).filter(PartnerGrowthRecord.partner_id.in_(partner_ids or [-1])).all()
     by_partner = {}
     for record in records:
         by_partner.setdefault(record.partner_id, []).append(record)
@@ -509,6 +539,8 @@ def partner_growth_summary(db: Session = Depends(get_db), user=Depends(require_u
 @router.get("/partner-growth/records")
 def list_partner_records(partner_id: Optional[int] = None, record_type: Optional[str] = None, db: Session = Depends(get_db), user=Depends(require_user)):
     q = db.query(PartnerGrowthRecord, ChannelPartner).join(ChannelPartner, PartnerGrowthRecord.partner_id == ChannelPartner.id)
+    if user.role != ROLE_ADMIN:
+        q = q.filter(ChannelPartner.created_by == user.id)
     if partner_id:
         q = q.filter(PartnerGrowthRecord.partner_id == partner_id)
     if record_type:
@@ -530,8 +562,7 @@ def list_partner_records(partner_id: Optional[int] = None, record_type: Optional
 
 @router.post("/partner-growth/records", status_code=201)
 def create_partner_record(data: PartnerGrowthRecordIn, db: Session = Depends(get_db), user=Depends(require_user)):
-    if not db.query(ChannelPartner).filter_by(id=data.partner_id).first():
-        raise HTTPException(404, "渠道伙伴不存在")
+    _check_partner_access(db, data.partner_id, user)
     record = PartnerGrowthRecord(**data.model_dump(exclude_unset=True), created_by=user.id)
     if not record.record_date:
         record.record_date = date.today()
@@ -543,9 +574,9 @@ def create_partner_record(data: PartnerGrowthRecordIn, db: Session = Depends(get
 
 @router.put("/partner-growth/records/{record_id}")
 def update_partner_record(record_id: int, data: PartnerGrowthRecordPatch, db: Session = Depends(get_db), user=Depends(require_user)):
-    record = db.query(PartnerGrowthRecord).filter_by(id=record_id).first()
-    if not record:
-        raise HTTPException(404, "记录不存在")
+    record = _check_partner_record_access(db, record_id, user)
+    if data.partner_id is not None:
+        _check_partner_access(db, data.partner_id, user)
     for k, v in data.model_dump(exclude_unset=True).items():
         setattr(record, k, v)
     db.commit()
@@ -553,9 +584,7 @@ def update_partner_record(record_id: int, data: PartnerGrowthRecordPatch, db: Se
 
 
 @router.delete("/partner-growth/records/{record_id}", status_code=204)
-def delete_partner_record(record_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
-    record = db.query(PartnerGrowthRecord).filter_by(id=record_id).first()
-    if not record:
-        raise HTTPException(404, "记录不存在")
+def delete_partner_record(record_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
+    record = _check_partner_record_access(db, record_id, user)
     db.delete(record)
     db.commit()

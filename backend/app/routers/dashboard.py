@@ -5,7 +5,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Customer, FollowUp, Lead, Opportunity, User
+from app.models import ChannelPartner, Customer, FollowUp, Lead, Opportunity, OpportunityType, User
+from app.permissions import ROLE_ADMIN
 from app.permissions import managed_user_ids, scoped_customer_query, scoped_lead_query, scoped_opportunity_query
 from app.routers.utils import require_user
 
@@ -88,17 +89,17 @@ def dashboard_stats(db: Session = Depends(get_db), user=Depends(require_user)):
 @router.get("/sales-performance")
 def sales_performance(period: str = Query("month"), db: Session = Depends(get_db), user=Depends(require_user)):
     user_ids = managed_user_ids(db, user)
-    q = db.query(User).filter(User.is_active == True, User.role != "admin", User.username != "admin")
+    q = db.query(User).filter(User.is_active == True, User.role.in_(["sales", "channel_manager"]))
     if user_ids is not None:
         q = q.filter(User.id.in_(user_ids or [-1]))
     users = q.order_by(User.id).all()
     today = date.today()
-    ndays = 30
+    start = date(today.year, today.month, 1)
     if period == "quarter":
-        ndays = 90
+        start_month = ((today.month - 1) // 3) * 3 + 1
+        start = date(today.year, start_month, 1)
     elif period == "year":
-        ndays = 365
-    start = today - timedelta(days=ndays)
+        start = date(today.year, 1, 1)
     result = []
     for u in users:
         base = _perm_filter(
@@ -111,6 +112,7 @@ def sales_performance(period: str = Query("month"), db: Session = Depends(get_db
         opp_count = len(opps)
         won_count = len(won)
         total_amt = round(sum(o.amount or 0 for o in opps), 1)
+        won_amt = round(sum(o.amount or 0 for o in won), 1)
         result.append(
             {
                 "sales_rep_id": u.id,
@@ -118,8 +120,57 @@ def sales_performance(period: str = Query("month"), db: Session = Depends(get_db
                 "opp_count": opp_count,
                 "won_count": won_count,
                 "total_amount": total_amt,
+                "won_amount": won_amt,
                 "conversion_rate": round(won_count / opp_count * 100, 1) if opp_count > 0 else 0,
                 "avg_deal_size": round(total_amt / won_count, 1) if won_count > 0 else 0,
             }
         )
-    return sorted(result, key=lambda x: (x["total_amount"], x["opp_count"]), reverse=True)
+    return sorted(result, key=lambda x: (x["total_amount"], x["won_amount"], x["opp_count"]), reverse=True)
+
+
+@router.get("/partner-performance")
+def partner_performance(period: str = Query("year"), db: Session = Depends(get_db), user=Depends(require_user)):
+    today = date.today()
+    start = None
+    if period != "all":
+        ndays = 30
+        if period == "quarter":
+            ndays = 90
+        elif period == "year":
+            ndays = 365
+        start = today - timedelta(days=ndays)
+
+    partner_q = db.query(ChannelPartner)
+    if user.role != ROLE_ADMIN:
+        partner_q = partner_q.filter(ChannelPartner.created_by == user.id)
+    partners = partner_q.order_by(ChannelPartner.name).all()
+
+    result = []
+    for partner in partners:
+        opp_q = db.query(Opportunity).filter(
+            Opportunity.opp_type == OpportunityType.CHANNEL,
+            Opportunity.channel_partner_id == partner.id,
+        )
+        if start:
+            opp_q = opp_q.filter(Opportunity.created_at >= start)
+        opp_q = _perm_filter(opp_q, db, user)
+        opps = opp_q.all()
+        won_opps = [o for o in opps if o.stage and str(o.stage.value) == "5"]
+        sales_names = []
+        for uid in sorted({o.sales_rep_id for o in opps if o.sales_rep_id}):
+            sales = db.query(User).filter(User.id == uid).first()
+            if sales:
+                sales_names.append(sales.real_name or sales.username)
+        result.append(
+            {
+                "partner_id": partner.id,
+                "partner_name": partner.name,
+                "level": partner.level,
+                "region": partner.region,
+                "completed_amount": round(sum(o.amount or 0 for o in won_opps), 1),
+                "opp_count": len(opps),
+                "total_amount": round(sum(o.amount or 0 for o in opps), 1),
+                "sales_names": "、".join(sales_names) if sales_names else "-",
+            }
+        )
+    return sorted(result, key=lambda x: (x["completed_amount"], x["total_amount"], x["opp_count"]), reverse=True)

@@ -97,6 +97,7 @@ def list_opps(
     stage: Optional[str] = Query(None),
     opp_type: Optional[str] = Query(None),
     sales_rep_id: Optional[int] = Query(None),
+    channel_partner_id: Optional[int] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
@@ -111,6 +112,8 @@ def list_opps(
         q = q.filter(Opportunity.opp_type == opp_type)
     if sales_rep_id:
         q = q.filter(Opportunity.sales_rep_id == sales_rep_id)
+    if channel_partner_id:
+        q = q.filter(Opportunity.channel_partner_id == channel_partner_id)
     results = q.order_by(Opportunity.updated_at.desc()).offset(skip).limit(limit).all()
     out = []
     for o in results:
@@ -233,4 +236,3 @@ def delete_opp(oid: int, db: Session = Depends(get_db), user=Depends(require_use
     _check_edit_access(o, db, user)
     db.delete(o)
     db.commit()
-
