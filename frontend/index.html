@@ -2132,8 +2132,8 @@ function AppLayout(props) {
 
     { key: 'group-partner', icon: IC('TeamOutlined'), label: '渠道管理', className: 'business-section-item', children: [
       { key: '/partners', label: '渠道档案' },
-      { key: '/partners/performance', label: '渠道绩效' },
-      { key: '/partners/growth', label: '渠道成长' },
+      { key: '/partners/performance', label: '渠道业绩' },
+      { key: '/partners/growth', label: '渠道培训' },
       { key: '/partners/registration', label: '项目报备' },
       { key: '/partners/commission', label: '返点管理' }
     ] },
@@ -2365,7 +2365,7 @@ function AppLayout(props) {
 
 
 
-  var titleMap = { '/dashboard': '仪表盘', '/business-excellence': '经营驾驶舱', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/leads/bid-conversion': '招标转化', '/presales': '售前协同', '/presales/assets': '售前资产', '/security-business': '网安业务', '/sales-growth': '销售增长', '/products': '产品管理', '/products/recommendations': '推荐产品', '/partners': '渠道档案', '/partners/registration': '项目报备', '/partners/growth': '渠道成长', '/partners/credit': '渠道信用', '/partners/performance': '渠道绩效', '/partners/commission': '返点管理' };
+  var titleMap = { '/dashboard': '仪表盘', '/business-excellence': '经营驾驶舱', '/follow-ups': '今日待跟进', '/customers': '客户管理', '/customers/profile': '客户360画像', '/customers/operations': '客户分层运营', '/opportunities/direct': '直销商机', '/opportunities/channel': '渠道商机', '/leads': '线索管理', '/leads/bid-radar': '招标雷达', '/leads/bid-conversion': '招标转化', '/presales': '售前协同', '/presales/assets': '售前资产', '/security-business': '网安业务', '/sales-growth': '销售增长', '/products': '产品管理', '/products/recommendations': '推荐产品', '/partners': '渠道档案', '/partners/registration': '项目报备', '/partners/growth': '渠道培训', '/partners/credit': '渠道信用', '/partners/performance': '渠道业绩', '/partners/commission': '返点管理' };
 
 
 
@@ -13265,7 +13265,7 @@ function PartnerPerformancePage() {
 
 
 
-      e('div', null, e('h1', { className: 'page-title' }, '📊  渠道绩效'), e('p', { className: 'page-desc' }, '渠道伙伴商机转化与业绩排行')),
+      e('div', null, e('h1', { className: 'page-title' }, '📊  渠道业绩'), e('p', { className: 'page-desc' }, '渠道伙伴商机转化与业绩排行')),
 
 
 
@@ -18913,7 +18913,7 @@ function SalesGrowthPage(props) {
   }
   if (partnerOnly) {
     return e('div', null,
-      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '渠道成长'), e('p', { className: 'page-desc' }, '围绕伙伴认证、培训、违规、业绩和返点测算，管理渠道能力成长')),
+      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '渠道培训'), e('p', { className: 'page-desc' }, '围绕伙伴认证、培训、违规、业绩和返点测算，管理渠道能力成长')),
       partnerTab
     );
   }
