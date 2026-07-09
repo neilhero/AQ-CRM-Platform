@@ -195,7 +195,7 @@ def create_opp(data: OpportunityCreate, db: Session = Depends(get_db), user=Depe
     _validate_required_opportunity_fields(kwargs)
     kwargs["opp_type"] = "channel" if kwargs.get("opp_type") == "channel" else "direct"
     if user.role == ROLE_CHANNEL_MANAGER and kwargs.get("opp_type") != "channel":
-        raise HTTPException(403, "渠道经理只能新建渠道商机")
+        raise HTTPException(403, "渠道负责人只能新建渠道商机")
     if user.role in (ROLE_SALES, ROLE_CHANNEL_MANAGER):
         kwargs["sales_rep_id"] = user.id
     elif user.role == ROLE_MANAGER and kwargs.get("sales_rep_id") not in (managed_user_ids(db, user) or []):

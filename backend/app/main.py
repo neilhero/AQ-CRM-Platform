@@ -1,5 +1,8 @@
 from fastapi import FastAPI
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base, SessionLocal
 from app.models import User, Customer, ChannelPartner, Contact, Product, ProductSubCategory, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, AuditChange, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask, BiddingDataSource, SalesTarget, CustomerOperationProfile, OpportunityReview, PartnerGrowthRecord, CustomerIdentity, ChannelRegistrationRule, ChannelRegistrationGovernance, PresalesSlaRule, PresalesSlaTracking, BidConversion, CustomerDecisionNode, CustomerDecisionEdge, CustomerCompetitorInstall, IndustryProductRecommendation, PocRecord, ForecastSnapshot, PresalesAsset, BidScoreCriterion
 from datetime import date, datetime, timezone, timedelta
@@ -11,13 +14,35 @@ CST = timezone(timedelta(hours=8))
 from app.services.auth import hash_password
 from app.services.auth import get_current_user
 
-app = FastAPI(title="AnQuan CRM v3.3")
+app = FastAPI(title="AnQuan CRM v3.6", docs_url=None)
 
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8097", "http://127.0.0.1:8097", "http://121.41.66.121"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 Base.metadata.create_all(bind=engine)
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "frontend"))
+FRONTEND_STATIC_DIR = os.path.join(FRONTEND_DIR, "static")
+FAVICON_PATH = os.path.join(FRONTEND_STATIC_DIR, "favicon.svg")
+
+if os.path.isdir(FRONTEND_STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=FRONTEND_STATIC_DIR), name="frontend-static")
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon_ico():
+    return FileResponse(FAVICON_PATH, media_type="image/svg+xml")
+
+@app.get("/favicon.svg", include_in_schema=False)
+def favicon_svg():
+    return FileResponse(FAVICON_PATH, media_type="image/svg+xml")
+
+@app.get("/docs", include_in_schema=False)
+def custom_swagger_docs():
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title="AnQuan CRM v3.6 - API Docs",
+        swagger_favicon_url="/static/favicon.svg?v=3.6",
+    )
 
 def ensure_schema_updates():
     with engine.begin() as conn:
@@ -197,7 +222,7 @@ async def audit_write_requests(request, call_next):
 
 @app.get("/")
 def root():
-    return {"message": "AnQuan CRM v3.3 API", "status": "running"}
+    return {"message": "AnQuan CRM v3.6 API", "status": "running"}
 
 @app.on_event("startup")
 def seed():

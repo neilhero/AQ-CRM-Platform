@@ -48,7 +48,7 @@ def _validate_manager(db: Session, manager_id: Optional[int]):
         return
     manager = db.query(User).filter_by(id=manager_id, role=ROLE_MANAGER, is_active=True).first()
     if not manager:
-        raise HTTPException(400, "直属主管必须是启用状态的销售主管")
+        raise HTTPException(400, "直属销售负责人必须是启用状态的销售负责人")
 
 
 def _user_out(user: User, db: Session):

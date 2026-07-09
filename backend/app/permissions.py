@@ -18,9 +18,9 @@ VALID_ROLES = (
 
 ROLE_LABELS = {
     ROLE_ADMIN: "管理员",
-    ROLE_MANAGER: "销售主管",
+    ROLE_MANAGER: "销售负责人",
     ROLE_SALES: "销售",
-    ROLE_CHANNEL_MANAGER: "渠道经理",
+    ROLE_CHANNEL_MANAGER: "渠道负责人",
     ROLE_PRESALES: "售前",
 }
 
