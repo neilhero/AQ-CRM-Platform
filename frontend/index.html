@@ -568,9 +568,21 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 .profile-summary-item{padding:10px 8px;background:#fff;border:1px solid #e5edf8;border-radius:6px}
 .profile-summary-label{display:block;font-size:12px;color:#64748b;margin-bottom:2px}
 .profile-summary-value{font-size:16px;font-weight:650;color:#2563eb}
-.profile-section{padding:16px 16px 4px;margin:0 0 16px;background:#f8fafc;border:1px solid #e7edf5;border-radius:8px}
-.profile-section-title{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:14px;font-weight:650;color:#0f2747}
-.profile-section-title:before{content:'';display:block;width:3px;height:15px;background:#2563eb;border-radius:2px}
+.profile-section{margin:0 0 20px;border:1px solid #dbe5f1;border-radius:8px;overflow:hidden;background:#fff}
+.profile-section-title{display:flex;align-items:center;gap:9px;margin:0;padding:13px 16px;font-size:15px;font-weight:700;color:#0f2747;line-height:1.4;border-bottom:1px solid #dbe5f1;background:#f8fbff}
+.profile-section-title:before{content:'';display:block;width:4px;height:18px;background:#2563eb;border-radius:3px}
+.profile-section-title:after{content:'';flex:1;height:1px;margin-left:4px;background:linear-gradient(90deg,rgba(37,99,235,.22),transparent)}
+.profile-section>.ant-row,.profile-section>.ant-form-item{margin-left:16px!important;margin-right:16px!important}
+.profile-section>.ant-row:first-of-type{margin-top:17px}
+.profile-section>.ant-form-item:last-child{margin-bottom:18px}
+.profile-section-role{border-color:#bfd7fb;box-shadow:0 1px 2px rgba(37,99,235,.05)}
+.profile-section-role .profile-section-title{color:#123b75;background:#eef5ff;border-bottom-color:#cfe2ff}
+.profile-section-role .profile-section-title:before{background:#1677ff}
+.profile-section-role .profile-section-title:after{background:linear-gradient(90deg,rgba(22,119,255,.28),transparent)}
+.profile-section-business{border-color:#bfe5df;box-shadow:0 1px 2px rgba(13,148,136,.05)}
+.profile-section-business .profile-section-title{color:#0f4c4a;background:#effaf8;border-bottom-color:#cbece7}
+.profile-section-business .profile-section-title:before{background:#0f9b8e}
+.profile-section-business .profile-section-title:after{background:linear-gradient(90deg,rgba(15,155,142,.26),transparent)}
 .profile-workbench .ant-form-item{margin-bottom:14px}
 .profile-workbench .ant-form-item-label>label{font-weight:600;color:#334155}
 .profile-workbench textarea.ant-input{resize:vertical}
@@ -1526,7 +1538,7 @@ async function api(method, path, body) {
 
 
 
-  if (r.status === 401) {
+  if (r.status === 401 && path !== '/auth/login') {
 
 
 
@@ -1534,7 +1546,7 @@ async function api(method, path, body) {
 
 
 
-    localStorage.clear(); window.location.hash = "#/login"; window.location.reload();
+    localStorage.removeItem('aq2_token'); localStorage.removeItem('aq2_user'); window.location.hash = "#/login"; window.location.reload();
 
 
 
@@ -1638,7 +1650,7 @@ async function downloadFile(path, filename, options) {
   if (token) headers['Authorization'] = 'Bearer ' + token;
   var r = await fetch(API_BASE + path, { headers: headers });
   if (r.status === 401) {
-    localStorage.clear(); window.location.hash = '#/login';
+    localStorage.removeItem('aq2_token'); localStorage.removeItem('aq2_user'); window.location.hash = '#/login';
     message.error('请先登录');
     return false;
   }
@@ -1681,7 +1693,7 @@ async function uploadForm(method, path, formData) {
   if (token) headers['Authorization'] = 'Bearer ' + token;
   var r = await fetch(API_BASE + path, { method: method, headers: headers, body: formData });
   if (r.status === 401) {
-    localStorage.clear(); window.location.hash = '#/login';
+    localStorage.removeItem('aq2_token'); localStorage.removeItem('aq2_user'); window.location.hash = '#/login';
     throw new Error('未登录');
   }
   if (r.status === 204) return null;
@@ -1817,7 +1829,16 @@ function LoginPage() {
 
 
 
-    }).catch(function(err) { message.error(err.message); })
+    }).catch(function() {
+
+      message.error('用户名或密码错误，请重新输入');
+
+      form.setFields([
+        { name: 'username', errors: ['请检查用户名'] },
+        { name: 'password', errors: ['请检查密码'] }
+      ]);
+
+    })
 
 
 
@@ -2172,7 +2193,7 @@ function AppLayout(props) {
 
 
 
-  function logout() { localStorage.clear(); window.location.replace('/'); }
+  function logout() { localStorage.removeItem('aq2_token'); localStorage.removeItem('aq2_user'); window.location.replace('/'); }
 
 
 
@@ -18968,7 +18989,7 @@ function SecurityBusinessPage(props) {
       )),
       e(Col, { xs: 24, lg: 17 }, e(Card, { title: '客户360画像', className: 'profile-workbench', extra: e(Button, { type: 'primary', disabled: !selectedCustomerId, onClick: saveProfile }, '保存画像') },
         e(Form, { form: profileForm, layout: 'vertical' },
-          e('div', { className: 'profile-section' },
+          e('div', { className: 'profile-section profile-section-role' },
             e('div', { className: 'profile-section-title' }, '关键角色与合规情况'),
             e(Row, { gutter: 16 },
               e(Col, { xs: 24, md: 8 }, e(Form.Item, { name: 'technical_owner', label: '技术负责人' }, e(Input, { placeholder: '姓名 / 部门 / 职务' }))),
@@ -18981,7 +19002,7 @@ function SecurityBusinessPage(props) {
               e(Col, { xs: 24, md: 8 }, e(Form.Item, { name: 'xinchuang_status', label: '信创状态' }, e(Select, { allowClear: true, placeholder: '请选择信创状态' }, ['无要求','规划中','适配中','已完成'].map(function(x){return e(Option,{key:x,value:x},x);}))))
             )
           ),
-          e('div', { className: 'profile-section' },
+          e('div', { className: 'profile-section profile-section-business' },
             e('div', { className: 'profile-section-title' }, '客户经营信息'),
             e(Form.Item, { name: 'org_structure', label: '客户组织架构' }, e(TextArea, { rows: 3, placeholder: '建议记录业务部门、信息中心、采购部门及汇报关系' })),
             e(Form.Item, { name: 'decision_chain', label: '决策链' }, e(TextArea, { rows: 3, placeholder: '业务部门 / 信息中心 / 采购 / 分管领导 / 最终拍板人' })),
