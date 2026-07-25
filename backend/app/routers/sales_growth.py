@@ -385,18 +385,51 @@ def customer_operations(db: Session = Depends(get_db), user=Depends(require_user
             .filter(Opportunity.customer_id == customer.id)
             .scalar()
         )
+        follow_rows = (
+            db.query(FollowUp.opportunity_id, func.max(FollowUp.created_at))
+            .filter(FollowUp.opportunity_id.in_([o.id for o in opps] or [-1]))
+            .group_by(FollowUp.opportunity_id)
+            .all()
+        )
+        latest_follow_by_opp = {opp_id: followed_at for opp_id, followed_at in follow_rows}
         inferred = "strategic" if customer.level == "VIP" or amount >= 300 else "key" if customer.level == "A" or amount >= 100 else "normal"
         if latest_follow and (today - latest_follow.date()).days >= 90:
             inferred = "dormant"
         segment = profile.segment if profile else inferred
         active_opps = [o for o in opps if not o.is_closed]
-        stale_opps = [o for o in active_opps if o.updated_at and (today - o.updated_at).days >= 30]
-        if latest_follow is None or (today - latest_follow.date()).days >= 30:
-            alerts.append({"type": "long_no_follow", "level": "warning", "customer_id": customer.id, "customer_name": customer.name, "message": "长期未跟进"})
+        stale_opps = []
+        for opp in active_opps:
+            last_followed_at = latest_follow_by_opp.get(opp.id)
+            last_activity_date = last_followed_at.date() if last_followed_at else opp.created_at
+            unfollowed_days = max((today - last_activity_date).days, 0) if last_activity_date else 0
+            if unfollowed_days >= 30:
+                stale_opps.append((opp, last_followed_at, unfollowed_days))
+        customer_activity_date = latest_follow.date() if latest_follow else (customer.created_at.date() if customer.created_at else None)
+        customer_unfollowed_days = max((today - customer_activity_date).days, 0) if customer_activity_date else 0
+        if customer_unfollowed_days >= 30:
+            alerts.append({
+                "type": "long_no_follow",
+                "level": "warning",
+                "customer_id": customer.id,
+                "customer_name": customer.name,
+                "message": "长期未跟进",
+                "unfollowed_days": customer_unfollowed_days,
+                "last_follow_up_at": latest_follow.isoformat() if latest_follow else None,
+            })
         if segment in ("strategic", "key") and not active_opps:
             alerts.append({"type": "key_no_opportunity", "level": "warning", "customer_id": customer.id, "customer_name": customer.name, "message": "重点客户暂无活跃商机"})
-        for opp in stale_opps:
-            alerts.append({"type": "stale_opportunity", "level": "warning", "customer_id": customer.id, "customer_name": customer.name, "opportunity_id": opp.id, "opportunity_name": opp.name, "message": "商机久未推进"})
+        for opp, last_followed_at, unfollowed_days in stale_opps:
+            alerts.append({
+                "type": "stale_opportunity",
+                "level": "warning",
+                "customer_id": customer.id,
+                "customer_name": customer.name,
+                "opportunity_id": opp.id,
+                "opportunity_name": opp.name,
+                "message": f"商机{unfollowed_days}天未跟进",
+                "unfollowed_days": unfollowed_days,
+                "last_follow_up_at": last_followed_at.isoformat() if last_followed_at else None,
+            })
         items.append({
             "customer_id": customer.id,
             "customer_name": customer.name,
@@ -415,6 +448,22 @@ def customer_operations(db: Session = Depends(get_db), user=Depends(require_user
     for item in items:
         summary[item["segment"]] = summary.get(item["segment"], 0) + 1
     return {"summary": summary, "items": items, "alerts": alerts[:100]}
+
+
+@router.get("/customer-operation-notifications")
+def customer_operation_notifications(db: Session = Depends(get_db), user=Depends(require_user)):
+    """Return customer-level long-no-follow notices for the global notification bell."""
+    alerts = customer_operations(db=db, user=user).get("alerts", [])
+    items = []
+    for alert in alerts:
+        if alert.get("type") != "long_no_follow":
+            continue
+        item = dict(alert)
+        item["notice_key"] = "customer-operation-{}-{}".format(
+            item.get("customer_id"), item.get("last_follow_up_at") or "never"
+        )
+        items.append(item)
+    return {"count": len(items), "items": items[:20]}
 
 
 @router.put("/customer-operations/{customer_id}")

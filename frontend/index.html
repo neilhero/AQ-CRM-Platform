@@ -547,7 +547,54 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 
 
-.page-title{font-size:22px;font-weight:700;margin:0 0 4px}
+.page-title{font-size:22px;font-weight:700;margin:0 0 4px}
+
+.customer-profile-page{max-width:1560px;margin:0 auto}
+.customer-profile-page .profile-page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px}
+.customer-profile-page .profile-page-head .page-title{margin-bottom:5px}
+.customer-profile-page .profile-page-head .page-desc{margin:0;color:#64748b;font-size:14px}
+.profile-selector-card,.profile-workbench{height:100%;border:1px solid #e2e8f0!important;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.profile-selector-card .ant-card-head,.profile-workbench .ant-card-head{min-height:54px;padding:0 20px;border-bottom:1px solid #e2e8f0}
+.profile-selector-card .ant-card-head-title,.profile-workbench .ant-card-head-title{font-weight:650;color:#0f2747}
+.profile-selector-card .ant-card-body{padding:18px}
+.profile-workbench .ant-card-body{padding:20px 22px 22px}
+.profile-select-label{display:block;margin-bottom:8px;font-size:13px;font-weight:600;color:#334155}
+.profile-select-tip{margin:8px 0 18px;color:#94a3b8;font-size:12px;line-height:1.6}
+.profile-empty{padding:30px 8px 22px;text-align:center}
+.profile-empty .ant-empty{margin:14px 0 4px}
+.profile-customer-summary{margin-top:20px;padding:16px;border:1px solid #dbeafe;background:#f8fbff;border-radius:8px}
+.profile-customer-name{font-size:16px;font-weight:650;color:#0f2747;line-height:1.5;word-break:break-word;margin-bottom:14px}
+.profile-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.profile-summary-item{padding:10px 8px;background:#fff;border:1px solid #e5edf8;border-radius:6px}
+.profile-summary-label{display:block;font-size:12px;color:#64748b;margin-bottom:2px}
+.profile-summary-value{font-size:16px;font-weight:650;color:#2563eb}
+.profile-section{padding:16px 16px 4px;margin:0 0 16px;background:#f8fafc;border:1px solid #e7edf5;border-radius:8px}
+.profile-section-title{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:14px;font-weight:650;color:#0f2747}
+.profile-section-title:before{content:'';display:block;width:3px;height:15px;background:#2563eb;border-radius:2px}
+.profile-workbench .ant-form-item{margin-bottom:14px}
+.profile-workbench .ant-form-item-label>label{font-weight:600;color:#334155}
+.profile-workbench textarea.ant-input{resize:vertical}
+@media(max-width:1100px){.customer-profile-page .profile-page-head{display:block}.customer-profile-page .profile-page-head .page-desc{margin-top:6px}.profile-summary-grid{grid-template-columns:1fr}}
+
+.customer-operations-page{max-width:1560px;margin:0 auto}
+.operations-page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px}
+.operations-page-head .page-title{margin-bottom:5px}
+.operations-page-head .page-desc{margin:0;color:#64748b;font-size:14px}
+.segment-stat-card,.operations-alert-card,.operations-table-card{border:1px solid #e2e8f0!important;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.segment-stat-card{overflow:hidden;position:relative}
+.segment-stat-card:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+.segment-stat-card .ant-card-body{padding:17px 18px}
+.segment-stat-card .ant-statistic-title{margin-bottom:7px;font-weight:600;color:#475569}
+.segment-stat-card .ant-statistic-content{font-size:28px;color:#0f2747}
+.segment-stat-card.strategic:before{background:#e24a4a}.segment-stat-card.key:before{background:#2563eb}.segment-stat-card.normal:before{background:#16a34a}.segment-stat-card.dormant:before{background:#94a3b8}
+.operations-alert-card .ant-card-head,.operations-table-card .ant-card-head{min-height:54px;padding:0 20px;border-bottom:1px solid #e2e8f0}
+.operations-alert-card .ant-card-head-title,.operations-table-card .ant-card-head-title{font-weight:650;color:#0f2747}
+.operations-alert-card .ant-card-body{padding:0 20px 8px}
+.operations-table-card .ant-card-body{padding:0}
+.operations-alert-tag{min-width:108px;text-align:center}
+.operations-days{font-weight:600;color:#d97706;white-space:nowrap}
+.operations-table-card .ant-table-thead>tr>th{background:#f8fafc;font-weight:600;color:#334155}
+@media(max-width:1100px){.operations-page-head{display:block}.operations-page-head .page-desc{margin-top:6px}}
 
 
 
@@ -1598,10 +1645,10 @@ function downloadImportErrors(prev, type) {
   if (!prev || !prev.rows) return;
   var keys = type === 'customers'
     ? ['_row','name','industry','address','website','level','description','_errors']
-    : ['_row','name','company','contact_name','contact_phone','source','quality','industry','notes','_errors'];
+    : ['_row','name','company','contact_name','contact_phone','source','industry','notes','_errors'];
   var labels = type === 'customers'
     ? ['行号','客户名称','行业','地址','网址','客户等级','描述','错误原因']
-    : ['行号','线索名称','公司名称','联系人','联系电话','来源','质量','行业','备注','错误原因'];
+    : ['行号','线索名称','公司名称','联系人','联系电话','来源链接','行业','备注','错误原因'];
   var badRows = prev.rows.filter(function(r) { return !r._valid; });
   if (!badRows.length) {
     message.info('没有错误行');
@@ -1970,10 +2017,10 @@ function AppLayout(props) {
 
 
   var _mc = useState([]), menuConfig = _mc[0], setMenuConfig = _mc[1];
-  var _ntf = useState({ count: 0, items: [] }), presalesNotice = _ntf[0], setPresalesNotice = _ntf[1];
-  var noticeReadKey = 'aq_notice_read_' + (user.id || user.username || 'guest');
-  function noticeKey(item) {
-    return (item.notice_type || 'notice') + '-' + item.id;
+  var _ntf = useState({ count: 0, items: [] }), presalesNotice = _ntf[0], setPresalesNotice = _ntf[1];
+  var noticeReadKey = 'aq_notice_read_' + (user.id || user.username || 'guest');
+  function noticeKey(item) {
+    return item.notice_key || ((item.notice_type || 'notice') + '-' + item.id);
   }
   function getReadNotices() {
     try { return JSON.parse(localStorage.getItem(noticeReadKey) || '[]'); } catch(ex) { return []; }
@@ -2010,13 +2057,17 @@ function AppLayout(props) {
   useEffect(function() { api('GET','/menu-config').then(function(d){setMenuConfig(d||[]);}).catch(function(){}); }, []);
   useEffect(function() {
     function loadNotice() {
-      Promise.all([
-        api('GET','/security-business/presales-notifications').catch(function(){ return { count: 0, items: [] }; }),
-        api('GET','/security-business/channel-registration-notifications').catch(function(){ return { count: 0, items: [] }; })
-      ]).then(function(res){
-        var presales = res[0] || { count: 0, items: [] };
-        var registrations = res[1] || { count: 0, items: [] };
-        var mergedItems = (registrations.items || []).map(function(item) { return Object.assign({ notice_type: 'registration' }, item); }).concat((presales.items || []).map(function(item) { return Object.assign({ notice_type: 'presales' }, item); }));
+      Promise.all([
+        api('GET','/security-business/presales-notifications').catch(function(){ return { count: 0, items: [] }; }),
+        api('GET','/security-business/channel-registration-notifications').catch(function(){ return { count: 0, items: [] }; }),
+        api('GET','/sales-growth/customer-operation-notifications').catch(function(){ return { count: 0, items: [] }; })
+      ]).then(function(res){
+        var presales = res[0] || { count: 0, items: [] };
+        var registrations = res[1] || { count: 0, items: [] };
+        var customerOperations = res[2] || { count: 0, items: [] };
+        var mergedItems = (registrations.items || []).map(function(item) { return Object.assign({ notice_type: 'registration' }, item); })
+          .concat((presales.items || []).map(function(item) { return Object.assign({ notice_type: 'presales' }, item); }))
+          .concat((customerOperations.items || []).map(function(item) { return Object.assign({ notice_type: 'customer_operation' }, item); }));
         var unreadItems = applyUnreadNotices(mergedItems);
         setPresalesNotice({
           count: unreadItems.length,
@@ -2429,17 +2480,26 @@ function AppLayout(props) {
 
 
   var pageTitle = isDetail ? '商机详情' : (isCustDetail ? '客户详情' : (titleMap[hash] || '仪表盘'));
-  var noticeItems = (presalesNotice.items || []).map(function(item) {
-    if (item.notice_type === 'registration') {
-      return {
+  var noticeItems = (presalesNotice.items || []).map(function(item) {
+    if (item.notice_type === 'registration') {
+      return {
         key: 'registration-' + item.id,
         label: e('div', { style: { minWidth: 240 } },
           e('div', { style: { fontWeight: 600, color: '#0f172a' } }, '项目报备待审核'),
           e('div', { style: { fontSize: 12, color: '#64748b', marginTop: 2 } }, (item.final_customer_name || '-') + ' · ' + (item.partner_name || '-') + ' · ' + (item.created_at ? dayjs(item.created_at).format('MM-DD HH:mm') : ''))
-        )
-      };
-    }
-    return {
+        )
+      };
+    }
+    if (item.notice_type === 'customer_operation') {
+      return {
+        key: item.notice_key || ('customer-operation-' + item.customer_id),
+        label: e('div', { style: { minWidth: 240 } },
+          e('div', { style: { fontWeight: 600, color: '#b45309' } }, '客户长期未跟进'),
+          e('div', { style: { fontSize: 12, color: '#64748b', marginTop: 2 } }, (item.customer_name || '-') + ' · 已超过 ' + (item.unfollowed_days || 30) + ' 天未记录跟进')
+        )
+      };
+    }
+    return {
       key: 'presales-' + item.id,
       label: e('div', { style: { minWidth: 240 } },
         e('div', { style: { fontWeight: 600, color: '#0f172a' } }, item.opportunity_name || '售前申请'),
@@ -2591,7 +2651,7 @@ function AppLayout(props) {
 
 
 
-        e(Dropdown, { trigger: ['click'], menu: { items: noticeItems, onClick: function(i) { if (i.key === 'empty') return; markNoticeRead([i.key]); nav(String(i.key).indexOf('registration-') === 0 ? '/partners/registration' : '/presales'); } }, placement: 'bottomRight' },
+        e(Dropdown, { trigger: ['click'], menu: { items: noticeItems, onClick: function(i) { if (i.key === 'empty') return; markNoticeRead([i.key]); var key = String(i.key); nav(key.indexOf('registration-') === 0 ? '/partners/registration' : (key.indexOf('customer-operation-') === 0 ? '/customers/operations' : '/presales')); } }, placement: 'bottomRight' },
           e(Badge, { count: presalesNotice.count || 0, overflowCount: 99, offset: [-2, 4] }, e(Button, { type: 'text', icon: IC('BellOutlined') }))
         ),
 
@@ -14531,15 +14591,7 @@ function LeadListPage() {
 
 
 
-    if (ql) p.push('quality=' + encodeURIComponent(ql));
-
-
-
-
-
-
-
-    if (st) p.push('status=' + encodeURIComponent(st));
+    if (st) p.push('status=' + encodeURIComponent(st));
 
 
 
@@ -14963,7 +15015,9 @@ function LeadListPage() {
     }).catch(function(err) { message.error(err.message || '删除失败'); });
   }
 
-  var sourceColors = { '官网': 'blue', '展会': 'purple', '伙伴引荐': 'gold', '电话': 'cyan', '招标网站': 'orange', 'bidding': 'orange', '其他': 'default' };
+  var sourceLabels = { website: '官网', exhibition: '展会', partner: '伙伴引荐', phone: '电话', bidding: '招标采集', other: '其他', '官网': '官网', '展会': '展会', '伙伴引荐': '伙伴引荐', '电话': '电话', '招标网站': '招标采集', '其他': '其他' };
+
+  var sourceColors = { website: 'blue', exhibition: 'purple', partner: 'gold', phone: 'cyan', bidding: 'orange', other: 'default', '官网': 'blue', '展会': 'purple', '伙伴引荐': 'gold', '电话': 'cyan', '招标网站': 'orange', '其他': 'default' };
 
 
 
@@ -14971,7 +15025,7 @@ function LeadListPage() {
 
 
 
-  var qualityColors = { '冷': '#94a3b8', '温': '#f59e0b', '热': '#ef4444' };
+  var statusLabels = { new: '新', contacted: '已联系', confirmed: '已确认', converted: '已转化', closed: '已作废', '新': '新', '已联系': '已联系', '已确认需求': '已确认', '已转化商机': '已转化', '已作废': '已作废' };
 
 
 
@@ -14979,7 +15033,23 @@ function LeadListPage() {
 
 
 
-  var statusColors = { '新': '#3b82f6', '已联系': '#f59e0b', '已确认需求': '#8b5cf6', '已转化商机': '#22c55e', '已作废': '#94a3b8' };
+  var statusColors = { new: '#3b82f6', contacted: '#f59e0b', confirmed: '#8b5cf6', converted: '#22c55e', closed: '#94a3b8', '新': '#3b82f6', '已联系': '#f59e0b', '已确认需求': '#8b5cf6', '已转化商机': '#22c55e', '已作废': '#94a3b8' };
+
+  var industryLabels = { Government: '政府', government: '政府' };
+
+  function leadSourceLabel(v) { return sourceLabels[v] || v || '-'; }
+
+  function leadStatusLabel(v) { return statusLabels[v] || v || '-'; }
+
+  function leadIndustryLabel(v) { return industryLabels[v] || v || '-'; }
+
+  function leadSourceUrl(row) {
+    if (!row) return '';
+    if (row.url && /^https?:\/\//i.test(row.url)) return row.url;
+    var text = row.notes || '';
+    var match = String(text).match(/https?:\/\/[^\s；;，,]+/i);
+    return match ? match[0] : '';
+  }
 
 
 
@@ -15123,7 +15193,7 @@ function LeadListPage() {
 
 
 
-    { title: '来源', dataIndex: 'source', width: 80, render: function(v) { return v ? e(Tag, { color: sourceColors[v] || 'default' }, v) : '-'; } },
+    { title: '来源链接', dataIndex: 'source', width: 92, render: function(v, r) { var url = leadSourceUrl(r); return url ? e('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, '来源链接') : (v ? e(Tag, { color: sourceColors[v] || 'default' }, leadSourceLabel(v)) : '-'); } },
 
 
 
@@ -15131,7 +15201,7 @@ function LeadListPage() {
 
 
 
-    { title: '质量', dataIndex: 'quality', width: 56, align: 'center', render: function(v) { return v ? v === '热' ? '🔥' : v === '温' ? '🟡' : '🔵' : '-'; } },
+    { title: '状态', dataIndex: 'status', width: 100, render: function(v) { return v ? e(Tag, { color: statusColors[v] || '#94a3b8' }, leadStatusLabel(v)) : '-'; } },
 
 
 
@@ -15139,15 +15209,7 @@ function LeadListPage() {
 
 
 
-    { title: '状态', dataIndex: 'status', width: 100, render: function(v) { return v ? e(Tag, { color: statusColors[v] || '#94a3b8' }, v) : '-'; } },
-
-
-
-
-
-
-
-    { title: '行业', dataIndex: 'industry', width: 90, ellipsis: true },
+    { title: '行业', dataIndex: 'industry', width: 90, ellipsis: true, render: function(v) { return leadIndustryLabel(v); } },
 
 
 
@@ -15563,31 +15625,7 @@ function LeadListPage() {
 
 
 
-            e(Option, { value: '官网' }, '官网'), e(Option, { value: '展会' }, '展会'), e(Option, { value: '伙伴引荐' }, '伙伴引荐'), e(Option, { value: '电话' }, '电话'), e(Option, { value: '招标网站' }, '🕷️ 招标'), e(Option, { value: '其他' }, '其他')
-
-
-
-
-
-
-
-          )),
-
-
-
-
-
-
-
-          e(Col, null, e(Select, { placeholder: '质量', allowClear: true, style: { width: 80 }, value: ql, onChange: setQl },
-
-
-
-
-
-
-
-            e(Option, { value: '热' }, '🔥 热'), e(Option, { value: '温' }, '🟡 温'), e(Option, { value: '冷' }, '🔵 冷')
+            e(Option, { value: 'website' }, '官网'), e(Option, { value: 'exhibition' }, '展会'), e(Option, { value: 'partner' }, '伙伴引荐'), e(Option, { value: 'phone' }, '电话'), e(Option, { value: 'bidding' }, '招标采集'), e(Option, { value: 'other' }, '其他')
 
 
 
@@ -15611,7 +15649,7 @@ function LeadListPage() {
 
 
 
-            e(Option, { value: '新' }, '新'), e(Option, { value: '已联系' }, '已联系'), e(Option, { value: '已确认需求' }, '已确认'), e(Option, { value: '已转化商机' }, '已转化'), e(Option, { value: '已作废' }, '已作废')
+            e(Option, { value: 'new' }, '新'), e(Option, { value: 'contacted' }, '已联系'), e(Option, { value: 'confirmed' }, '已确认'), e(Option, { value: 'converted' }, '已转化'), e(Option, { value: 'closed' }, '已作废')
 
 
 
@@ -15831,15 +15869,7 @@ function LeadListPage() {
 
 
 
-          e(Col, { span: 8 }, e(Form.Item, { name: 'source', label: '来源' }, e(Select, null, e(Option, { value: '官网' }, '官网'), e(Option, { value: '展会' }, '展会'), e(Option, { value: '伙伴引荐' }, '伙伴引荐'), e(Option, { value: '电话' }, '电话'), e(Option, { value: '其他' }, '其他')))),
-
-
-
-
-
-
-
-          e(Col, { span: 8 }, e(Form.Item, { name: 'quality', label: '质量' }, e(Select, null, e(Option, { value: '热' }, '热'), e(Option, { value: '温' }, '温'), e(Option, { value: '冷' }, '冷')))),
+          e(Col, { span: 8 }, e(Form.Item, { name: 'source', label: '来源链接' }, e(Select, null, e(Option, { value: 'website' }, '官网'), e(Option, { value: 'exhibition' }, '展会'), e(Option, { value: 'partner' }, '伙伴引荐'), e(Option, { value: 'phone' }, '电话'), e(Option, { value: 'bidding' }, '招标采集'), e(Option, { value: 'other' }, '其他')))),
 
 
 
@@ -16087,15 +16117,7 @@ function LeadListPage() {
 
 
 
-            { title: '截止日期', dataIndex: 'deadline', width: 100, render: function(v) { return e(Tag, { color: 'orange' }, v); } },
-
-
-
-
-
-
-
-            { title: '质量', dataIndex: 'quality', width: 60, align: 'center', render: function(v) { return v === '热' ? '🔥' : v === '温' ? '🟡' : '🔵'; } }
+            { title: '截止日期', dataIndex: 'deadline', width: 100, render: function(v) { return e(Tag, { color: 'orange' }, v); } }
 
 
 
@@ -18000,7 +18022,7 @@ function ImportModal(props) {
 
 
 
-    : ['线索名称','公司名称','联系人','联系电话','来源','质量','行业','备注'];
+    : ['线索名称','公司名称','联系人','联系电话','来源链接','行业','备注'];
 
 
 
@@ -18472,7 +18494,7 @@ function ImportModal(props) {
 
 
 
-                    : ['name','company','contact_name','contact_phone','source','quality','industry','notes'][fieldLabels.indexOf(fl)];
+                    : ['name','company','contact_name','contact_phone','source','industry','notes'][fieldLabels.indexOf(fl)];
 
 
 
@@ -18871,25 +18893,47 @@ function SecurityBusinessPage(props) {
     setLoading(true);
     api('POST', '/security-business/bid-radar/collect').then(function(d) { message.success('招标雷达新增 ' + (d.created || 0) + ' 条情报'); loadOperational(); }).catch(function(err) { message.error(err.message || '采集失败'); }).finally(function() { setLoading(false); });
   }
-  var profileTab = e('div', null,
-    e(Row, { gutter: 16 },
-      e(Col, { span: 7 }, e(Card, { title: '选择客户', size: 'small' },
-        e(Select, { showSearch: true, style: { width: '100%', marginBottom: 12 }, placeholder: '搜索客户', value: selectedCustomerId, onChange: loadProfile, filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); })),
-        profile ? e(Descriptions, { size: 'small', column: 1, bordered: true }, e(Descriptions.Item, { label: '客户' }, profile.customer_name || '-'), e(Descriptions.Item, { label: '联系人' }, (profile.contacts || []).length + ' 人'), e(Descriptions.Item, { label: '历史商机' }, (profile.opportunities || []).length + ' 个')) : e(Empty, { description: '请选择客户' })
-      )),
-      e(Col, { span: 17 }, e(Card, { title: '客户360画像', size: 'small', extra: e(Button, { type: 'primary', disabled: !selectedCustomerId, onClick: saveProfile }, '保存画像') },
-        e(Form, { form: profileForm, layout: 'vertical' },
-          e(Row, { gutter: 12 }, e(Col, { span: 8 }, e(Form.Item, { name: 'technical_owner', label: '技术负责人' }, e(Input))), e(Col, { span: 8 }, e(Form.Item, { name: 'purchase_owner', label: '采购负责人' }, e(Input))), e(Col, { span: 8 }, e(Form.Item, { name: 'competitors', label: '竞品情况' }, e(Input, { placeholder: '奇安信/深信服/绿盟等' })))),
-          e(Row, { gutter: 12 }, e(Col, { span: 8 }, e(Form.Item, { name: 'mlps_status', label: '等保状态' }, e(Select, { allowClear: true }, ['未启动','测评中','整改中','已通过'].map(function(x){return e(Option,{key:x,value:x},x);})))) , e(Col, { span: 8 }, e(Form.Item, { name: 'crypto_status', label: '密评状态' }, e(Select, { allowClear: true }, ['未启动','测评中','整改中','已通过'].map(function(x){return e(Option,{key:x,value:x},x);})))) , e(Col, { span: 8 }, e(Form.Item, { name: 'xinchuang_status', label: '信创状态' }, e(Select, { allowClear: true }, ['无要求','规划中','适配中','已完成'].map(function(x){return e(Option,{key:x,value:x},x);}))))),
-          e(Form.Item, { name: 'org_structure', label: '客户组织架构' }, e(TextArea, { rows: 3 })),
-          e(Form.Item, { name: 'decision_chain', label: '决策链' }, e(TextArea, { rows: 3, placeholder: '业务部门/信息中心/采购/分管领导/最终拍板人' })),
-          e(Form.Item, { name: 'historical_projects', label: '历史项目' }, e(TextArea, { rows: 2 })),
-          e(Form.Item, { name: 'security_products', label: '在用安全产品' }, e(TextArea, { rows: 2 })),
-          e(Form.Item, { name: 'notes', label: '补充备注' }, e(TextArea, { rows: 2 }))
-        )
-      ))
-    )
-  );
+  var profileTab = e('div', { className: 'customer-profile-page' },
+    e(Row, { gutter: 18, align: 'stretch' },
+      e(Col, { xs: 24, lg: 7 }, e(Card, { title: '选择客户', className: 'profile-selector-card' },
+        e('label', { className: 'profile-select-label' }, '客户名称'),
+        e(Select, { showSearch: true, style: { width: '100%' }, placeholder: '搜索并选择已建客户', value: selectedCustomerId, onChange: loadProfile, filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); })),
+        e('div', { className: 'profile-select-tip' }, '仅可为客户管理中已建立的客户补充360画像信息。'),
+        profile ? e('div', { className: 'profile-customer-summary' },
+          e('div', { className: 'profile-customer-name' }, profile.customer_name || '-'),
+          e('div', { className: 'profile-summary-grid' },
+            e('div', { className: 'profile-summary-item' }, e('span', { className: 'profile-summary-label' }, '联系人'), e('span', { className: 'profile-summary-value' }, (profile.contacts || []).length + ' 人')),
+            e('div', { className: 'profile-summary-item' }, e('span', { className: 'profile-summary-label' }, '历史商机'), e('span', { className: 'profile-summary-value' }, (profile.opportunities || []).length + ' 个'))
+          )
+        ) : e('div', { className: 'profile-empty' }, e(Empty, { image: Empty.PRESENTED_IMAGE_SIMPLE, description: '请选择客户后开始补充画像' }))
+      )),
+      e(Col, { xs: 24, lg: 17 }, e(Card, { title: '客户360画像', className: 'profile-workbench', extra: e(Button, { type: 'primary', disabled: !selectedCustomerId, onClick: saveProfile }, '保存画像') },
+        e(Form, { form: profileForm, layout: 'vertical' },
+          e('div', { className: 'profile-section' },
+            e('div', { className: 'profile-section-title' }, '关键角色与合规情况'),
+            e(Row, { gutter: 16 },
+              e(Col, { xs: 24, md: 8 }, e(Form.Item, { name: 'technical_owner', label: '技术负责人' }, e(Input, { placeholder: '姓名 / 部门 / 职务' }))),
+              e(Col, { xs: 24, md: 8 }, e(Form.Item, { name: 'purchase_owner', label: '采购负责人' }, e(Input, { placeholder: '姓名 / 部门 / 职务' }))),
+              e(Col, { xs: 24, md: 8 }, e(Form.Item, { name: 'competitors', label: '竞品情况' }, e(Input, { placeholder: '如：奇安信、深信服、绿盟' })))
+            ),
+            e(Row, { gutter: 16 },
+              e(Col, { xs: 24, md: 8 }, e(Form.Item, { name: 'mlps_status', label: '等保状态' }, e(Select, { allowClear: true, placeholder: '请选择等保状态' }, ['未启动','测评中','整改中','已通过'].map(function(x){return e(Option,{key:x,value:x},x);})))),
+              e(Col, { xs: 24, md: 8 }, e(Form.Item, { name: 'crypto_status', label: '密评状态' }, e(Select, { allowClear: true, placeholder: '请选择密评状态' }, ['未启动','测评中','整改中','已通过'].map(function(x){return e(Option,{key:x,value:x},x);})))),
+              e(Col, { xs: 24, md: 8 }, e(Form.Item, { name: 'xinchuang_status', label: '信创状态' }, e(Select, { allowClear: true, placeholder: '请选择信创状态' }, ['无要求','规划中','适配中','已完成'].map(function(x){return e(Option,{key:x,value:x},x);}))))
+            )
+          ),
+          e('div', { className: 'profile-section' },
+            e('div', { className: 'profile-section-title' }, '客户经营信息'),
+            e(Form.Item, { name: 'org_structure', label: '客户组织架构' }, e(TextArea, { rows: 3, placeholder: '建议记录业务部门、信息中心、采购部门及汇报关系' })),
+            e(Form.Item, { name: 'decision_chain', label: '决策链' }, e(TextArea, { rows: 3, placeholder: '业务部门 / 信息中心 / 采购 / 分管领导 / 最终拍板人' })),
+            e(Form.Item, { name: 'historical_projects', label: '历史项目' }, e(TextArea, { rows: 2, placeholder: '客户已采购项目、合同周期、合作体验等' })),
+            e(Form.Item, { name: 'security_products', label: '在用安全产品' }, e(TextArea, { rows: 2, placeholder: '现有厂商、产品名称、替换或扩容机会' })),
+            e(Form.Item, { name: 'notes', label: '补充备注' }, e(TextArea, { rows: 2, placeholder: '其他需要沉淀的客户信息' }))
+          )
+        )
+      ))
+    )
+  );
   var registrationTabLegacy = e('div', null,
     e(Card, { title: '渠道项目报备', size: 'small', style: { marginBottom: 16 } }, e(Form, { form: regForm, layout: 'vertical' },
       e(Row, { gutter: 12 }, e(Col, { span: 6 }, e(Form.Item, { name: 'opportunity_id', label: '关联渠道商机' }, e(Select, { allowClear: true, showSearch: true }, opps.filter(function(o){return o.opp_type === 'channel';}).map(function(o){return e(Option,{key:o.id,value:o.id},o.name);})))) , e(Col, { span: 6 }, e(Form.Item, { name: 'partner_id', label: '渠道伙伴' }, e(Select, { allowClear: true, showSearch: true }, partners.map(function(p){return e(Option,{key:p.id,value:p.id},p.name);})))) , e(Col, { span: 5 }, e(Form.Item, { name: 'final_customer_name', label: '最终客户', rules: [{ required: true, message: '请输入最终客户' }] }, e(Input))), e(Col, { span: 4 }, e(Form.Item, { name: 'region', label: '区域归属' }, e(Input, { placeholder: '华东/华南' }))), e(Col, { span: 3 }, e(Form.Item, { name: 'protection_days', label: '保护期' }, e(InputNumber, { min: 1, style: { width: '100%' }, placeholder: '90' })))),
@@ -18978,14 +19022,16 @@ function SecurityBusinessPage(props) {
     e(Table, { rowKey: 'id', loading: loading, dataSource: radarItems, pagination: { pageSize: 8 }, columns: [{ title: '项目', dataIndex: 'title', ellipsis: true }, { title: '采购单位', dataIndex: 'buyer', width: 160 }, { title: '预算', dataIndex: 'budget', width: 90, render: function(v){return (v || 0) + '万';} }, { title: '截止', dataIndex: 'deadline', width: 110 }, { title: '产品线', dataIndex: 'matched_product_line', width: 150 }, { title: '竞品判断', dataIndex: 'competitor_judgment', width: 190, ellipsis: true }, { title: '状态', dataIndex: 'status', width: 90, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }] }),
     e(Card, { title: '自动跟进任务', size: 'small', style: { marginTop: 16 } }, e(Table, { rowKey: 'id', size: 'small', dataSource: radarTasks, pagination: false, columns: [{ title: '任务', dataIndex: 'title', ellipsis: true }, { title: '截止', dataIndex: 'due_date', width: 110 }, { title: '状态', dataIndex: 'status', width: 90, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }, { title: '说明', dataIndex: 'notes', ellipsis: true }] }))
   );
-  if (profileOnly) {
-    return e('div', null,
-      e('div', { style: { marginBottom: 16 } },
-        e('h1', { className: 'page-title' }, '客户360画像'),
-        e('p', { className: 'page-desc' }, '先在客户管理建立客户，再为已存在客户补充组织架构、决策链、合规状态和竞品信息')
-      ),
-      profileTab
-    );
+  if (profileOnly) {
+    return e('div', { className: 'customer-profile-page' },
+      e('div', { className: 'profile-page-head' },
+        e('div', null,
+        e('h1', { className: 'page-title' }, '客户360画像'),
+        e('p', { className: 'page-desc' }, '先在客户管理建立客户，再为已存在客户补充组织架构、决策链、合规状态和竞品信息')
+        )
+      ),
+      profileTab
+    );
   }
   if (registrationOnly) {
     return e('div', null,
@@ -19040,12 +19086,20 @@ function SalesGrowthPage(props) {
   var _recordForm = Form.useForm(), recordForm = _recordForm[0];
   var _opForm = Form.useForm(), opForm = _opForm[0];
   var _opOpen = useState(false), opOpen = _opOpen[0], setOpOpen = _opOpen[1];
-  var _opCustomer = useState(null), opCustomer = _opCustomer[0], setOpCustomer = _opCustomer[1];
-  function fmtDate(v) { return v && v.format ? v.format('YYYY-MM-DD') : v; }
-  function loadGrowth() {
-    setLoading(true);
-    Promise.all([
-      api('GET', '/sales-growth/forecast?group_by=' + groupBy + '&period_label=' + encodeURIComponent(periodLabel)),
+  var _opCustomer = useState(null), opCustomer = _opCustomer[0], setOpCustomer = _opCustomer[1];
+  function fmtDate(v) { return v && v.format ? v.format('YYYY-MM-DD') : v; }
+  function loadGrowth() {
+    setLoading(true);
+    if (segmentOnly) {
+      api('GET', '/sales-growth/customer-operations').then(function(data) {
+        setCustomerOps(data || { summary: {}, items: [], alerts: [] });
+      }).catch(function(err) {
+        message.error(err.message || '客户分层运营数据加载失败');
+      }).finally(function() { setLoading(false); });
+      return;
+    }
+    Promise.all([
+      api('GET', '/sales-growth/forecast?group_by=' + groupBy + '&period_label=' + encodeURIComponent(periodLabel)),
       api('GET', '/sales-growth/targets/summary?period_label=' + encodeURIComponent(periodLabel)),
       api('GET', '/sales-growth/customer-operations'),
       api('GET', '/sales-growth/opportunity-reviews'),
@@ -19068,7 +19122,7 @@ function SalesGrowthPage(props) {
       message.error(err.message || '销售增长数据加载失败');
     }).finally(function() { setLoading(false); });
   }
-  useEffect(function() { loadGrowth(); }, [groupBy]);
+  useEffect(function() { loadGrowth(); }, [groupBy, segmentOnly]);
   function saveTarget() {
     targetForm.validateFields().then(function(v) {
       v.period_label = v.period_label || periodLabel;
@@ -19172,28 +19226,35 @@ function SalesGrowthPage(props) {
       { title: '赢单率', width: 110, render: function(_, r){ return (r.actual_win_rate || 0) + '% / ' + (r.win_rate_target || 0) + '%'; } }
     ] })
   );
-  var segmentTab = e('div', null,
-    e(Row, { gutter: 12, style: { marginBottom: 16 } },
-      ['strategic','key','normal','dormant'].map(function(k){ var text = { strategic: '战略客户', key: '重点客户', normal: '普通客户', dormant: '沉睡客户' }[k]; return e(Col, { span: 6, key: k }, e(Card, { size: 'small' }, e(Statistic, { title: text, value: (customerOps.summary || {})[k] || 0, suffix: '个' }))); })
-    ),
-    e(Card, { size: 'small', title: '自动运营提醒', style: { marginBottom: 16 } },
-      e(Table, { rowKey: function(r, i){ return r.type + '-' + (r.opportunity_id || r.customer_id) + '-' + i; }, size: 'small', dataSource: customerOps.alerts || [], pagination: { pageSize: 5 }, columns: [
-        { title: '提醒', dataIndex: 'message', width: 140, render: function(v){ return e(Tag, { color: 'orange' }, v); } },
-        { title: '客户', dataIndex: 'customer_name', width: 180 },
-        { title: '商机', dataIndex: 'opportunity_name', ellipsis: true, render: function(v){ return v || '-'; } }
-      ] })
-    ),
-    e(Table, { rowKey: 'customer_id', loading: loading, dataSource: customerOps.items || [], pagination: { pageSize: 10 }, columns: [
-      { title: '客户', dataIndex: 'customer_name', ellipsis: true },
-      { title: '行业', dataIndex: 'industry', width: 100 },
-      { title: '分层', dataIndex: 'segment_label', width: 100, render: function(v, r){ return e(Tag, { color: r.segment === 'strategic' ? 'red' : r.segment === 'key' ? 'blue' : r.segment === 'dormant' ? 'default' : 'green' }, v); } },
-      { title: '活跃商机', dataIndex: 'active_opportunities', width: 100 },
-      { title: '累计金额', dataIndex: 'total_amount', width: 110, render: function(v){ return (v || 0) + '万'; } },
-      { title: '健康度', dataIndex: 'health_status', width: 100, render: function(v){ var text = { normal: '正常', risk: '风险', inactive: '沉睡' }[v] || v || '-'; var color = v === 'risk' ? 'orange' : v === 'inactive' ? 'default' : 'green'; return e(Tag, { color: color }, text); } },
-      { title: '下一步动作', dataIndex: 'next_action', ellipsis: true, render: function(v){ return v || '-'; } },
-      { title: '操作', width: 100, render: function(_, r){ return e(Button, { size: 'small', onClick: function(){ openOperation(r); } }, '运营策略'); } }
-    ] })
-  );
+  var segmentTab = e('div', { className: 'customer-operations-page' },
+    e(Row, { gutter: [16, 16], style: { marginBottom: 18 } },
+      ['strategic','key','normal','dormant'].map(function(k){
+        var text = { strategic: '战略客户', key: '重点客户', normal: '普通客户', dormant: '沉睡客户' }[k];
+        return e(Col, { xs: 12, md: 6, key: k }, e(Card, { size: 'small', className: 'segment-stat-card ' + k }, e(Statistic, { title: text, value: (customerOps.summary || {})[k] || 0, suffix: '个' })));
+      })
+    ),
+    e(Card, { className: 'operations-alert-card', title: '自动运营提醒', extra: e(Tag, { color: 'orange' }, '需关注 ' + ((customerOps.alerts || []).length) + ' 项'), style: { marginBottom: 18 } },
+      e(Table, { rowKey: function(r, i){ return r.type + '-' + (r.opportunity_id || r.customer_id) + '-' + i; }, size: 'small', dataSource: customerOps.alerts || [], pagination: { pageSize: 5, size: 'small' }, locale: { emptyText: '暂无待处理提醒' }, columns: [
+        { title: '提醒类型', dataIndex: 'message', width: 150, render: function(v){ return e(Tag, { color: 'orange', className: 'operations-alert-tag' }, v); } },
+        { title: '客户', dataIndex: 'customer_name', width: 220, ellipsis: true },
+        { title: '商机', dataIndex: 'opportunity_name', ellipsis: true, render: function(v){ return v || '客户运营提醒'; } },
+        { title: '未跟进天数', dataIndex: 'unfollowed_days', width: 130, render: function(v){ return v ? e('span', { className: 'operations-days' }, v + ' 天') : '-'; } },
+        { title: '最后跟进', dataIndex: 'last_follow_up_at', width: 150, render: function(v){ return v ? dayjs(v).format('YYYY-MM-DD') : '暂无跟进记录'; } }
+      ] })
+    ),
+    e(Card, { className: 'operations-table-card', title: '客户分层清单', extra: e('span', { style: { color: '#64748b', fontSize: 13 } }, '共 ' + ((customerOps.items || []).length) + ' 个客户') },
+      e(Table, { rowKey: 'customer_id', loading: loading, dataSource: customerOps.items || [], pagination: { pageSize: 10 }, columns: [
+        { title: '客户', dataIndex: 'customer_name', ellipsis: true },
+        { title: '行业', dataIndex: 'industry', width: 110, render: function(v){ return v || '-'; } },
+        { title: '分层', dataIndex: 'segment_label', width: 110, render: function(v, r){ return e(Tag, { color: r.segment === 'strategic' ? 'red' : r.segment === 'key' ? 'blue' : r.segment === 'dormant' ? 'default' : 'green' }, v); } },
+        { title: '活跃商机', dataIndex: 'active_opportunities', width: 110, render: function(v){ return (v || 0) + ' 个'; } },
+        { title: '累计金额', dataIndex: 'total_amount', width: 120, render: function(v){ return (v || 0) + ' 万'; } },
+        { title: '健康度', dataIndex: 'health_status', width: 105, render: function(v){ var text = { normal: '正常', risk: '风险', inactive: '沉睡' }[v] || v || '-'; var color = v === 'risk' ? 'orange' : v === 'inactive' ? 'default' : 'green'; return e(Tag, { color: color }, text); } },
+        { title: '下一步动作', dataIndex: 'next_action', ellipsis: true, render: function(v){ return v || '-'; } },
+        { title: '操作', width: 110, render: function(_, r){ return e(Button, { size: 'small', onClick: function(){ openOperation(r); } }, '运营策略'); } }
+      ] })
+    )
+  );
   var reviewTab = e('div', null,
     e(Card, { title: '输赢单复盘', size: 'small', style: { marginBottom: 16 } },
       e(Form, { form: reviewForm, layout: 'vertical' },
@@ -19267,11 +19328,11 @@ function SalesGrowthPage(props) {
         e(Form.Item, { name: 'next_action', label: '下一步动作' }, e(TextArea, { rows: 2 }))
       )
     );
-  if (segmentOnly) {
-    return e('div', null,
-      e('div', { style: { marginBottom: 16 } }, e('h1', { className: 'page-title' }, '客户分层运营'), e('p', { className: 'page-desc' }, '按客户价值与活跃度分层经营，沉淀客户健康度、运营策略和下一步动作')),
-      segmentTab,
-      operationModal
+  if (segmentOnly) {
+    return e('div', { className: 'customer-operations-page' },
+      e('div', { className: 'operations-page-head' }, e('div', null, e('h1', { className: 'page-title' }, '客户分层运营'), e('p', { className: 'page-desc' }, '按客户价值与活跃度分层经营，沉淀客户健康度、运营策略和下一步动作'))),
+      segmentTab,
+      operationModal
     );
   }
   if (partnerOnly) {
