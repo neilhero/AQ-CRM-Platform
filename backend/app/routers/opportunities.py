@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -32,6 +33,24 @@ VALID_PROBABILITIES = {"HIGH", "MID_HIGH", "MID", "LOW"}
 
 def _raw_value(value):
     return value.value if hasattr(value, "value") else value
+
+
+def _week_update_status(opportunity: Opportunity) -> str:
+    """Return the current-week status without persisting a stale display value."""
+    week_start = date.today() - timedelta(days=date.today().weekday())
+
+    created_at = opportunity.created_at
+    updated_at = opportunity.updated_at
+    if hasattr(created_at, "date"):
+        created_at = created_at.date()
+    if hasattr(updated_at, "date"):
+        updated_at = updated_at.date()
+
+    if created_at and created_at >= week_start:
+        return "NEW"
+    if updated_at and updated_at >= week_start:
+        return "UPDATED"
+    return "UNCHANGED"
 
 
 def _validate_required_opportunity_fields(values):
@@ -130,6 +149,7 @@ def list_opps(
         d["opp_type"] = o.opp_type.value if o.opp_type else None
         d["stage"] = o.stage.value if o.stage else None
         d["probability"] = o.probability.value if o.probability else None
+        d["update_status"] = _week_update_status(o)
         out.append(d)
     return out
 
@@ -184,6 +204,7 @@ def get_opp(oid: int, db: Session = Depends(get_db), user=Depends(require_user))
     d["opp_type"] = o.opp_type.value if o.opp_type else None
     d["stage"] = o.stage.value if o.stage else None
     d["probability"] = o.probability.value if o.probability else None
+    d["update_status"] = _week_update_status(o)
     return d
 
 
@@ -222,6 +243,7 @@ def update_opp(oid: int, data: OpportunityUpdate, db: Session = Depends(get_db),
     _validate_required_opportunity_fields(final_values)
     for k, v in updates.items():
         setattr(o, k, v)
+    o.updated_at = date.today()
     db.commit()
     db.refresh(o)
     return {"message": "updated"}

@@ -2114,9 +2114,9 @@ function AppLayout(props) {
         var presales = res[0] || { count: 0, items: [] };
         var registrations = res[1] || { count: 0, items: [] };
         var customerOperations = res[2] || { count: 0, items: [] };
-        var mergedItems = (registrations.items || []).map(function(item) { return Object.assign({ notice_type: 'registration' }, item); })
-          .concat((presales.items || []).map(function(item) { return Object.assign({ notice_type: 'presales' }, item); }))
-          .concat((customerOperations.items || []).map(function(item) { return Object.assign({ notice_type: 'customer_operation' }, item); }));
+        var mergedItems = (registrations.items || []).map(function(item) { return Object.assign({}, item, { notice_type: 'registration' }); })
+          .concat((presales.items || []).map(function(item) { return Object.assign({}, item, { notice_type: 'presales' }); }))
+          .concat((customerOperations.items || []).map(function(item) { return Object.assign({}, item, { notice_type: 'customer_operation' }); }));
         var unreadItems = applyUnreadNotices(mergedItems);
         setPresalesNotice({
           count: unreadItems.length,
@@ -2532,7 +2532,7 @@ function AppLayout(props) {
   var noticeItems = (presalesNotice.items || []).map(function(item) {
     if (item.notice_type === 'registration') {
       return {
-        key: 'registration-' + item.id,
+        key: noticeKey(item),
         label: e('div', { style: { minWidth: 240 } },
           e('div', { style: { fontWeight: 600, color: '#0f172a' } }, '项目报备待审核'),
           e('div', { style: { fontSize: 12, color: '#64748b', marginTop: 2 } }, (item.final_customer_name || '-') + ' · ' + (item.partner_name || '-') + ' · ' + (item.created_at ? dayjs(item.created_at).format('MM-DD HH:mm') : ''))
@@ -2541,7 +2541,7 @@ function AppLayout(props) {
     }
     if (item.notice_type === 'customer_operation') {
       return {
-        key: item.notice_key || ('customer-operation-' + item.customer_id),
+        key: noticeKey(item),
         label: e('div', { style: { minWidth: 240 } },
           e('div', { style: { fontWeight: 600, color: '#b45309' } }, '客户长期未跟进'),
           e('div', { style: { fontSize: 12, color: '#64748b', marginTop: 2 } }, (item.customer_name || '-') + ' · 已超过 ' + (item.unfollowed_days || 30) + ' 天未记录跟进')
@@ -2549,7 +2549,7 @@ function AppLayout(props) {
       };
     }
     return {
-      key: 'presales-' + item.id,
+      key: noticeKey(item),
       label: e('div', { style: { minWidth: 240 } },
         e('div', { style: { fontWeight: 600, color: '#0f172a' } }, item.opportunity_name || '售前申请'),
         e('div', { style: { fontSize: 12, color: '#64748b', marginTop: 2 } }, (item.customer_name || '-') + ' · ' + (item.requester_name || '-') + ' · ' + (item.scheduled_date ? dayjs(item.scheduled_date).format('MM-DD HH:mm') : '未排期'))
@@ -2700,7 +2700,7 @@ function AppLayout(props) {
 
 
 
-        e(Dropdown, { trigger: ['click'], menu: { items: noticeItems, onClick: function(i) { if (i.key === 'empty') return; markNoticeRead([i.key]); var key = String(i.key); nav(key.indexOf('registration-') === 0 ? '/partners/registration' : (key.indexOf('customer-operation-') === 0 ? '/customers/operations' : '/presales')); } }, placement: 'bottomRight' },
+        e(Dropdown, { trigger: ['click'], menu: { items: noticeItems, onClick: function(i) { if (i.key === 'empty') return; var key = String(i.key); var notice = (presalesNotice.items || []).find(function(item) { return noticeKey(item) === key; }); markNoticeRead([key]); nav(notice && notice.notice_type === 'registration' ? '/partners/registration' : (notice && notice.notice_type === 'customer_operation' ? '/customers/operations' : '/presales')); } }, placement: 'bottomRight' },
           e(Badge, { count: presalesNotice.count || 0, overflowCount: 99, offset: [-2, 4] }, e(Button, { type: 'text', icon: IC('BellOutlined') }))
         ),
 
@@ -8676,7 +8676,7 @@ function OppListPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '手机', value: kp.phone, onChange: function(ev) { var nw = kpList.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setKpList(nw); } })),
+            e(Col, { span: 5 }, e(Input, { placeholder: '联系方式', value: kp.phone, onChange: function(ev) { var nw = kpList.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setKpList(nw); } })),
 
 
 
@@ -8764,7 +8764,7 @@ function OppListPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '手机', value: hp.phone, onChange: function(ev) { var nw = hpList.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setHpList(nw); } })),
+            e(Col, { span: 5 }, e(Input, { placeholder: '联系方式', value: hp.phone, onChange: function(ev) { var nw = hpList.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setHpList(nw); } })),
 
 
 
@@ -10503,16 +10503,24 @@ function OppDetailPage(props) {
         e(Tag, { color: tagColor, style: { margin: 0 } }, title),
         e('span', { style: { fontSize: 12, color: '#94a3b8' } }, rows.length + ' 人')
       ),
-      rows.length === 0
-        ? e('div', { style: { border: '1px dashed #cbd5e1', borderRadius: 8, padding: '12px 14px', color: '#94a3b8', background: '#fff' } }, emptyText)
-        : rows.map(function(c, idx) {
-            return e('div', { key: title + idx, style: { display: 'grid', gridTemplateColumns: 'minmax(120px,1.2fr) minmax(110px,1fr) minmax(120px,1fr) minmax(160px,1.3fr)', gap: 12, alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', marginBottom: 8, background: '#fff' } },
-              e('div', { style: { fontWeight: 700, color: '#0f172a' } }, c.name || '-'),
-              e('div', { style: { color: '#475569' } }, c.position || '-'),
-              e('div', { style: { color: '#475569' } }, c.phone || '-'),
-              e('div', { style: { color: '#64748b' } }, c.email || '-')
-            );
-          })
+      rows.length === 0
+        ? e('div', { style: { border: '1px dashed #cbd5e1', borderRadius: 8, padding: '12px 14px', color: '#94a3b8', background: '#fff' } }, emptyText)
+        : e('div', null,
+            e('div', { style: { display: 'grid', gridTemplateColumns: 'minmax(120px,1.2fr) minmax(110px,1fr) minmax(120px,1fr) minmax(160px,1.3fr)', gap: 12, padding: '0 12px 7px', color: '#64748b', fontSize: 12, fontWeight: 600 } },
+              e('div', null, '姓名'),
+              e('div', null, '职位'),
+              e('div', null, '联系方式'),
+              e('div', null, '邮箱')
+            ),
+            rows.map(function(c, idx) {
+              return e('div', { key: title + idx, style: { display: 'grid', gridTemplateColumns: 'minmax(120px,1.2fr) minmax(110px,1fr) minmax(120px,1fr) minmax(160px,1.3fr)', gap: 12, alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', marginBottom: 8, background: '#fff' } },
+                e('div', { style: { fontWeight: 700, color: '#0f172a' } }, c.name || '-'),
+                e('div', { style: { color: '#475569' } }, c.position || '-'),
+                e('div', { style: { color: '#475569' } }, c.phone || '-'),
+                e('div', { style: { color: '#64748b' } }, c.email || '-')
+              );
+            })
+          )
     );
   }
 
@@ -10927,7 +10935,7 @@ function OppDetailPage(props) {
 
 
 
-                e(Descriptions.Item, { label: '手机' }, parts[2]||'-'),
+                e(Descriptions.Item, { label: '联系方式' }, parts[2]||'-'),
 
 
 
@@ -11023,7 +11031,7 @@ function OppDetailPage(props) {
 
 
 
-                e(Descriptions.Item, { label: '手机' }, parts[2]||'-'),
+                e(Descriptions.Item, { label: '联系方式' }, parts[2]||'-'),
 
 
 
@@ -11547,7 +11555,7 @@ function OppDetailPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '手机', value: kp.phone, onChange: function(ev) { var nw = kpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setKpList2(nw); } })),
+            e(Col, { span: 5 }, e(Input, { placeholder: '联系方式', value: kp.phone, onChange: function(ev) { var nw = kpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setKpList2(nw); } })),
 
 
 
@@ -11635,7 +11643,7 @@ function OppDetailPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '手机', value: hp.phone, onChange: function(ev) { var nw = hpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setHpList2(nw); } })),
+            e(Col, { span: 5 }, e(Input, { placeholder: '联系方式', value: hp.phone, onChange: function(ev) { var nw = hpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setHpList2(nw); } })),
 
 
 
