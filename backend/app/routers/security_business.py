@@ -20,7 +20,7 @@ from app.models import (
     PresalesRequest,
     User,
 )
-from app.permissions import ROLE_ADMIN, ROLE_MANAGER, ROLE_PRESALES, can_access_customer, can_access_opportunity, scoped_opportunity_query
+from app.permissions import ROLE_ADMIN, ROLE_MANAGER, ROLE_PRESALES, can_access_customer, can_access_opportunity, managed_user_ids, scoped_channel_partner_query, scoped_opportunity_query
 from app.routers.utils import require_admin, require_user
 
 router = APIRouter()
@@ -140,10 +140,8 @@ def _accessible_opp_ids(db: Session, user):
 
 
 def _check_partner_access(db: Session, partner_id: int, user):
-    partner = db.query(ChannelPartner).filter_by(id=partner_id).first()
+    partner = scoped_channel_partner_query(db.query(ChannelPartner), db, user).filter_by(id=partner_id).first()
     if not partner:
-        raise HTTPException(404, "渠道不存在")
-    if user.role != ROLE_ADMIN and partner.created_by != user.id:
         raise HTTPException(403, "无权访问该渠道")
     return partner
 
@@ -233,13 +231,9 @@ def list_channel_registrations(
     user=Depends(require_user),
 ):
     q = db.query(ChannelRegistration)
-    if user.role == ROLE_MANAGER:
-        q = q.filter(or_(
-            ChannelRegistration.created_by == user.id,
-            ChannelRegistration.status.in_(["pending", "conflict"]),
-        ))
-    elif user.role != ROLE_ADMIN:
-        q = q.filter(ChannelRegistration.created_by == user.id)
+    visible_ids = managed_user_ids(db, user)
+    if visible_ids is not None:
+        q = q.filter(ChannelRegistration.created_by.in_(visible_ids or [-1]))
     if keyword:
         q = q.filter(ChannelRegistration.final_customer_name.contains(keyword))
     if status:
@@ -294,8 +288,17 @@ def update_channel_registration(registration_id: int, data: ChannelRegistrationU
         raise HTTPException(404, "报备不存在")
     patch = data.model_dump(exclude_unset=True)
     review_fields = {"status", "arbitration_result", "conflict_reason"}
-    is_review_only = set(patch.keys()).issubset(review_fields)
-    if not _can_manage_registration(reg, user) and not (user.role in (ROLE_ADMIN, ROLE_MANAGER) and is_review_only):
+    review_patch = set(patch.keys()) & review_fields
+    if review_patch:
+        if user.role not in (ROLE_ADMIN, ROLE_MANAGER):
+            raise HTTPException(403, "仅管理员或销售主管可审批报备")
+        if set(patch.keys()) - review_fields:
+            raise HTTPException(400, "审批时不能同时修改报备内容")
+        if reg.status not in ("pending", "conflict"):
+            raise HTTPException(400, "该报备已完成审批，不能重复审批")
+        if patch.get("status") not in ("protected", "rejected"):
+            raise HTTPException(400, "审批状态无效")
+    elif not _can_manage_registration(reg, user):
         raise HTTPException(403, "无权操作该报备")
     if "partner_id" in patch and patch["partner_id"] is not None:
         _check_partner_access(db, patch["partner_id"], user)
@@ -328,13 +331,11 @@ def delete_channel_registration(registration_id: int, db: Session = Depends(get_
 def list_channel_registration_notifications(db: Session = Depends(get_db), user=Depends(require_user)):
     if user.role not in (ROLE_ADMIN, ROLE_MANAGER):
         return {"count": 0, "items": []}
-    rows = (
-        db.query(ChannelRegistration)
-        .filter(ChannelRegistration.status.in_(["pending", "conflict"]))
-        .order_by(ChannelRegistration.created_at.desc())
-        .limit(20)
-        .all()
-    )
+    rows_q = db.query(ChannelRegistration).filter(ChannelRegistration.status.in_(["pending", "conflict"]))
+    visible_ids = managed_user_ids(db, user)
+    if visible_ids is not None:
+        rows_q = rows_q.filter(ChannelRegistration.created_by.in_(visible_ids or [-1]))
+    rows = rows_q.order_by(ChannelRegistration.created_at.desc()).limit(20).all()
     items = [_enrich_registration(db, row) for row in rows]
     return {"count": len(items), "items": items}
 

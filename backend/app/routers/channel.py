@@ -4,7 +4,7 @@ from typing import Optional
 from app.database import get_db
 from app.models import ChannelPartner, ChannelRegistration, CommissionRule, Contact, Opportunity, PartnerGrowthRecord, User
 from app.schemas import ChannelPartnerCreate, ChannelPartnerUpdate, ContactCreate, ContactUpdate
-from app.permissions import ROLE_ADMIN
+from app.permissions import ROLE_ADMIN, managed_user_ids, scoped_channel_partner_query
 from app.routers.utils import require_user
 
 router = APIRouter()
@@ -16,7 +16,21 @@ def _can_manage_partner(user, partner: ChannelPartner):
     return partner.created_by == user.id
 
 
-def _check_partner_access(partner: ChannelPartner, user):
+def _can_view_partner(db: Session, user, partner: ChannelPartner):
+    if user.role == ROLE_ADMIN:
+        return True
+    return partner.created_by in (managed_user_ids(db, user) or [])
+
+
+def _check_partner_view_access(db: Session, partner: ChannelPartner, user):
+    if not partner:
+        raise HTTPException(404, "Not found")
+    if not _can_view_partner(db, user, partner):
+        raise HTTPException(403, "没有权限查看该渠道档案")
+    return partner
+
+
+def _check_partner_manage_access(partner: ChannelPartner, user):
     if not partner:
         raise HTTPException(404, "Not found")
     if not _can_manage_partner(user, partner):
@@ -46,9 +60,7 @@ def _partner_dict(db: Session, partner: ChannelPartner):
 def list_partners(keyword: Optional[str]=Query(None), level: Optional[str]=Query(None),
                   region: Optional[str]=Query(None), skip: int=Query(0,ge=0), limit: int=Query(100,ge=1,le=500),
                   db: Session=Depends(get_db), user=Depends(require_user)):
-    q = db.query(ChannelPartner)
-    if user.role != ROLE_ADMIN:
-        q = q.filter(ChannelPartner.created_by == user.id)
+    q = scoped_channel_partner_query(db.query(ChannelPartner), db, user)
     if keyword: q = q.filter(ChannelPartner.name.contains(keyword))
     if level: q = q.filter(ChannelPartner.level == level)
     if region: q = q.filter(ChannelPartner.region == region)
@@ -57,7 +69,7 @@ def list_partners(keyword: Optional[str]=Query(None), level: Optional[str]=Query
 @router.get("/{pid}")
 def get_partner(pid: int, db: Session=Depends(get_db), user=Depends(require_user)):
     p = db.query(ChannelPartner).filter_by(id=pid).first()
-    _check_partner_access(p, user)
+    _check_partner_view_access(db, p, user)
     return _partner_dict(db, p)
 
 @router.post("", status_code=201)
@@ -68,14 +80,14 @@ def create_partner(data: ChannelPartnerCreate, db: Session=Depends(get_db), user
 @router.put("/{pid}")
 def update_partner(pid: int, data: ChannelPartnerUpdate, db: Session=Depends(get_db), user=Depends(require_user)):
     p = db.query(ChannelPartner).filter_by(id=pid).first()
-    _check_partner_access(p, user)
+    _check_partner_manage_access(p, user)
     for k,v in data.model_dump(exclude_unset=True).items(): setattr(p,k,v)
     db.commit(); db.refresh(p); return _partner_dict(db, p)
 
 @router.delete("/{pid}", status_code=204)
 def delete_partner(pid: int, db: Session=Depends(get_db), user=Depends(require_user)):
     p = db.query(ChannelPartner).filter_by(id=pid).first()
-    _check_partner_access(p, user)
+    _check_partner_manage_access(p, user)
     db.query(Contact).filter(Contact.partner_id == pid).delete(synchronize_session=False)
     db.query(CommissionRule).filter(CommissionRule.partner_id == pid).delete(synchronize_session=False)
     db.query(PartnerGrowthRecord).filter(PartnerGrowthRecord.partner_id == pid).delete(synchronize_session=False)
@@ -92,20 +104,20 @@ def delete_partner(pid: int, db: Session=Depends(get_db), user=Depends(require_u
 @router.get("/{pid}/contacts")
 def list_partner_contacts(pid: int, db: Session=Depends(get_db), user=Depends(require_user)):
     p = db.query(ChannelPartner).filter_by(id=pid).first()
-    _check_partner_access(p, user)
+    _check_partner_view_access(db, p, user)
     return db.query(Contact).filter(Contact.partner_id == pid).order_by(Contact.id.desc()).all()
 
 @router.post("/{pid}/contacts", status_code=201)
 def create_partner_contact(pid: int, data: ContactCreate, db: Session=Depends(get_db), user=Depends(require_user)):
     p = db.query(ChannelPartner).filter_by(id=pid).first()
-    _check_partner_access(p, user)
+    _check_partner_manage_access(p, user)
     c = Contact(**{**data.model_dump(exclude_unset=True), "partner_id": pid, "customer_id": None})
     db.add(c); db.commit(); db.refresh(c); return c
 
 @router.put("/{pid}/contacts/{cid}")
 def update_partner_contact(pid: int, cid: int, data: ContactUpdate, db: Session=Depends(get_db), user=Depends(require_user)):
     p = db.query(ChannelPartner).filter_by(id=pid).first()
-    _check_partner_access(p, user)
+    _check_partner_manage_access(p, user)
     c = db.query(Contact).filter_by(id=cid, partner_id=pid).first()
     if not c: raise HTTPException(404, "Not found")
     for k, v in data.model_dump(exclude_unset=True).items(): setattr(c, k, v)
@@ -114,7 +126,7 @@ def update_partner_contact(pid: int, cid: int, data: ContactUpdate, db: Session=
 @router.delete("/{pid}/contacts/{cid}", status_code=204)
 def delete_partner_contact(pid: int, cid: int, db: Session=Depends(get_db), user=Depends(require_user)):
     p = db.query(ChannelPartner).filter_by(id=pid).first()
-    _check_partner_access(p, user)
+    _check_partner_manage_access(p, user)
     c = db.query(Contact).filter_by(id=cid, partner_id=pid).first()
     if not c: raise HTTPException(404, "Not found")
     db.delete(c); db.commit()

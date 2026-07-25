@@ -12160,10 +12160,12 @@ function ProductListPage() {
 
 
 
-function PartnerArchivePage() {
-
-
-
+function PartnerArchivePage() {
+
+  var partnerUser = JSON.parse(localStorage.getItem('aq2_user') || '{}');
+
+
+
 
 
 
@@ -12793,7 +12795,7 @@ function PartnerArchivePage() {
 
 
 
-        e(Button, { size: 'small', type: 'link', onClick: function() { openDrawer(r); } }, '编辑'),
+        (partnerUser.role === 'admin' || Number(r.created_by) === Number(partnerUser.id)) ? e(Button, { size: 'small', type: 'link', onClick: function() { openDrawer(r); } }, '编辑') : null,
 
 
 
@@ -12801,7 +12803,7 @@ function PartnerArchivePage() {
 
 
 
-        e(Popconfirm, { title: '删除伙伴「' + r.name + '」？', open: delPop === r.id, onOpenChange: function(v) { setDelPop(v ? r.id : null); }, onConfirm: function() { delPartner(r.id); } },
+        (partnerUser.role === 'admin' || Number(r.created_by) === Number(partnerUser.id)) ? e(Popconfirm, { title: '删除渠道「' + r.name + '」？', open: delPop === r.id, onOpenChange: function(v) { setDelPop(v ? r.id : null); }, onConfirm: function() { delPartner(r.id); } },
 
 
 
@@ -12809,7 +12811,7 @@ function PartnerArchivePage() {
 
 
 
-          e(Button, { size: 'small', type: 'link', danger: true }, '删除'))
+          e(Button, { size: 'small', type: 'link', danger: true }, '删除')) : null
 
 
 
@@ -14601,7 +14603,9 @@ function LeadListPage() {
 
   var _bm = useState(false), bidModal = _bm[0], setBidModal = _bm[1];
   var _bkw = useState([]), bidKeywords = _bkw[0], setBidKeywords = _bkw[1];
-  var _bsrc = useState([]), bidSources = _bsrc[0], setBidSources = _bsrc[1];
+  var _bsrc = useState([]), bidSources = _bsrc[0], setBidSources = _bsrc[1];
+  var _btests = useState({}), bidSourceTests = _btests[0], setBidSourceTests = _btests[1];
+  var _btesting = useState(null), bidSourceTesting = _btesting[0], setBidSourceTesting = _btesting[1];
   var _bkwm = useState(false), bidKeywordModal = _bkwm[0], setBidKeywordModal = _bkwm[1];
   var _bsrcm = useState(false), bidSourceModal = _bsrcm[0], setBidSourceModal = _bsrcm[1];
   var _kwForm = Form.useForm(), keywordForm = _kwForm[0];
@@ -14862,7 +14866,7 @@ function LeadListPage() {
 
 
 
-  function delLead(id) {
+  function delLead(id) {
 
 
 
@@ -15006,7 +15010,8 @@ function LeadListPage() {
 
 
 
-      message.success('采集完成：新增 ' + d.collected_count + ' 条线索');
+      if (d.collected_count > 0) message.success(d.message || ('采集完成：新增 ' + d.collected_count + ' 条线索'));
+      else message.info(d.message || '采集完成，本次没有新增线索');
 
 
 
@@ -15087,12 +15092,70 @@ function LeadListPage() {
     }).catch(function(err) { if (err && err.errorFields) return; message.error(err.message || '保存失败'); });
   }
 
-  function deleteBidSource(id) {
-    api('DELETE', '/bidding/sources/' + id).then(function() {
-      message.success('数据源已删除');
-      fetchBiddingConfig();
-    }).catch(function(err) { message.error(err.message || '删除失败'); });
-  }
+  function deleteBidSource(id) {
+    api('DELETE', '/bidding/sources/' + id).then(function() {
+      message.success('数据源已删除');
+      fetchBiddingConfig();
+    }).catch(function(err) { message.error(err.message || '删除失败'); });
+  }
+
+  function voidLead(lead) {
+    api('PUT', '/leads/' + lead.id, { status: 'closed' }).then(function() {
+      message.success('线索已作废');
+      fetchLeads();
+      fetchFunnel();
+    }).catch(function(err) { message.error(err.message || '作废失败'); });
+  }
+
+  function toggleBidSource(source) {
+    var payload = {
+      name: source.name,
+      search_url: source.search_url,
+      is_active: !source.is_active,
+      sort_order: source.sort_order || 0,
+      notes: source.notes || ''
+    };
+    api('PUT', '/bidding/sources/' + source.id, payload).then(function() {
+      message.success(source.is_active ? '数据源已停用' : '数据源已启用');
+      fetchBiddingConfig();
+    }).catch(function(err) { message.error(err.message || '状态更新失败'); });
+  }
+
+  function testBidSource(source) {
+    var keyword = '网络安全';
+    if (bidKeywords.length && bidKeywords[0].keywords) {
+      keyword = bidKeywords[0].keywords.split(/[，、,\s]+/).filter(Boolean)[0] || keyword;
+    }
+    setBidSourceTesting(source.id);
+    api('POST', '/bidding/sources/' + source.id + '/test', { keyword: keyword }).then(function(result) {
+      setBidSourceTests(function(prev) {
+        var next = Object.assign({}, prev);
+        next[source.id] = result;
+        return next;
+      });
+      if (result.status === 'success') message.success(source.name + '：' + result.message);
+      else if (result.status === 'empty') message.info(source.name + '：' + result.message);
+      else message.warning(source.name + '：' + result.message);
+    }).catch(function(err) {
+      message.error(err.message || '数据源测试失败');
+    }).finally(function() {
+      setBidSourceTesting(null);
+    });
+  }
+
+  function bidSourceStatusTag(status) {
+    var labels = {
+      success: ['green', '成功'],
+      empty: ['blue', '无匹配'],
+      authorization_required: ['gold', '需授权'],
+      restricted: ['orange', '访问受限'],
+      unavailable: ['red', '连接失败'],
+      invalid: ['red', '地址无效'],
+      error: ['red', '失败']
+    };
+    var item = labels[status] || ['default', status || '未测试'];
+    return e(Tag, { color: item[0] }, item[1]);
+  }
 
   var sourceLabels = { website: '官网', exhibition: '展会', partner: '伙伴引荐', phone: '电话', bidding: '招标采集', other: '其他', '官网': '官网', '展会': '展会', '伙伴引荐': '伙伴引荐', '电话': '电话', '招标网站': '招标采集', '其他': '其他' };
 
@@ -15144,7 +15207,8 @@ function LeadListPage() {
 
 
 
-  var f = funnel || { total: 0, new_count: 0, contacted_count: 0, confirmed_count: 0, converted_count: 0, closed_count: 0 };
+  var f = funnel || { total: 0, stages: {} };
+  var funnelStages = f.stages || f;
 
 
 
@@ -15160,7 +15224,15 @@ function LeadListPage() {
 
 
 
-    { key: 'new_count', label: '新', color: '#3b82f6' },
+    { key: 'new', label: '新', color: '#3b82f6' },
+
+
+
+
+
+
+
+    { key: 'converted', label: '已转化', color: '#22c55e' },
 
 
 
@@ -15168,31 +15240,7 @@ function LeadListPage() {
 
 
 
-    { key: 'contacted_count', label: '已联系', color: '#f59e0b' },
-
-
-
-
-
-
-
-    { key: 'confirmed_count', label: '已确认', color: '#8b5cf6' },
-
-
-
-
-
-
-
-    { key: 'converted_count', label: '已转化', color: '#22c55e' },
-
-
-
-
-
-
-
-    { key: 'closed_count', label: '已作废', color: '#94a3b8' }
+    { key: 'closed', label: '已作废', color: '#94a3b8' }
 
 
 
@@ -15208,7 +15256,7 @@ function LeadListPage() {
 
 
 
-  var funnelMax = Math.max.apply(null, stageItems.map(function(s) { return f[s.key] || 0; }).concat([1]));
+  var funnelMax = Math.max.apply(null, stageItems.map(function(s) { return funnelStages[s.key] || 0; }).concat([1]));
 
 
 
@@ -15320,7 +15368,7 @@ function LeadListPage() {
 
 
 
-      var isConverted = r.status === '已转化商机';
+      var isConverted = r.status === 'converted' || r.status === '已转化商机';
 
 
 
@@ -15328,7 +15376,7 @@ function LeadListPage() {
 
 
 
-      var isClosed = r.status === '已作废';
+      var isClosed = r.status === 'closed' || r.status === '已作废';
 
 
 
@@ -15384,7 +15432,10 @@ function LeadListPage() {
 
 
 
-        } }, '转化'),
+        } }, '转化'),
+
+        (isConverted || isClosed) ? null : e(Popconfirm, { title: '确认作废线索「' + r.name + '」？', onConfirm: function() { voidLead(r); } },
+          e(Button, { size: 'small', type: 'link', style: { color: '#64748b' } }, '作废')),
 
 
 
@@ -15536,7 +15587,7 @@ function LeadListPage() {
 
 
 
-            var val = f[item.key] || 0;
+            var val = funnelStages[item.key] || 0;
 
 
 
@@ -15552,7 +15603,6 @@ function LeadListPage() {
 
 
 
-            var nextVal = idx < stageItems.length - 1 ? (f[stageItems[idx + 1].key] || 0) : 0;
 
 
 
@@ -15560,7 +15610,6 @@ function LeadListPage() {
 
 
 
-            var cnv = val > 0 && idx < stageItems.length - 1 ? Math.round(nextVal / val * 100) + '%→' : '';
 
 
 
@@ -15608,7 +15657,7 @@ function LeadListPage() {
 
 
 
-              e('div', { style: { fontSize: 12, fontWeight: 600, marginTop: 6, color: '#1e293b', height: 18, lineHeight: '18px' } }, item.label),
+              e('div', { style: { fontSize: 12, fontWeight: 600, marginTop: 8, color: '#1e293b', height: 18, lineHeight: '18px' } }, item.label)
 
 
 
@@ -15616,7 +15665,6 @@ function LeadListPage() {
 
 
 
-              e('div', { style: { fontSize: 10, color: '#94a3b8', marginTop: 2, height: 14, lineHeight: '14px' } }, idx < stageItems.length - 1 ? cnv : '')
 
 
 
@@ -15728,7 +15776,7 @@ function LeadListPage() {
 
 
 
-            e(Option, { value: 'new' }, '新'), e(Option, { value: 'contacted' }, '已联系'), e(Option, { value: 'confirmed' }, '已确认'), e(Option, { value: 'converted' }, '已转化'), e(Option, { value: 'closed' }, '已作废')
+            e(Option, { value: 'new' }, '新'), e(Option, { value: 'converted' }, '已转化'), e(Option, { value: 'closed' }, '已作废')
 
 
 
@@ -16020,7 +16068,7 @@ function LeadListPage() {
 
 
 
-    e(Modal, { title: '🕷️ 招标采集结果', open: bidModal, onCancel: function() { setBidModal(false); }, footer: e(Button, { type: 'primary', onClick: function() { setBidModal(false); } }, '知道了'), width: 680 },
+    e(Modal, { title: '🕷️ 招标采集结果', open: bidModal, onCancel: function() { setBidModal(false); }, footer: e(Button, { type: 'primary', onClick: function() { setBidModal(false); } }, '知道了'), width: 860 },
 
 
 
@@ -16140,7 +16188,18 @@ function LeadListPage() {
 
 
 
-        bidResult.collected && bidResult.collected.length > 0 ? e('div', null,
+        bidResult.source_reports && bidResult.source_reports.length > 0 ? e('div', { style: { marginBottom: 14 } },
+          e('div', { style: { fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 6 } }, '数据源运行情况'),
+          e(Table, { dataSource: bidResult.source_reports, rowKey: 'source', size: 'small', pagination: false, columns: [
+            { title: '数据源', dataIndex: 'source', width: 150, ellipsis: true },
+            { title: '状态', dataIndex: 'status', width: 90, render: function(v) { return bidSourceStatusTag(v); } },
+            { title: '匹配', dataIndex: 'matched', width: 70, align: 'right' },
+            { title: '新增', dataIndex: 'created', width: 70, align: 'right' },
+            { title: '重复', dataIndex: 'duplicates', width: 70, align: 'right' },
+            { title: '说明', dataIndex: 'message', ellipsis: true }
+          ] })
+        ) : null,
+        bidResult.collected && bidResult.collected.length > 0 ? e('div', null,
 
 
 
@@ -16278,7 +16337,7 @@ function LeadListPage() {
         { title: '订阅名称', dataIndex: 'name', width: 140, ellipsis: true },
         { title: '关键词', dataIndex: 'keywords', ellipsis: true },
         { title: '区域', dataIndex: 'regions', width: 100, render: function(v) { return v || '-'; } },
-        { title: '状态', dataIndex: 'is_active', width: 80, render: function(v) { return e(Tag, { color: v ? 'green' : 'default' }, v ? '启用' : '停用'); } },
+        { title: '状态', dataIndex: 'is_active', width: 90, render: function(v) { return e(Tag, { color: v ? 'green' : 'default' }, v ? '启用' : '停用'); } },
         { title: '操作', width: 90, render: function(_, r) { return e(Popconfirm, { title: '删除该监测关键词？', onConfirm: function() { deleteBidKeyword(r.id); } }, e(Button, { size: 'small', danger: true }, '删除')); } }
       ] })
     ),
@@ -16297,8 +16356,12 @@ function LeadListPage() {
       e(Table, { style: { marginTop: 16 }, rowKey: 'id', size: 'small', dataSource: bidSources, pagination: false, columns: [
         { title: '数据源', dataIndex: 'name', width: 120 },
         { title: '搜索地址', dataIndex: 'search_url', ellipsis: true },
-        { title: '状态', dataIndex: 'is_active', width: 80, render: function(v) { return e(Tag, { color: v ? 'green' : 'default' }, v ? '启用' : '停用'); } },
-        { title: '操作', width: 90, render: function(_, r) { return e(Popconfirm, { title: '删除该数据源？', onConfirm: function() { deleteBidSource(r.id); } }, e(Button, { size: 'small', danger: true }, '删除')); } }
+        { title: '状态', dataIndex: 'is_active', width: 90, render: function(v, r) { return e(Tag, { color: v ? 'green' : 'default', title: '点击切换状态', style: { cursor: 'pointer' }, onClick: function() { toggleBidSource(r); } }, v ? '启用' : '停用'); } },
+        { title: '连通性', width: 100, render: function(_, r) { return bidSourceTests[r.id] ? bidSourceStatusTag(bidSourceTests[r.id].status) : e('span', { style: { color: '#94a3b8' } }, '未测试'); } },
+        { title: '操作', width: 170, render: function(_, r) { return e(Space, { size: 6 },
+          e(Button, { size: 'small', loading: bidSourceTesting === r.id, onClick: function() { testBidSource(r); } }, '测试'),
+          e(Popconfirm, { title: '删除该数据源？', onConfirm: function() { deleteBidSource(r.id); } }, e(Button, { size: 'small', danger: true }, '删除'))
+        ); } }
       ] })
     ) : null,
 
@@ -19043,24 +19106,27 @@ function SecurityBusinessPage(props) {
       { title: '客户归属区域', dataIndex: 'region', width: 130, render: function(v){return v || '-';} },
       { title: '渠道', dataIndex: 'partner_name', width: 280, render: function(v){return e('span', { style: { whiteSpace: 'nowrap' } }, v || '-');} },
       { title: '保护截止', dataIndex: 'protection_end', width: 120, render: function(v){return v || '-';} },
-      { title: '报备说明', dataIndex: 'notes', ellipsis: true, render: function(v){return v || '-';} },
-      { title: '操作', width: 300, render: function(_, r){
-        var canOwn = user.role === 'admin' || Number(r.created_by) === Number(user.id);
-        var canReview = user.role === 'admin' || user.role === 'manager';
-        var isApproved = r.status === 'protected';
-        var isRejected = r.status === 'rejected';
-        var statusText = isApproved ? '已通过' : (isRejected ? '已驳回' : '待审批');
-        var statusStyle = isApproved
-          ? { color: '#16a34a', borderColor: '#86efac', background: '#f0fdf4' }
-          : (isRejected ? { color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2' } : { color: '#d97706', borderColor: '#fcd34d', background: '#fffbeb' });
-        return e(Space, null,
-          e(Button, { size: 'small', style: statusStyle }, statusText),
-          canOwn ? e(Button, { size: 'small', onClick: function(){ editRegistration(r); } }, '编辑') : null,
-          canOwn ? e(Popconfirm, { title: '确认删除此报备？', onConfirm: function(){ deleteRegistration(r); } }, e(Button, { size: 'small', danger: true }, '删除')) : null,
-          canReview ? e(Button, { size: 'small', onClick: function(){ arbitrate(r, 'protected'); } }, '通过') : null,
-          canReview ? e(Button, { size: 'small', danger: true, onClick: function(){ arbitrate(r, 'rejected'); } }, '驳回') : null
-        );
-      } }
+      { title: '报备说明', dataIndex: 'notes', ellipsis: true, render: function(v){return v || '-';} },
+      { title: '操作', width: 330, render: function(_, r){
+        var canOwn = user.role === 'admin' || Number(r.created_by) === Number(user.id);
+        var canReview = user.role === 'admin' || user.role === 'manager';
+        var isApproved = r.status === 'protected';
+        var isRejected = r.status === 'rejected';
+        var isPendingReview = !isApproved && !isRejected;
+        var statusText = isApproved ? '已通过' : (isRejected ? '已驳回' : '待审批');
+        var statusStyle = isApproved
+          ? { color: '#16a34a', borderColor: '#86efac', background: '#f0fdf4' }
+          : (isRejected ? { color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2' } : { color: '#d97706', borderColor: '#fcd34d', background: '#fffbeb' });
+        return e('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
+          e(Tag, { style: statusStyle }, statusText),
+          canOwn ? e(Popconfirm, { title: '确认删除此报备？', onConfirm: function(){ deleteRegistration(r); } }, e(Button, { size: 'small', danger: true }, '删除')) : null,
+          canReview && isPendingReview ? e('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 4, paddingLeft: 10, borderLeft: '1px solid #dbe3ef' } },
+            e('span', { style: { color: '#64748b', fontSize: 12, fontWeight: 600 } }, '审批'),
+            e(Button, { size: 'small', type: 'primary', style: { background: '#16a34a', borderColor: '#16a34a' }, onClick: function(){ arbitrate(r, 'protected'); } }, '通过'),
+            e(Button, { size: 'small', danger: true, onClick: function(){ arbitrate(r, 'rejected'); } }, '驳回')
+          ) : null
+        );
+      } }
     ] })
   );
   var presalesUsers = users.filter(function(u) { return u.role === 'presales'; });

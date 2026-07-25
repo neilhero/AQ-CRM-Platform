@@ -27,6 +27,7 @@ from app.permissions import (
     ROLE_MANAGER,
     can_access_customer,
     managed_user_ids,
+    scoped_channel_partner_query,
     scoped_customer_query,
     scoped_opportunity_query,
 )
@@ -143,10 +144,7 @@ def _check_opp_access(db: Session, opportunity_id: int, user):
 
 
 def _scoped_partner_query(db: Session, user):
-    q = db.query(ChannelPartner)
-    if user.role != ROLE_ADMIN:
-        q = q.filter(ChannelPartner.created_by == user.id)
-    return q
+    return scoped_channel_partner_query(db.query(ChannelPartner), db, user)
 
 
 def _check_partner_access(db: Session, partner_id: int, user):
@@ -166,7 +164,8 @@ def _check_partner_record_access(db: Session, record_id: int, user):
     if not row:
         raise HTTPException(404, "记录不存在")
     record, partner = row
-    if user.role != ROLE_ADMIN and partner.created_by != user.id:
+    visible_ids = managed_user_ids(db, user)
+    if visible_ids is not None and partner.created_by not in visible_ids:
         raise HTTPException(403, "无权访问该渠道记录")
     return record
 
@@ -588,8 +587,9 @@ def partner_growth_summary(db: Session = Depends(get_db), user=Depends(require_u
 @router.get("/partner-growth/records")
 def list_partner_records(partner_id: Optional[int] = None, record_type: Optional[str] = None, db: Session = Depends(get_db), user=Depends(require_user)):
     q = db.query(PartnerGrowthRecord, ChannelPartner).join(ChannelPartner, PartnerGrowthRecord.partner_id == ChannelPartner.id)
-    if user.role != ROLE_ADMIN:
-        q = q.filter(ChannelPartner.created_by == user.id)
+    visible_ids = managed_user_ids(db, user)
+    if visible_ids is not None:
+        q = q.filter(ChannelPartner.created_by.in_(visible_ids or [-1]))
     if partner_id:
         q = q.filter(PartnerGrowthRecord.partner_id == partner_id)
     if record_type:

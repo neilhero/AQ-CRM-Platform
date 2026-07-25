@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import ChannelPartner, Customer, FollowUp, Lead, Opportunity, OpportunityType, User
 from app.permissions import ROLE_ADMIN
-from app.permissions import managed_user_ids, scoped_customer_query, scoped_lead_query, scoped_opportunity_query
+from app.permissions import managed_user_ids, scoped_channel_partner_query, scoped_customer_query, scoped_lead_query, scoped_opportunity_query
 from app.routers.utils import require_user
 
 CST = timezone(timedelta(hours=8))
@@ -140,9 +140,7 @@ def partner_performance(period: str = Query("year"), db: Session = Depends(get_d
             ndays = 365
         start = today - timedelta(days=ndays)
 
-    partner_q = db.query(ChannelPartner)
-    if user.role != ROLE_ADMIN:
-        partner_q = partner_q.filter(ChannelPartner.created_by == user.id)
+    partner_q = scoped_channel_partner_query(db.query(ChannelPartner), db, user)
     partners = partner_q.order_by(ChannelPartner.name).all()
 
     result = []

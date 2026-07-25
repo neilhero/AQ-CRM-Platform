@@ -127,6 +127,15 @@ def scoped_lead_query(q, db, user):
     return q.filter(Lead.assigned_to.in_(owner_ids or [-1]))
 
 
+def scoped_channel_partner_query(q, db, user):
+    from app.models import ChannelPartner
+
+    if user.role == ROLE_ADMIN:
+        return q
+    owner_ids = managed_user_ids(db, user)
+    return q.filter(ChannelPartner.created_by.in_(owner_ids or [-1]))
+
+
 def can_access_opportunity(db, user, opportunity_id: int) -> bool:
     from app.models import Opportunity
 
