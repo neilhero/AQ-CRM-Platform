@@ -994,7 +994,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 
 
-.cat-card{border-radius:16px;padding:20px;cursor:pointer;transition:all .2s}
+.cat-card{border-radius:16px;padding:20px;cursor:pointer;transition:all .2s}
 
 
 
@@ -1026,7 +1026,56 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 
 
-.prod-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.08)!important;transform:translateY(-1px)}
+.prod-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.08)!important;transform:translateY(-1px)}
+
+/* Product workspace */
+.product-workbench{max-width:1560px;margin:0 auto;padding-bottom:20px}
+.product-page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px}
+.product-page-kicker{display:flex;align-items:center;gap:8px;margin-bottom:7px;color:#64748b;font-size:13px;font-weight:600}
+.product-page-kicker i{width:8px;height:8px;border-radius:50%;background:#2563eb;display:inline-block}
+.product-page-head .page-title{margin-bottom:5px}
+.product-page-head .page-subtitle{max-width:720px;margin:0}
+.product-page-actions{display:flex;gap:10px;flex-shrink:0}
+.product-page-actions .ant-btn{height:38px;padding:0 16px;border-radius:7px;font-weight:600}
+.product-category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:18px}
+.product-category-card{position:relative;min-height:142px;padding:18px 19px 15px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;overflow:hidden;transition:border-color .18s,box-shadow .18s,transform .18s}
+.product-category-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(15,23,42,.08)}
+.product-category-card.is-active{box-shadow:0 8px 22px rgba(15,23,42,.1)}
+.product-category-card.is-dragover{border-style:dashed;transform:translateY(-2px)}
+.product-category-accent{position:absolute;left:0;top:0;right:0;height:4px}
+.product-category-head{display:flex;align-items:center;gap:11px;margin-bottom:15px}
+.product-category-icon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:19px}
+.product-category-name{min-width:0;flex:1;color:#172b4d;font-size:16px;font-weight:700}
+.product-category-count{display:flex;align-items:baseline;gap:3px;color:#64748b;font-size:12px;white-space:nowrap}
+.product-category-count strong{font-size:23px;line-height:1;font-weight:750}
+.product-category-subtags{display:flex;gap:7px;flex-wrap:wrap;min-height:27px}
+.product-category-subtags .ant-tag{margin:0;padding:2px 8px;border-radius:5px;font-size:12px;line-height:20px}
+.product-list-toolbar{display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:11px 14px;border:1px solid #e2e8f0;border-radius:8px;background:#fff}
+.product-list-toolbar-title{color:#172b4d;font-size:15px;font-weight:700}
+.product-list-toolbar-desc{color:#94a3b8;font-size:12px}
+.product-list-toolbar .ant-btn{margin-left:auto}
+.product-group{margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.03)}
+.product-group-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eef2f7}
+.product-group-title{display:flex;align-items:center;gap:10px;min-width:0}
+.product-group-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.product-group-name{font-size:16px;font-weight:700;color:#172b4d}
+.product-group-count{color:#94a3b8;font-size:12px}
+.product-list{padding:12px 16px 16px;min-height:82px}
+.product-row{display:grid;grid-template-columns:28px minmax(0,1fr) 120px 86px;gap:12px;align-items:center;padding:12px 12px;border:1px solid #e9eef5;border-radius:7px;background:#fff;cursor:grab;transition:border-color .16s,background .16s,box-shadow .16s}
+.product-row+.product-row{margin-top:9px}
+.product-row:hover{border-color:#cbd5e1;box-shadow:0 3px 10px rgba(15,23,42,.04)}
+.product-row.is-dragover{border-style:dashed}
+.product-row-grip{color:#a0aec0;font-size:17px;text-align:center}
+.product-row-name{margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#172b4d;font-size:14px;font-weight:700}
+.product-row-meta{display:flex;align-items:center;gap:7px;min-width:0}
+.product-row-meta .ant-tag{margin:0;border-radius:4px;font-size:11px;line-height:20px}
+.product-row-description{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#94a3b8;font-size:12px}
+.product-row-price{font-size:17px;font-weight:750;text-align:right;white-space:nowrap}
+.product-row-actions{display:flex;justify-content:flex-end;gap:3px}
+.product-drop-zone{height:32px;margin-top:10px;border:1px dashed #cbd5e1;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:12px}
+.product-empty{padding:26px 0;text-align:center;color:#94a3b8;font-size:13px}
+@media(max-width:960px){.product-page-head{align-items:flex-start;flex-direction:column}.product-category-grid{grid-template-columns:1fr}.product-list-toolbar{align-items:flex-start;flex-wrap:wrap}.product-list-toolbar .ant-btn{margin-left:0}.product-row{grid-template-columns:24px minmax(0,1fr) 78px}.product-row-actions{grid-column:2 / -1;justify-content:flex-start}.product-row-price{font-size:15px}}
+@media(max-width:600px){.product-page-actions{width:100%}.product-page-actions .ant-btn{flex:1;padding:0 10px}.product-list{padding:10px}.product-category-card{min-height:0}.product-row-meta{display:block}.product-row-description{margin-top:4px}}
 
 
 
@@ -11317,7 +11366,7 @@ function OppDetailPage(props) {
           { title: '售前支持', dataIndex: 'owner_name', width: 110, render: function(v) { return v || '-'; } },
           { title: '排期', dataIndex: 'scheduled_date', width: 130, render: function(v) { return v ? dayjs(v).format('MM-DD HH:mm') : '-'; } },
           { title: '说明', dataIndex: 'details', ellipsis: true, render: function(v) { return v || '-'; } },
-          { title: '状态', dataIndex: 'status', width: 100, render: function(v) { var colors = { pending: 'gold', in_progress: 'cyan', done: 'green' }; return e(Tag, { color: colors[v] || 'default' }, v || '-'); } }
+          { title: '状态', dataIndex: 'status', width: 100, render: function(v) { var colors = { pending: 'gold', in_progress: 'cyan', done: 'green', rejected: 'red' }; var labels = { pending: '待处理', in_progress: '进行中', done: '已完成', rejected: '已驳回' }; return e(Tag, { color: colors[v] || 'default' }, labels[v] || v || '-'); } }
         ] })
       )
     ),
@@ -11769,10 +11818,10 @@ function ProductListPage() {
 
   var MAIN_CATS = [CAT_AI, CAT_DATA, CAT_EDU];
   var CAT_META = {};
-  CAT_META[CAT_AI] = { icon: '\uD83D\uDEE1\uFE0F', color: '#4f46e5', bg: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', border: '#c7d2fe' };
-  CAT_META[CAT_DATA] = { icon: '\uD83D\uDD10', color: '#059669', bg: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', border: '#a7f3d0' };
-  CAT_META[CAT_EDU] = { icon: '\uD83C\uDF93', color: '#d97706', bg: 'linear-gradient(135deg, #fffbeb, #fef3c7)', border: '#fde68a' };
-  CAT_META[CAT_NONE] = { icon: '\uD83D\uDCE6', color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' };
+  CAT_META[CAT_AI] = { icon: '\uD83D\uDEE1\uFE0F', color: '#4f46e5', tint: '#eef2ff', border: '#c7d2fe' };
+  CAT_META[CAT_DATA] = { icon: '\uD83D\uDD10', color: '#059669', tint: '#ecfdf5', border: '#a7f3d0' };
+  CAT_META[CAT_EDU] = { icon: '\uD83C\uDF93', color: '#d97706', tint: '#fffbeb', border: '#fde68a' };
+  CAT_META[CAT_NONE] = { icon: '\uD83D\uDCE6', color: '#64748b', tint: '#f8fafc', border: '#e2e8f0' };
 
   var fetchData = useCallback(function() {
     setLoading(true);
@@ -11914,28 +11963,29 @@ function ProductListPage() {
     api('DELETE', '/products/sub-categories/' + sub.id).then(function() { message.success(TXT.subDeleted); fetchData(); }).catch(function(err) { message.error(err.message || TXT.deleteFailed); });
   }
 
-  function renderProductRow(prod, meta) {
-    var isOver = dragOverProduct === prod.id;
-    return e('div', {
-      key: prod.id,
-      draggable: true,
-      onDragStart: onDragStart(prod),
-      onDragOver: function(ev) { onDragOver(ev); setDragOverProduct(prod.id); },
-      onDragLeave: function() { setDragOverProduct(null); },
-      onDrop: onDropProduct(prod),
-      style: { display: 'grid', gridTemplateColumns: '32px 1fr 110px 86px', gap: 12, alignItems: 'center', padding: '12px 14px', border: isOver ? '1px dashed ' + meta.color : '1px solid #e2e8f0', borderRadius: 8, background: isOver ? meta.color + '08' : '#fff', marginBottom: 10, cursor: 'grab' }
-    },
-      e('div', { style: { color: '#94a3b8', fontSize: 18, textAlign: 'center' } }, '\u2630'),
-      e('div', { style: { minWidth: 0 } },
-        e('div', { style: { fontWeight: 700, fontSize: 15, color: '#0f172a', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, prod.name),
-        e('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
-          prod.sub_category ? e(Tag, { color: 'blue', style: { borderRadius: 5 } }, prod.sub_category) : e(Tag, { color: 'default', style: { borderRadius: 5 } }, TXT.noSub),
-          prod.description ? e('span', { style: { color: '#94a3b8', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, prod.description) : null
-        )
-      ),
-      e('div', { style: { color: meta.color, fontWeight: 800, fontSize: 18, textAlign: 'right' } }, prod.unit_price ? '\u00A5' + Number(prod.unit_price).toFixed(1) + '\u4e07' : TXT.noPrice),
-      e('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: 4 } },
-        e(Button, { size: 'small', type: 'text', icon: IC('EditOutlined'), onClick: function() { setEdit(prod); setModalCategory(prod.category || null); form.setFieldsValue(prod); setOpen(true); } }),
+  function renderProductRow(prod, meta) {
+    var isOver = dragOverProduct === prod.id;
+    return e('div', {
+      key: prod.id,
+      className: 'product-row' + (isOver ? ' is-dragover' : ''),
+      draggable: true,
+      onDragStart: onDragStart(prod),
+      onDragOver: function(ev) { onDragOver(ev); setDragOverProduct(prod.id); },
+      onDragLeave: function() { setDragOverProduct(null); },
+      onDrop: onDropProduct(prod),
+      style: { borderColor: isOver ? meta.color : undefined, background: isOver ? meta.tint : undefined }
+    },
+      e('div', { className: 'product-row-grip' }, '\u2630'),
+      e('div', { style: { minWidth: 0 } },
+        e('div', { className: 'product-row-name' }, prod.name),
+        e('div', { className: 'product-row-meta' },
+          prod.sub_category ? e(Tag, { color: 'blue' }, prod.sub_category) : e(Tag, null, TXT.noSub),
+          prod.description ? e('span', { className: 'product-row-description' }, prod.description) : null
+        )
+      ),
+      e('div', { className: 'product-row-price', style: { color: meta.color } }, prod.unit_price ? '\u00A5' + Number(prod.unit_price).toFixed(1) + '\u4e07' : TXT.noPrice),
+      e('div', { className: 'product-row-actions' },
+        e(Button, { size: 'small', type: 'text', icon: IC('EditOutlined'), onClick: function() { setEdit(prod); setModalCategory(prod.category || null); form.setFieldsValue(prod); setOpen(true); } }),
         e(Popconfirm, { title: TXT.deleteProductConfirm + prod.name + '\uff1f', onConfirm: function() { del(prod.id); } },
           e(Button, { size: 'small', type: 'text', danger: true, icon: IC('DeleteOutlined') })
         )
@@ -11943,77 +11993,77 @@ function ProductListPage() {
     );
   }
 
-  function renderCategorySection(category) {
-    var meta = CAT_META[category] || CAT_META[CAT_NONE];
-    var rows = productsForCategory(category);
-    return e('div', { key: category, className: 'section-card', style: { marginBottom: 16, padding: 0, overflow: 'hidden' } },
-      e('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: category === CAT_NONE ? '#f8fafc' : meta.color + '08' } },
-        e('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-          e('span', { style: { fontSize: 22 } }, meta.icon),
-          e('span', { style: { fontSize: 18, fontWeight: 800, color: '#0f172a' } }, category),
-          e('span', { style: { fontSize: 13, color: '#94a3b8' } }, rows.length + ' \u6b3e')
-        ),
-        null
-      ),
-      e('div', { onDragOver: onDragOver, onDrop: category === CAT_NONE ? null : onDropCat(category, null), style: { padding: 16, minHeight: 82 } },
-        rows.length ? rows.map(function(prod) { return renderProductRow(prod, meta); }) : e('div', { style: { textAlign: 'center', color: '#94a3b8', padding: '28px 0' } }, TXT.emptyCat),
-        rows.length ? e('div', { onDragOver: onDragOver, onDrop: onDropCategoryEnd(category), style: { height: 34, border: '1px dashed #cbd5e1', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 12 } }, TXT.dropBottom) : null
-      )
-    );
+  function renderCategorySection(category) {
+    var meta = CAT_META[category] || CAT_META[CAT_NONE];
+    var rows = productsForCategory(category);
+    return e('div', { key: category, className: 'product-group', style: { borderLeft: '4px solid ' + meta.color } },
+      e('div', { className: 'product-group-head' },
+        e('div', { className: 'product-group-title' },
+          e('span', { className: 'product-group-icon', style: { background: meta.tint } }, meta.icon),
+          e('span', { className: 'product-group-name' }, category),
+          e('span', { className: 'product-group-count' }, rows.length + ' \u6b3e\u4ea7\u54c1')
+        )
+      ),
+      e('div', { className: 'product-list', onDragOver: onDragOver, onDrop: category === CAT_NONE ? null : onDropCat(category, null) },
+        rows.length ? rows.map(function(prod) { return renderProductRow(prod, meta); }) : e('div', { className: 'product-empty' }, TXT.emptyCat),
+        rows.length ? e('div', { className: 'product-drop-zone', onDragOver: onDragOver, onDrop: onDropCategoryEnd(category) }, TXT.dropBottom) : null
+      )
+    );
   }
 
-  return e('div', null,
-    e('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 } },
-      e('div', null,
-        e('h1', { className: 'page-title' }, TXT.productManage),
-        e('p', { className: 'page-subtitle' }, '\u5171 ' + (data.length || 0) + ' ' + TXT.productCount + ' \u00B7 ' + TXT.pageSub)
-      ),
-      e('div', { style: { display: 'flex', gap: 10 } },
-        e(Button, { type: 'primary', size: 'large', icon: IC('PlusOutlined'), onClick: function() { setEdit(null); setModalCategory(selCat || null); form.resetFields(); form.setFieldsValue({ category: selCat || undefined, sub_category: selSub || undefined }); setOpen(true); } }, TXT.newProduct),
-        e(Button, { type: 'primary', size: 'large', icon: IC('SettingOutlined'), onClick: function() { openSubManager(selCat || MAIN_CATS[0]); } }, TXT.manageSub)
-      )
-    ),
-    e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 } },
-      MAIN_CATS.map(function(key) {
-        var meta = CAT_META[key];
-        var cd = getCatData(key);
-        var isActive = selCat === key;
-        var isDragOver = dragOverCat === key;
-        return e('div', {
-          key: key,
-          className: 'cat-card' + (isActive ? ' cat-card-active' : '') + (isDragOver ? ' cat-card-dragover' : ''),
-          style: { background: isDragOver ? meta.bg : (isActive ? meta.bg : '#fff'), border: isDragOver ? '2px dashed ' + meta.color : (isActive ? '2px solid ' + meta.color : '1px solid #e2e8f0'), boxShadow: isDragOver ? '0 0 0 6px ' + meta.color + '18' : (isActive ? '0 2px 12px ' + meta.color + '18' : '0 1px 3px rgba(0,0,0,.04)') },
-          onClick: function() { setSelCat(isActive ? null : key); setSelSub(null); },
-          onDragOver: function(ev) { ev.preventDefault(); setDragOverCat(key); },
-          onDragLeave: function() { setDragOverCat(null); },
-          onDrop: onDropCat(key, null)
-        },
-          e('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 } },
-            e('div', { style: { width: 44, height: 44, borderRadius: 12, background: meta.color + '16', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 } }, meta.icon),
-            e('div', { style: { flex: 1, fontSize: 16, fontWeight: 800, color: '#1e293b' } }, key),
-            e('div', { style: { textAlign: 'center' } },
-              e('div', { style: { fontSize: 28, fontWeight: 800, color: meta.color, lineHeight: 1 } }, cd.count || 0),
-              e('div', { style: { fontSize: 11, color: '#94a3b8' } }, TXT.productCount)
-            )
-          ),
-          e('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } },
-            (cd.children || []).map(function(sub) {
-              var subActive = selCat === key && selSub === sub.key;
-              return e(Tag, { key: sub.key, color: subActive ? meta.color : 'default', style: { cursor: 'pointer', borderRadius: 6, padding: '2px 10px', fontSize: 12 }, onClick: function(ev) { ev.stopPropagation(); setSelCat(key); setSelSub(subActive ? null : sub.key); }, onDragOver: function(ev) { ev.stopPropagation(); ev.preventDefault(); }, onDrop: function(ev) { ev.stopPropagation(); onDropCat(key, sub.key)(ev); } }, sub.label + ' (' + sub.count + ')');
-            })
-          )
-        );
-      })
-    ),
-    e('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 16, gap: 12 } },
-      selCat ? e('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
-          e(Button, { size: 'small', type: 'text', icon: IC('ArrowLeftOutlined'), onClick: function() { setSelCat(null); setSelSub(null); } }),
-          e('span', { style: { fontSize: 15, fontWeight: 700 } }, selCat),
-          selSub ? e('span', { style: { color: '#94a3b8' } }, ' / ' + selSub) : null
-        ) : e('span', { style: { fontSize: 15, fontWeight: 700 } }, TXT.byCategory),
-      e('span', { style: { fontSize: 13, color: '#94a3b8' } }, TXT.dragHint),
-      e('div', { style: { flex: 1 } })
-    ),
+  return e('div', { className: 'product-workbench' },
+    e('div', { className: 'product-page-head' },
+      e('div', null,
+        e('div', { className: 'product-page-kicker' }, e('i'), '\u4ea7\u54c1\u4f53\u7cfb'),
+        e('h1', { className: 'page-title' }, TXT.productManage),
+        e('p', { className: 'page-subtitle' }, '\u5171 ' + (data.length || 0) + ' ' + TXT.productCount + ' \u00B7 ' + TXT.pageSub)
+      ),
+      e('div', { className: 'product-page-actions' },
+        e(Button, { type: 'primary', size: 'large', icon: IC('PlusOutlined'), onClick: function() { setEdit(null); setModalCategory(selCat || null); form.resetFields(); form.setFieldsValue({ category: selCat || undefined, sub_category: selSub || undefined }); setOpen(true); } }, TXT.newProduct),
+        e(Button, { size: 'large', icon: IC('SettingOutlined'), onClick: function() { openSubManager(selCat || MAIN_CATS[0]); } }, TXT.manageSub)
+      )
+    ),
+    e('div', { className: 'product-category-grid' },
+      MAIN_CATS.map(function(key) {
+        var meta = CAT_META[key];
+        var cd = getCatData(key);
+        var isActive = selCat === key;
+        var isDragOver = dragOverCat === key;
+        return e('div', {
+          key: key,
+          className: 'product-category-card' + (isActive ? ' is-active' : '') + (isDragOver ? ' is-dragover' : ''),
+          style: { borderColor: (isActive || isDragOver) ? meta.color : undefined, background: isActive || isDragOver ? meta.tint : undefined },
+          onClick: function() { setSelCat(isActive ? null : key); setSelSub(null); },
+          onDragOver: function(ev) { ev.preventDefault(); setDragOverCat(key); },
+          onDragLeave: function() { setDragOverCat(null); },
+          onDrop: onDropCat(key, null)
+        },
+          e('div', { className: 'product-category-accent', style: { background: meta.color } }),
+          e('div', { className: 'product-category-head' },
+            e('div', { className: 'product-category-icon', style: { background: meta.tint } }, meta.icon),
+            e('div', { className: 'product-category-name' }, key),
+            e('div', { className: 'product-category-count' },
+              e('strong', { style: { color: meta.color } }, cd.count || 0),
+              e('span', null, '\u6b3e')
+            )
+          ),
+          e('div', { className: 'product-category-subtags' },
+            (cd.children || []).map(function(sub) {
+              var subActive = selCat === key && selSub === sub.key;
+              return e(Tag, { key: sub.key, color: subActive ? meta.color : 'default', style: { cursor: 'pointer' }, onClick: function(ev) { ev.stopPropagation(); setSelCat(key); setSelSub(subActive ? null : sub.key); }, onDragOver: function(ev) { ev.stopPropagation(); ev.preventDefault(); }, onDrop: function(ev) { ev.stopPropagation(); onDropCat(key, sub.key)(ev); } }, sub.label + ' (' + sub.count + ')');
+            })
+          )
+        );
+      })
+    ),
+    e('div', { className: 'product-list-toolbar' },
+      selCat ? e('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+          e('span', { className: 'product-list-toolbar-title' }, selCat),
+          selSub ? e('span', { style: { color: '#94a3b8' } }, ' / ' + selSub) : null
+        ) : e('span', { className: 'product-list-toolbar-title' }, TXT.byCategory),
+      e('span', { className: 'product-list-toolbar-desc' }, TXT.dragHint),
+      selCat ? e(Button, { size: 'small', type: 'text', icon: IC('ReloadOutlined'), onClick: function() { setSelCat(null); setSelSub(null); } }, '\u67e5\u770b\u5168\u90e8') : null
+    ),
     loading ? e(Spin, { size: 'large', style: { display: 'block', margin: '60px auto' } }) : visibleCategoryKeys().map(renderCategorySection),
     e(Modal, { title: edit ? TXT.editProduct : TXT.newProduct, open: open, onOk: save, onCancel: function() { setOpen(false); }, destroyOnClose: true, width: 560 },
       e(Form, { form: form, layout: 'vertical' },
@@ -18804,7 +18854,8 @@ function SecurityBusinessPage(props) {
   var _preCust = useState(null), presalesCustomerId = _preCust[0], setPresalesCustomerId = _preCust[1];
   var profileForm = Form.useForm()[0], regForm = Form.useForm()[0], presalesForm = Form.useForm()[0], subForm = Form.useForm()[0], itemForm = Form.useForm()[0];
   var reqTypeText = { presales_support: '售前支持', poc: 'POC申请', test_resource: '测试资源排期', solution_review: '方案评审', bid_support: '标书支持', demo: '演示记录' };
-  var statusColor = { pending: 'gold', protected: 'green', conflict: 'red', rejected: 'default', done: 'green', open: 'blue', in_progress: 'cyan', new: 'blue' };
+  var statusColor = { pending: 'gold', protected: 'green', conflict: 'red', rejected: 'default', done: 'green', open: 'blue', in_progress: 'cyan', new: 'blue' };
+  var statusText = { pending: '待处理', in_progress: '进行中', done: '已完成', rejected: '已驳回', protected: '已通过', conflict: '冲突', open: '待处理', new: '新建' };
   function fmtDate(v) { return v && v.format ? v.format('YYYY-MM-DD') : v; }
   function fmtDateTime(v) { return v && v.format ? v.format('YYYY-MM-DD HH:mm:ss') : v; }
   function loadBasics() {
@@ -19002,7 +19053,7 @@ function SecurityBusinessPage(props) {
       e(Button, { type: 'primary', onClick: submitPresales }, '创建申请')
     )),
     e(Table, { rowKey: 'id', loading: loading, dataSource: presales, pagination: { pageSize: 8 }, columns: [
-      { title: '客户', dataIndex: 'customer_name', width: 180, ellipsis: true, render: function(v){return v || '-';} }, { title: '商机', dataIndex: 'opportunity_name', width: 220, ellipsis: true }, { title: '类型', dataIndex: 'request_type', width: 120, render: function(v){return reqTypeText[v] || v;} }, { title: '负责人', dataIndex: 'requester_name', width: 100, render: function(v){return v || '-';} }, { title: '售前支持', dataIndex: 'owner_name', width: 110, render: function(v){return v || '-';} }, { title: '排期', dataIndex: 'scheduled_date', width: 130, render: function(v){return v ? dayjs(v).format('MM-DD HH:mm') : '-';} }, { title: '状态', dataIndex: 'status', width: 110, render: function(v){return e(Tag,{color:statusColor[v]||'default'},v);} }, { title: '操作', width: 180, render: function(_, r){return e(Space, null, e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'in_progress'); } }, '进行中'), e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'done'); } }, '完成'));} }
+      { title: '客户', dataIndex: 'customer_name', width: 180, ellipsis: true, render: function(v){return v || '-';} }, { title: '商机', dataIndex: 'opportunity_name', width: 220, ellipsis: true }, { title: '类型', dataIndex: 'request_type', width: 120, render: function(v){return reqTypeText[v] || v;} }, { title: '负责人', dataIndex: 'requester_name', width: 100, render: function(v){return v || '-';} }, { title: '售前支持', dataIndex: 'owner_name', width: 110, render: function(v){return v || '-';} }, { title: '排期', dataIndex: 'scheduled_date', width: 130, render: function(v){return v ? dayjs(v).format('MM-DD HH:mm') : '-';} }, { title: '状态', dataIndex: 'status', width: 110, render: function(v){return e(Tag,{color:statusColor[v]||'default'},statusText[v] || v || '-');} }, { title: '操作', width: 180, render: function(_, r){return e(Space, null, e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'in_progress'); } }, '进行中'), e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'done'); } }, '完成'));} }
     ] })
   );
   var radarTab = e('div', null,
