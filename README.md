@@ -1,193 +1,114 @@
-# 安泉CRM v3.4 (AQ-CRM-Platform)
+# 安泉CRM（AQ-CRM-Platform）
 
-安泉数智科技有限公司客户关系管理系统。
+面向网络安全行业的客户关系管理平台，覆盖客户、商机、渠道、售前协同、产品与经营分析等核心业务场景。
+
+## 核心能力
+
+| 模块 | 说明 |
+| --- | --- |
+| 仪表盘 | 客户、商机金额、商机数量及销售业绩概览 |
+| 今日待跟进 | 逾期、当日及近期待跟进事项提醒 |
+| 客户管理 | 客户、联系人、客户360画像与客户分层运营 |
+| 商机管理 | 直销与渠道商机、阶段管理、跟进记录与销售漏斗 |
+| 线索管理 | 线索录入、分配、转化、招标雷达与招标转化 |
+| 渠道管理 | 渠道档案、渠道业绩、渠道培训、项目报备与返点管理 |
+| 售前协同 | 售前支持申请、POC/方案/标书协同、排期及售前资产库 |
+| 产品管理 | 一级产品大类、二级分类、产品排序与行业推荐产品 |
+| 经营驾驶舱 | BI驾驶舱、目标绩效、销售预测、预测回看、输赢单复盘、售前SLA |
 
 ## 技术栈
 
-- **后端**: FastAPI + SQLAlchemy + SQLite + JWT（端口 8097）
-- **前端**: React 18 + Ant Design 5（单文件 HTML，CDN 本地化）
-- **管理后台**: 独立 React 单页（/admin）
-- **部署**: Nginx 反向代理 + systemd
+- 后端：FastAPI、SQLAlchemy、JWT
+- 前端：React 18、Ant Design 5（单页 HTML 应用）
+- 数据库：SQLite（演示）/ PostgreSQL / MySQL
+- 部署：Nginx、systemd
 
-## 功能模块
+## 本地启动
 
-| 模块 | 说明 |
-|------|------|
-| 仪表盘 | 关键指标统计看板 |
-| 今日待跟进 | 逾期/今日/即将到期跟进提醒 |
-| 客户管理 | 客户 CRUD + 嵌套联系人 + 数据权限隔离 |
-| 商机管理 | 直销商机 + 渠道商机，销售漏斗追踪 |
-| 线索管理 | 线索录入、分配、转换 |
-| 产品管理 | 产品目录维护 |
-| 渠道伙伴管理 | 伙伴档案、绩效、返点管理 |
-| 招标采集 | 招标信息自动采集入库 |
-| 数据导入 | 模板下载 → 预览 → 确认三步导入 |
-| 用户管理 | 用户 CRUD + 密码重置（仅管理员） |
-| 菜单管理 | v3.4 新增，侧栏菜单显隐开关 |
-| 经营增强 | 客户治理、渠道规则、售前 SLA、招标转化、推荐矩阵、预测回看、BI 驾驶舱 |
-
-## 快速启动
-
-### 1. 安装依赖
+### 1. 安装后端依赖
 
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-### 2. 下载前端 CDN 依赖
+### 2. 配置环境变量
+
+复制项目提供的环境变量示例文件，并在部署环境中填写数据库连接、JWT 密钥及初始化管理员信息。请勿将真实密码、访问令牌、密钥或生产服务器地址提交到代码仓库。
 
 ```bash
-mkdir -p frontend/static
-curl -sL -o frontend/static/react.min.js https://registry.npmmirror.com/react/18.2.0/files/umd/react.production.min.js
-curl -sL -o frontend/static/react-dom.min.js https://registry.npmmirror.com/react-dom/18.2.0/files/umd/react-dom.production.min.js
-curl -sL -o frontend/static/dayjs.min.js https://registry.npmmirror.com/dayjs/1.11.10/files/dayjs.min.js
-curl -sL -o frontend/static/antd.min.js https://registry.npmmirror.com/antd/5.17.0/files/dist/antd.min.js
-curl -sL -o frontend/static/antd-icons.min.js https://registry.npmmirror.com/@ant-design/icons/5.3.0/files/dist/index.umd.min.js
-curl -sL -o frontend/static/axios.min.js https://registry.npmmirror.com/axios/1.6.5/files/dist/axios.min.js
-curl -sL -o frontend/static/antd.min.css https://registry.npmmirror.com/antd/5.17.0/files/dist/reset.css
+cp deploy/env/aq-crm.env.example .env
 ```
 
-### 3. 启动后端
+建议至少配置：
+
+```bash
+DATABASE_URL=<数据库连接串>
+JWT_SECRET_KEY=<随机生成的高强度密钥>
+```
+
+生产环境应使用独立的 PostgreSQL 或 MySQL 数据库，并通过部署平台的密钥管理能力注入变量。
+
+### 3. 启动服务
 
 ```bash
 cd backend
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8097
 ```
 
-### 4. 访问
+本地启动后可访问：
 
-- 前端 CRM: `http://localhost:8097`（或通过 Nginx 代理 80 端口）
-- 管理后台: `http://localhost:8097/admin`
-- API 文档: `http://localhost:8097/docs`
+- CRM：`http://localhost:8097`
+- 管理后台：`http://localhost:8097/admin`
+- API 文档：`http://localhost:8097/docs`
 
-## 首次启动
+## 角色与数据权限
 
-系统首次启动时自动创建种子数据（3个用户、8个客户、5个产品、3个渠道伙伴、12个菜单项）。默认账号密码由种子脚本定义，详见 `backend/app/main.py` 中 `seed()` 函数。**生产环境请立即修改默认密码。**
+系统内置以下业务角色：
 
-## API 端点
+- 管理员：全局管理、用户与系统配置权限。
+- 销售主管：可查看和管理直属销售团队的数据。
+- 销售：管理本人创建或负责的客户、商机及线索。
+- 渠道经理：管理本人负责的渠道、渠道商机、报备与返点规则。
+- 售前：处理被分派的售前协同申请，维护售前资产。
 
-| 路径 | 方法 | 说明 |
-|------|------|------|
-| /api/auth/login | POST | 登录（返回 JWT token） |
-| /api/auth/me | GET | 当前用户信息 |
-| /api/auth/change-password | PUT | 修改密码 |
-| /api/customers | CRUD | 客户管理 |
-| /api/customers/{id}/contacts | GET/POST | 客户下联系人（嵌套路由） |
-| /api/opportunities | CRUD | 商机管理 |
-| /api/products | CRUD | 产品管理 |
-| /api/channel | CRUD | 渠道伙伴管理 |
-| /api/contacts | CRUD | 联系人管理 |
-| /api/leads | CRUD + convert | 线索管理 |
-| /api/follow-ups/today | GET | 今日跟进统计 |
-| /api/dashboard/stats | GET | 仪表盘统计 |
-| /api/bidding/collect | POST | 招标采集 |
-| /api/import/ | POST | 数据导入（模板/预览/确认） |
-| /api/users | CRUD + reset-password | 用户管理（仅 admin） |
-| /api/menu-config | GET/PUT | 菜单配置（v3.4） |
-| /api/audit-logs | GET | 审计日志（仅 admin） |
-| /api/security-business/customer-profiles | GET/PUT | 客户 360 画像 |
-| /api/security-business/channel-registrations | GET/POST/PUT | 渠道项目报备、保护期、撞单仲裁 |
-| /api/security-business/presales-requests | GET/POST/PUT | 售前协同、POC、排期、方案/标书/演示支持 |
-| /api/security-business/bid-radar | GET/POST/PUT | 招标雷达、关键词订阅、情报跟进任务 |
-| /api/business-excellence | GET/POST/PUT | 经营增强：客户合并、报备规则、售前 SLA、招标转化、决策链、竞品装机、推荐矩阵、POC、预测回看、渠道信用、资产库、BI |
+全部角色均可浏览导航菜单；数据访问和编辑范围由角色、创建人、负责人、直属团队关系及售前协同关系共同控制。
 
-## 网安行业 P1 业务能力
+## 生产部署建议
 
-- 客户 360 画像：记录组织架构、决策链、技术负责人、采购负责人、历史项目、在用安全产品、竞品情况、等保/密评/信创状态。
-- 项目报备/撞单：渠道商机支持最终客户穿透、区域归属、保护期、重复客户识别、保护期冲突和管理员仲裁。
-- 售前协同：商机可发起售前支持、POC、测试资源排期、方案评审、标书支持、演示记录，并跟踪负责人、排期和状态。
-- 招标雷达：支持关键词订阅、预算下限、产品线匹配、竞品判断、截止提醒，并在采集/录入情报时自动生成跟进任务。
+1. 使用 PostgreSQL 或 MySQL，避免将 SQLite 用于多人生产环境。
+2. 将 `DATABASE_URL`、`JWT_SECRET_KEY` 及管理员初始化信息保存于环境变量或密钥管理服务。
+3. 使用 HTTPS，并限制管理后台与 API 的访问来源。
+4. 定期执行数据库备份，并定期验证恢复流程。
+5. 启用审计日志，定期检查用户、权限、导入导出与关键数据变更。
+6. 不要在 README、提交记录、前端代码、截图或工单中记录真实账号、密码、Token、私钥或服务器地址。
 
-## 网安行业经营增强
+## 数据库迁移与备份
 
-- P0 治理闭环：客户唯一识别、疑似重复发现、客户合并、渠道报备规则与延期、售前 SLA 排期、招标转线索/商机、写操作前后快照审计。
-- P1 增长能力：客户决策链图谱、竞品装机与替换机会、行业-产品推荐矩阵、POC 闭环记录、销售预测快照与准确率回看。
-- P2 经营看板：渠道信用分、售前资产库、招标评分项解析、客户安全成熟度评分、BI 经营驾驶舱。
-
-## 生产数据库与运维
-
-默认仍使用 SQLite，适合演示和轻量部署。生产环境建议设置 `DATABASE_URL` 切换到 PostgreSQL 或 MySQL：
+迁移、备份与恢复脚本位于 `backend/scripts/`。执行前请在受控环境中配置数据库连接，并先完成备份验证。
 
 ```bash
-# PostgreSQL
-export DATABASE_URL='postgresql+psycopg2://aq_crm:password@127.0.0.1:5432/aq_crm'
-
-# MySQL
-export DATABASE_URL='mysql+pymysql://aq_crm:password@127.0.0.1:3306/aq_crm?charset=utf8mb4'
+cd backend
+python scripts/backup_db.py
 ```
 
-systemd 部署可参考 `deploy/env/aq-crm.env.example`，复制到 `/etc/aq-crm/aq-crm.env` 后执行：
+## 安全说明
 
-```bash
-systemctl daemon-reload
-systemctl restart aq-crm
-```
-
-### SQLite 迁移到 PostgreSQL/MySQL
-
-```bash
-cd /opt/aq-crm
-export DATABASE_URL='postgresql+psycopg2://aq_crm:password@127.0.0.1:5432/aq_crm'
-python3 backend/scripts/migrate_sqlite_to_db.py --truncate
-```
-
-### 备份
-
-```bash
-cd /opt/aq-crm
-python3 backend/scripts/backup_db.py
-```
-
-SQLite 会生成 `.db` 备份；PostgreSQL/MySQL 会生成 SQL dump（需要服务器安装 `pg_dump` 或 `mysqldump`）。
-
-### 恢复
-
-恢复前请先停止服务：
-
-```bash
-systemctl stop aq-crm
-python3 backend/scripts/restore_db.py backend/backups/your-backup-file
-systemctl start aq-crm
-```
-
-### 审计日志
-
-系统会自动记录 `POST/PUT/PATCH/DELETE` 写操作，包括用户、路径、方法、状态码、IP、User-Agent 和时间。管理员可通过 `/api/audit-logs` 查询。
-
-## 种子数据
-
-- **8 客户**：浙江省政府云、上海AI研究院、北京智慧城市中心、广州数据局、深圳科技大学、江苏移动、工商银行数据中心、杭州公安
-- **5 产品**：安泉大模型防火墙 v3.0、安泉数据防泄漏系统、安泉AI教育平台、安泉智能体安全套件、安泉红队测试工具
-- **3 渠道伙伴**：北京网安科技(金牌)、上海安信网络(银牌)、深圳锐安信安(铜牌)
-- **12 菜单项**：仪表盘、今日待跟进、客户管理、商机管理(组)、直销商机、渠道商机、线索管理、产品管理、渠道伙伴管理(组)、伙伴档案、伙伴绩效、返点管理
+- 本仓库不包含任何可用于登录生产环境的账号、密码、Token 或服务器凭证。
+- 示例配置仅表示变量名称；真实值必须由部署环境提供。
+- 如曾在聊天记录、截图、终端历史或代码仓库中暴露访问令牌，请立即在对应平台撤销并重新生成。
 
 ## 项目结构
 
-```
+```text
 AQ-CRM-Platform/
 ├── backend/
-│   ├── app/
-│   │   ├── main.py              # FastAPI 入口 + 种子数据 + 嵌套路由
-│   │   ├── database.py          # SQLite 数据库配置（WAL模式）
-│   │   ├── models/              # SQLAlchemy 数据模型（10表）
-│   │   ├── routers/             # API 路由（14个模块）
-│   │   ├── schemas/             # Pydantic 数据校验
-│   │   └── services/            # 认证服务
+│   ├── app/                 # FastAPI 应用、模型、路由与服务
+│   ├── scripts/             # 迁移、备份与恢复脚本
 │   └── requirements.txt
 ├── frontend/
-│   ├── index.html               # 单文件 React 前端（~160KB）
-│   ├── admin.html               # 管理后台（独立页面）
-│   └── static/                  # CDN 依赖（本地化）
-└── setup.py
+│   ├── index.html           # CRM 前端
+│   ├── admin.html           # 管理后台
+│   └── static/              # 前端依赖
+└── deploy/                  # 部署及环境变量示例
 ```
-
-## 版本历史
-
-| 版本 | 更新内容 |
-|------|----------|
-| v3.4 | 菜单管理系统（侧栏动态显隐 + 管理后台开关） |
-| v3.3 | 数据权限隔离（owner_id）、嵌套联系人路由、用户管理 |
-| v3.2 | 仪表盘统计、销售业绩分析、今日跟进 |
-| v3.1 | 渠道伙伴管理、返点规则、商机报备 |
-| v3.0 | 初始版本：客户、商机、产品基础 CRUD |
