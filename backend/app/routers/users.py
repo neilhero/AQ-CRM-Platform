@@ -2,10 +2,17 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import (
+    AuditLog, BidConversion, BidRadarFollowTask, BidRadarSubscription,
+    ChannelPartner, ChannelRegistration, Customer, CustomerMergeLog,
+    FollowUp, ForecastSnapshot, Lead, Opportunity, OpportunityReview,
+    PartnerGrowthRecord, PocRecord, PresalesAsset, PresalesRequest,
+    SalesTarget, User,
+)
 from app.permissions import ROLE_LABELS, ROLE_MANAGER, validate_role, require_admin_role
 from app.routers.utils import require_user
 from app.services.auth import hash_password
@@ -62,6 +69,46 @@ def _user_out(user: User, db: Session):
         "manager_name": _manager_name(db, user.manager_id),
         "is_active": user.is_active,
     }
+
+
+def _handoff_user_references(db: Session, user_id: int):
+    """Preserve business history while removing an account."""
+    null_references = (
+        (User, User.manager_id),
+        (Customer, Customer.owner_id),
+        (ChannelPartner, ChannelPartner.created_by),
+        (Lead, Lead.assigned_to),
+        (AuditLog, AuditLog.user_id),
+        (ChannelRegistration, ChannelRegistration.arbitrator_id),
+        (ChannelRegistration, ChannelRegistration.created_by),
+        (PresalesRequest, PresalesRequest.requester_id),
+        (PresalesRequest, PresalesRequest.owner_id),
+        (PresalesRequest, PresalesRequest.created_by),
+        (BidRadarSubscription, BidRadarSubscription.owner_id),
+        (BidRadarFollowTask, BidRadarFollowTask.owner_id),
+        (OpportunityReview, OpportunityReview.reviewer_id),
+        (PartnerGrowthRecord, PartnerGrowthRecord.created_by),
+        (CustomerMergeLog, CustomerMergeLog.merged_by),
+        (BidConversion, BidConversion.converted_by),
+        (PocRecord, PocRecord.created_by),
+        (ForecastSnapshot, ForecastSnapshot.owner_id),
+        (PresalesAsset, PresalesAsset.created_by),
+    )
+    for model, column in null_references:
+        db.query(model).filter(column == user_id).update(
+            {column: None}, synchronize_session=False
+        )
+
+    # These columns are mandatory, so transfer their historical ownership.
+    db.query(Opportunity).filter(Opportunity.sales_rep_id == user_id).update(
+        {Opportunity.sales_rep_id: 1}, synchronize_session=False
+    )
+    db.query(FollowUp).filter(FollowUp.creator_id == user_id).update(
+        {FollowUp.creator_id: 1}, synchronize_session=False
+    )
+    db.query(SalesTarget).filter(SalesTarget.sales_rep_id == user_id).update(
+        {SalesTarget.sales_rep_id: 1}, synchronize_session=False
+    )
 
 
 @router.get("")
@@ -121,8 +168,13 @@ def delete_user(uid: int, db: Session = Depends(get_db), admin=Depends(require_a
         raise HTTPException(404, "用户不存在")
     if user.id == 1:
         raise HTTPException(400, "不能删除系统管理员")
-    db.delete(user)
-    db.commit()
+    try:
+        _handoff_user_references(db, user.id)
+        db.delete(user)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "该账号已关联业务数据，不能删除；请先停用账号或完成业务交接")
 
 
 @router.put("/{uid}/reset-password")

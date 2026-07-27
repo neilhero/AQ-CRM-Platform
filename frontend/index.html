@@ -843,7 +843,6 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 
 
-.funnel-cnv{font-size:11px;color:var(--text-secondary);width:55px;text-align:center}
 
 
 
@@ -3270,7 +3269,7 @@ function DashboardPage() {
 
 
 
-  var funnelMax = Math.max.apply(null, funnelData.map(function(d) { return d.count; }).concat([1]));
+  var funnelMax = Math.max.apply(null, funnelData.map(function(d) { return d.count; }).concat([1]));
 
 
 
@@ -3601,7 +3600,8 @@ function DashboardPage() {
 
 
 
-            : e('div', { style: { display: 'grid', gap: 12 } },
+            : e('div', { style: { display: 'grid', gap: 12 } },
+
 
 
 
@@ -3609,7 +3609,7 @@ function DashboardPage() {
 
 
 
-                funnelData.map(function(item, idx) {
+                funnelData.map(function(item) {
 
 
 
@@ -3617,7 +3617,7 @@ function DashboardPage() {
 
 
 
-                  var w = funnelMax > 0 ? Math.max((item.count / funnelMax) * 100, 8) : 8;
+                  var w = funnelMax > 0 ? Math.max((item.count / funnelMax) * 100, 8) : 8;
 
 
 
@@ -3625,23 +3625,7 @@ function DashboardPage() {
 
 
 
-                  var nextCount = idx < funnelData.length - 1 ? funnelData[idx + 1].count : 0;
-
-
-
-
-
-
-
-                  var cnv = item.count > 0 && idx < funnelData.length - 1 ? Math.round(nextCount / item.count * 100) + '%' : '-';
-
-
-
-
-
-
-
-                  return e('div', { key: item.stage, className: 'funnel-item' },
+                  return e('div', { key: item.stage, className: 'funnel-item' },
 
 
 
@@ -3673,7 +3657,7 @@ function DashboardPage() {
 
 
 
-                    ),
+                    )
 
 
 
@@ -3681,7 +3665,6 @@ function DashboardPage() {
 
 
 
-                    e('span', { className: 'funnel-cnv' }, idx < funnelData.length - 1 ? '→ ' + cnv : '')
 
 
 

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import ChannelPartner, Customer, FollowUp, Lead, Opportunity, OpportunityType, User
 from app.permissions import ROLE_ADMIN
-from app.permissions import managed_user_ids, scoped_channel_partner_query, scoped_customer_query, scoped_lead_query, scoped_opportunity_query
+from app.permissions import scoped_channel_partner_query, scoped_customer_query, scoped_lead_query, scoped_opportunity_query
 from app.routers.utils import require_user
 
 CST = timezone(timedelta(hours=8))
@@ -88,11 +88,14 @@ def dashboard_stats(db: Session = Depends(get_db), user=Depends(require_user)):
 
 @router.get("/sales-performance")
 def sales_performance(period: str = Query("month"), db: Session = Depends(get_db), user=Depends(require_user)):
-    user_ids = managed_user_ids(db, user)
-    q = db.query(User).filter(User.is_active == True, User.role.in_(["sales", "channel_manager"]))
-    if user_ids is not None:
-        q = q.filter(User.id.in_(user_ids or [-1]))
-    users = q.order_by(User.id).all()
+    # Rankings are shared across all sales accounts, while business records
+    # elsewhere remain subject to each user's regular data scope.
+    users = (
+        db.query(User)
+        .filter(User.is_active == True, User.role == "sales")
+        .order_by(User.id)
+        .all()
+    )
     today = date.today()
     start = date(today.year, today.month, 1)
     if period == "quarter":
@@ -102,12 +105,11 @@ def sales_performance(period: str = Query("month"), db: Session = Depends(get_db
         start = date(today.year, 1, 1)
     result = []
     for u in users:
-        base = _perm_filter(
-            db.query(Opportunity).filter(Opportunity.sales_rep_id == u.id, Opportunity.created_at >= start),
-            db,
-            user,
+        opps = (
+            db.query(Opportunity)
+            .filter(Opportunity.sales_rep_id == u.id, Opportunity.created_at >= start)
+            .all()
         )
-        opps = base.all()
         won = [o for o in opps if o.stage and str(o.stage.value) == "5"]
         opp_count = len(opps)
         won_count = len(won)
