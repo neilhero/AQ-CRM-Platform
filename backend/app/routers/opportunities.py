@@ -3,10 +3,15 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import ChannelPartner, Contact, Customer, Opportunity, User
+from app.models import (
+    BidConversion, ChannelPartner, ChannelRegistration, Contact, Customer,
+    FollowUp, Lead, Opportunity, OpportunityReview, PocRecord,
+    PresalesRequest, PresalesSlaTracking, User,
+)
 from app.permissions import (
     ROLE_CHANNEL_MANAGER,
     ROLE_MANAGER,
@@ -256,5 +261,38 @@ def delete_opp(oid: int, db: Session = Depends(get_db), user=Depends(require_use
         raise HTTPException(404, "Not found")
     _check_access(o, db, user)
     _check_edit_access(o, db, user)
-    db.delete(o)
-    db.commit()
+    # Remove or detach dependent records before deleting the opportunity.
+    request_ids = [row[0] for row in db.query(PresalesRequest.id).filter(
+        PresalesRequest.opportunity_id == oid
+    ).all()]
+    try:
+        if request_ids:
+            db.query(PresalesSlaTracking).filter(
+                PresalesSlaTracking.request_id.in_(request_ids)
+            ).delete(synchronize_session=False)
+        db.query(PocRecord).filter(PocRecord.opportunity_id == oid).delete(
+            synchronize_session=False
+        )
+        db.query(PresalesRequest).filter(PresalesRequest.opportunity_id == oid).delete(
+            synchronize_session=False
+        )
+        db.query(FollowUp).filter(FollowUp.opportunity_id == oid).delete(
+            synchronize_session=False
+        )
+        db.query(OpportunityReview).filter(OpportunityReview.opportunity_id == oid).delete(
+            synchronize_session=False
+        )
+        db.query(Lead).filter(Lead.opportunity_id == oid).update(
+            {Lead.opportunity_id: None}, synchronize_session=False
+        )
+        db.query(ChannelRegistration).filter(ChannelRegistration.opportunity_id == oid).update(
+            {ChannelRegistration.opportunity_id: None}, synchronize_session=False
+        )
+        db.query(BidConversion).filter(BidConversion.opportunity_id == oid).update(
+            {BidConversion.opportunity_id: None}, synchronize_session=False
+        )
+        db.delete(o)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "该商机存在未能清理的关联数据，暂时无法删除")

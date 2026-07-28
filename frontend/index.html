@@ -2165,7 +2165,7 @@ function AppLayout(props) {
 
 
 
-  var _s13 = useState([]), customers = _s13[0], setCustomers = _s13[1];
+  var _s13 = useState([]), customers = _s13[0], setCustomers = _s13[1];
 
 
 
@@ -10144,7 +10144,8 @@ function OppDetailPage(props) {
 
 
 
-  var _shp2 = useState([{name:'',position:'',phone:'',email:''}]), hpList2 = _shp2[0], setHpList2 = _shp2[1];
+  var _shp2 = useState([{name:'',position:'',phone:'',email:''}]), hpList2 = _shp2[0], setHpList2 = _shp2[1];
+  var _scp = useState([]), channelPartners = _scp[0], setChannelPartners = _scp[1];
 
 
 
@@ -10247,7 +10248,13 @@ function OppDetailPage(props) {
 
 
 
-  useEffect(function() { load(); api('GET', '/leads/sales/list').then(function(d) { setDetailUsers(d || []); }).catch(function(){}); }, [id]);
+  useEffect(function() {
+    load();
+    api('GET', '/leads/sales/list').then(function(d) { setDetailUsers(d || []); }).catch(function(){});
+    api('GET', '/channel-partners?limit=500').then(function(d) {
+      setChannelPartners(d.items || d || []);
+    }).catch(function() { setChannelPartners([]); });
+  }, [id]);
   useEffect(function() {
     if (!opp || !detailUsers.length || detailPresalesForm.getFieldValue('requester_id')) return;
     var owner = detailUsers.find(function(u) { return u.id === opp.sales_rep_id && u.role !== 'presales'; });
@@ -11444,7 +11451,9 @@ function OppDetailPage(props) {
 
 
 
-          e(Col, { span: 8 }, e(Form.Item, { name: 'stage', label: '阶段', rules: [{ required: true, message: '请选择阶段' }] }, e(Select, null, Object.entries(STAGE_MAP).map(function(kv) { return e(Option, { key: kv[0], value: kv[0] }, kv[1].label + ' (' + kv[1].pct + ')'); })))),
+          opp && opp.opp_type === 'channel' ? e(Col, { span: 24 }, e(Form.Item, { name: 'channel_partner_id', label: e('span', null, '关联渠道', e('span', { style: { marginLeft: 8, color: '#8aa0bd', fontSize: 12, fontWeight: 400 } }, '可修改为当前可见渠道')) }, e(Select, { showSearch: true, allowClear: true, placeholder: '选择关联渠道', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, channelPartners.map(function(partner) { return e(Option, { key: partner.id, value: partner.id }, partner.name); })))) : null,
+
+          e(Col, { span: 8 }, e(Form.Item, { name: 'stage', label: '阶段', rules: [{ required: true, message: '请选择阶段' }] }, e(Select, null, Object.entries(STAGE_MAP).map(function(kv) { return e(Option, { key: kv[0], value: kv[0] }, kv[1].label + ' (' + kv[1].pct + ')'); })))),
 
 
 
