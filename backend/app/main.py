@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base, SessionLocal
-from app.models import User, Customer, ChannelPartner, Contact, Product, ProductSubCategory, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, AuditChange, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask, BiddingDataSource, SalesTarget, CustomerOperationProfile, OpportunityReview, PartnerGrowthRecord, CustomerIdentity, ChannelRegistrationRule, ChannelRegistrationGovernance, PresalesSlaRule, PresalesSlaTracking, BidConversion, CustomerDecisionNode, CustomerDecisionEdge, CustomerCompetitorInstall, IndustryProductRecommendation, PocRecord, ForecastSnapshot, PresalesAsset, BidScoreCriterion
+from app.models import User, Customer, ChannelPartner, Contact, Product, ProductSubCategory, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, AuditChange, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask, BiddingDataSource, SalesTarget, CustomerOperationProfile, CustomerOperationNoticeRead, OpportunityReview, PartnerGrowthRecord, CustomerIdentity, ChannelRegistrationRule, ChannelRegistrationGovernance, PresalesSlaRule, PresalesSlaTracking, BidConversion, CustomerDecisionNode, CustomerDecisionEdge, CustomerCompetitorInstall, IndustryProductRecommendation, PocRecord, ForecastSnapshot, PresalesAsset, BidScoreCriterion
 from datetime import date, datetime, timezone, timedelta
 import hashlib, os, json, re
 from sqlalchemy import text
@@ -56,6 +56,8 @@ def ensure_schema_updates():
             user_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
             if "manager_id" not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN manager_id INTEGER"))
+            if "dingtalk_userid" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN dingtalk_userid VARCHAR(128)"))
             presales_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(presales_requests)")).fetchall()]
             if "requester_id" not in presales_cols:
                 conn.execute(text("ALTER TABLE presales_requests ADD COLUMN requester_id INTEGER"))

@@ -2098,13 +2098,19 @@ function AppLayout(props) {
     var read = getReadNotices();
     return (items || []).filter(function(item) { return read.indexOf(noticeKey(item)) < 0; });
   }
-  function markNoticeRead(keys) {
-    saveReadNotices(getReadNotices().concat(keys || []));
-    setPresalesNotice(function(prev) {
-      var nextItems = applyUnreadNotices(prev.items || []);
-      return { count: nextItems.length, items: nextItems };
-    });
-  }
+  function markNoticeRead(keys) {
+    saveReadNotices(getReadNotices().concat(keys || []));
+    setPresalesNotice(function(prev) {
+      var nextItems = applyUnreadNotices(prev.items || []);
+      return { count: nextItems.length, items: nextItems };
+    });
+  }
+  function markCustomerOperationNoticeRead(item) {
+    var key = noticeKey(item);
+    return api('POST', '/sales-growth/customer-operation-notifications/read', { notice_key: key }).then(function() {
+      markNoticeRead([key]);
+    });
+  }
 
 
 
@@ -2717,7 +2723,7 @@ function AppLayout(props) {
 
 
 
-        e(Dropdown, { trigger: ['click'], menu: { items: noticeItems, onClick: function(i) { if (i.key === 'empty') return; var key = String(i.key); var notice = (presalesNotice.items || []).find(function(item) { return noticeKey(item) === key; }); markNoticeRead([key]); nav(notice && notice.notice_type === 'registration' ? '/partners/registration' : (notice && notice.notice_type === 'customer_operation' ? '/customers/operations' : '/presales')); } }, placement: 'bottomRight' },
+        e(Dropdown, { trigger: ['click'], menu: { items: noticeItems, onClick: function(i) { if (i.key === 'empty') return; var key = String(i.key); var notice = (presalesNotice.items || []).find(function(item) { return noticeKey(item) === key; }); if (notice && notice.notice_type === 'customer_operation') { markCustomerOperationNoticeRead(notice).then(function(){ nav('/customers/operations'); }).catch(function(err){ message.error(err.message || '提醒处理失败'); }); return; } markNoticeRead([key]); nav(notice && notice.notice_type === 'registration' ? '/partners/registration' : '/presales'); } }, placement: 'bottomRight' },
           e(Badge, { count: presalesNotice.count || 0, overflowCount: 99, offset: [-2, 4] }, e(Button, { type: 'text', icon: IC('BellOutlined') }))
         ),
 
@@ -19381,7 +19387,7 @@ function SalesGrowthPage(props) {
       e(Table, { rowKey: 'customer_id', loading: loading, dataSource: customerOps.items || [], pagination: { pageSize: 10 }, columns: [
         { title: '客户', dataIndex: 'customer_name', ellipsis: true },
         { title: '行业', dataIndex: 'industry', width: 110, render: function(v){ return v || '-'; } },
-        { title: '分层', dataIndex: 'segment_label', width: 110, render: function(v, r){ return e(Tag, { color: r.segment === 'strategic' ? 'red' : r.segment === 'key' ? 'blue' : r.segment === 'dormant' ? 'default' : 'green' }, v); } },
+        { title: '分层', dataIndex: 'segment', width: 120, filters: [{ text: '战略客户', value: 'strategic' }, { text: '重点客户', value: 'key' }, { text: '普通客户', value: 'normal' }, { text: '沉睡客户', value: 'dormant' }], onFilter: function(value, r){ return r.segment === value; }, sorter: function(a, b){ var order = { strategic: 1, key: 2, normal: 3, dormant: 4 }; return (order[a.segment] || 99) - (order[b.segment] || 99); }, render: function(_, r){ return e(Tag, { color: r.segment === 'strategic' ? 'red' : r.segment === 'key' ? 'blue' : r.segment === 'dormant' ? 'default' : 'green' }, r.segment_label); } },
         { title: '活跃商机', dataIndex: 'active_opportunities', width: 110, render: function(v){ return (v || 0) + ' 个'; } },
         { title: '累计金额', dataIndex: 'total_amount', width: 120, render: function(v){ return (v || 0) + ' 万'; } },
         { title: '健康度', dataIndex: 'health_status', width: 105, render: function(v){ var text = { normal: '正常', risk: '风险', inactive: '沉睡' }[v] || v || '-'; var color = v === 'risk' ? 'orange' : v === 'inactive' ? 'default' : 'green'; return e(Tag, { color: color }, text); } },

@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -22,6 +22,7 @@ from app.models import (
 )
 from app.permissions import ROLE_ADMIN, ROLE_MANAGER, ROLE_PRESALES, can_access_customer, can_access_opportunity, managed_user_ids, scoped_channel_partner_query, scoped_opportunity_query
 from app.routers.utils import require_admin, require_user
+from app.services.dingtalk import send_presales_notification_safe
 
 router = APIRouter()
 
@@ -378,7 +379,12 @@ def list_presales_notifications(db: Session = Depends(get_db), user=Depends(requ
 
 
 @router.post("/presales-requests", status_code=201)
-def create_presales_request(data: PresalesRequestIn, db: Session = Depends(get_db), user=Depends(require_user)):
+def create_presales_request(
+    data: PresalesRequestIn,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
     opp = _check_opp_access(db, data.opportunity_id, user)
     if data.customer_id and opp.customer_id and data.customer_id != opp.customer_id:
         raise HTTPException(400, "商机不属于所选客户")
@@ -395,7 +401,19 @@ def create_presales_request(data: PresalesRequestIn, db: Session = Depends(get_d
     db.add(row)
     db.commit()
     db.refresh(row)
-    return _enrich_presales_request(db, row)
+    enriched = _enrich_presales_request(db, row)
+    background_tasks.add_task(
+        send_presales_notification_safe,
+        presales_user.dingtalk_userid,
+        row.id,
+        enriched.get("customer_name"),
+        enriched.get("opportunity_name"),
+        row.request_type,
+        enriched.get("requester_name"),
+        row.scheduled_date,
+        row.details,
+    )
+    return enriched
 
 
 @router.put("/presales-requests/{request_id}")

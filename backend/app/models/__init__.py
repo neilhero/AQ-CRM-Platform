@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum, Date, Boolean
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, Enum, Date, Boolean, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime, date, timezone, timedelta
 import enum
@@ -68,6 +68,7 @@ class User(Base):
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     email = Column(String(128))
     phone = Column(String(32))
+    dingtalk_userid = Column(String(128), nullable=True, index=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=now_cst)
     opportunities = relationship("Opportunity", back_populates="sales_rep")
@@ -382,6 +383,14 @@ class CustomerOperationProfile(Base):
     health_status = Column(String(32), default="normal", index=True)
     updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
     created_at = Column(DateTime, default=now_cst)
+
+class CustomerOperationNoticeRead(Base):
+    __tablename__ = "customer_operation_notice_reads"
+    __table_args__ = (UniqueConstraint("user_id", "notice_key", name="uq_customer_operation_notice_read"),)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    notice_key = Column(String(256), nullable=False, index=True)
+    read_at = Column(DateTime, default=now_cst, nullable=False)
 
 class OpportunityReview(Base):
     __tablename__ = "opportunity_reviews"

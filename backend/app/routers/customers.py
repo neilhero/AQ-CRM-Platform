@@ -2,11 +2,25 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.company_validation import customer_owner_name, find_duplicate_customer, validate_company_name_format
-from app.models import Customer, Opportunity
+from app.models import (
+    ChannelRegistration,
+    Contact,
+    Customer,
+    CustomerCompetitorInstall,
+    CustomerDecisionEdge,
+    CustomerDecisionNode,
+    CustomerIdentity,
+    CustomerMergeLog,
+    CustomerOperationProfile,
+    CustomerSecurityProfile,
+    Lead,
+    Opportunity,
+)
 from app.permissions import can_access_customer, scoped_customer_query, scoped_opportunity_query
 from app.routers.utils import require_user
 from app.schemas import CustomerCreate, CustomerUpdate
@@ -109,8 +123,73 @@ def update_customer(cid: int, data: CustomerUpdate, db: Session = Depends(get_db
 @router.delete("/{cid}", status_code=204)
 def delete_customer(cid: int, db: Session = Depends(get_db), user=Depends(require_user)):
     c = _check_cust(cid, db, user)
-    db.delete(c)
-    db.commit()
+    try:
+        contact_ids = [
+            row[0]
+            for row in db.query(Contact.id).filter(Contact.customer_id == cid).all()
+        ]
+        if contact_ids:
+            db.query(CustomerDecisionNode).filter(
+                CustomerDecisionNode.contact_id.in_(contact_ids)
+            ).update(
+                {CustomerDecisionNode.contact_id: None},
+                synchronize_session=False,
+            )
+
+        db.query(CustomerDecisionEdge).filter(
+            CustomerDecisionEdge.customer_id == cid
+        ).delete(synchronize_session=False)
+        db.query(CustomerDecisionNode).filter(
+            CustomerDecisionNode.customer_id == cid
+        ).delete(synchronize_session=False)
+        db.query(CustomerCompetitorInstall).filter(
+            CustomerCompetitorInstall.customer_id == cid
+        ).delete(synchronize_session=False)
+        db.query(CustomerSecurityProfile).filter(
+            CustomerSecurityProfile.customer_id == cid
+        ).delete(synchronize_session=False)
+        db.query(CustomerOperationProfile).filter(
+            CustomerOperationProfile.customer_id == cid
+        ).delete(synchronize_session=False)
+
+        db.query(CustomerIdentity).filter(
+            CustomerIdentity.parent_customer_id == cid
+        ).update(
+            {CustomerIdentity.parent_customer_id: None},
+            synchronize_session=False,
+        )
+        db.query(CustomerIdentity).filter(
+            CustomerIdentity.customer_id == cid
+        ).delete(synchronize_session=False)
+        db.query(CustomerMergeLog).filter(
+            CustomerMergeLog.target_customer_id == cid
+        ).delete(synchronize_session=False)
+        db.query(Contact).filter(Contact.customer_id == cid).delete(
+            synchronize_session=False
+        )
+
+        for opportunity in db.query(Opportunity).filter(
+            Opportunity.customer_id == cid
+        ).all():
+            if not (opportunity.end_customer_name or "").strip():
+                opportunity.end_customer_name = c.name
+            opportunity.customer_id = None
+        db.query(Lead).filter(Lead.customer_id == cid).update(
+            {Lead.customer_id: None},
+            synchronize_session=False,
+        )
+        db.query(ChannelRegistration).filter(
+            ChannelRegistration.duplicate_customer_id == cid
+        ).update(
+            {ChannelRegistration.duplicate_customer_id: None},
+            synchronize_session=False,
+        )
+
+        db.delete(c)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "该客户仍有关联业务数据，暂时无法删除，请先完成数据交接")
 
 
 @router.get("/{cid}/opportunities")

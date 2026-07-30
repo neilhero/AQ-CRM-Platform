@@ -26,6 +26,7 @@ class UserCreate(BaseModel):
     real_name: str
     role: str = "sales"
     manager_id: Optional[int] = None
+    dingtalk_userid: Optional[str] = None
 
 
 class UserUpdate(BaseModel):
@@ -33,6 +34,7 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
     manager_id: Optional[int] = None
     is_active: Optional[bool] = None
+    dingtalk_userid: Optional[str] = None
 
 
 class ResetPwd(BaseModel):
@@ -67,6 +69,7 @@ def _user_out(user: User, db: Session):
         "role_label": ROLE_LABELS.get(user.role, user.role),
         "manager_id": user.manager_id,
         "manager_name": _manager_name(db, user.manager_id),
+        "dingtalk_userid": user.dingtalk_userid,
         "is_active": user.is_active,
     }
 
@@ -131,6 +134,7 @@ def create_user(data: UserCreate, db: Session = Depends(get_db), admin=Depends(r
         real_name=data.real_name,
         role=data.role,
         manager_id=data.manager_id,
+        dingtalk_userid=(data.dingtalk_userid or "").strip() or None,
         is_active=True,
     )
     db.add(user)
@@ -156,6 +160,8 @@ def update_user(uid: int, data: UserUpdate, db: Session = Depends(get_db), admin
         user.manager_id = data.manager_id
     if data.is_active is not None:
         user.is_active = data.is_active
+    if "dingtalk_userid" in data.model_fields_set:
+        user.dingtalk_userid = (data.dingtalk_userid or "").strip() or None
     db.commit()
     db.refresh(user)
     return _user_out(user, db)

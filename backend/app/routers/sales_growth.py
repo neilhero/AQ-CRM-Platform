@@ -13,6 +13,7 @@ from app.models import (
     Contact,
     Customer,
     CustomerOperationProfile,
+    CustomerOperationNoticeRead,
     FollowUp,
     Lead,
     Opportunity,
@@ -78,6 +79,10 @@ class CustomerOperationIn(BaseModel):
     owner_strategy: Optional[str] = None
     next_action: Optional[str] = None
     health_status: str = "normal"
+
+
+class CustomerOperationNoticeReadIn(BaseModel):
+    notice_key: str
 
 
 class OpportunityReviewIn(BaseModel):
@@ -453,6 +458,12 @@ def customer_operations(db: Session = Depends(get_db), user=Depends(require_user
 def customer_operation_notifications(db: Session = Depends(get_db), user=Depends(require_user)):
     """Return customer-level long-no-follow notices for the global notification bell."""
     alerts = customer_operations(db=db, user=user).get("alerts", [])
+    read_keys = {
+        row[0]
+        for row in db.query(CustomerOperationNoticeRead.notice_key)
+        .filter(CustomerOperationNoticeRead.user_id == user.id)
+        .all()
+    }
     items = []
     for alert in alerts:
         if alert.get("type") != "long_no_follow":
@@ -461,8 +472,26 @@ def customer_operation_notifications(db: Session = Depends(get_db), user=Depends
         item["notice_key"] = "customer-operation-{}-{}".format(
             item.get("customer_id"), item.get("last_follow_up_at") or "never"
         )
-        items.append(item)
+        if item["notice_key"] not in read_keys:
+            items.append(item)
     return {"count": len(items), "items": items[:20]}
+
+
+@router.post("/customer-operation-notifications/read")
+def mark_customer_operation_notification_read(data: CustomerOperationNoticeReadIn, db: Session = Depends(get_db), user=Depends(require_user)):
+    active_keys = {
+        item.get("notice_key")
+        for item in customer_operation_notifications(db=db, user=user).get("items", [])
+    }
+    if data.notice_key not in active_keys:
+        raise HTTPException(404, "提醒不存在或已处理")
+    already_read = db.query(CustomerOperationNoticeRead).filter_by(
+        user_id=user.id, notice_key=data.notice_key
+    ).first()
+    if not already_read:
+        db.add(CustomerOperationNoticeRead(user_id=user.id, notice_key=data.notice_key))
+        db.commit()
+    return {"message": "提醒已处理"}
 
 
 @router.put("/customer-operations/{customer_id}")
