@@ -659,7 +659,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 
 
-.login-box h2{color:#fff;text-align:center;margin-bottom:8px;font-size:24px}
+.login-box h2{color:#fff;text-align:center;margin-bottom:32px;font-size:24px}
 
 
 
@@ -667,7 +667,9 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 
 
-.login-box .sub{color:#94a3b8;text-align:center;margin-bottom:32px;font-size:14px}
+.login-box .sub{color:#94a3b8;text-align:center;margin-bottom:32px;font-size:14px}
+
+.login-version{margin-left:8px;color:#94a3b8;font-size:13px;font-weight:500;vertical-align:middle}
 
 
 
@@ -1933,7 +1935,7 @@ function LoginPage() {
 
 
 
-        e('h2', null, '\u5B89\u6CC9CRM'),
+        e('h2', null, '\u5B89\u6CC9CRM', e('span', { className: 'login-version' }, 'v3.6')),
 
 
 
@@ -1941,7 +1943,6 @@ function LoginPage() {
 
 
 
-        e('div', { className: 'sub' }, '\u5B89\u6CC9\u6570\u667A \u00B7 \u5BA2\u6237\u5173\u7CFB\u7BA1\u7406\u5E73\u53F0 v3.6')
 
 
 
@@ -5067,8 +5068,10 @@ function CustomerListPage() {
 
 
 
-  var _s_oid = useState(undefined), ownerId = _s_oid[0], setOwnerId = _s_oid[1];
-  var curRole = JSON.parse(localStorage.getItem('aq2_user')||'{}').role || '';
+  var _s_oid = useState(undefined), ownerId = _s_oid[0], setOwnerId = _s_oid[1];
+  var currentUserC = JSON.parse(localStorage.getItem('aq2_user')||'{}');
+  var curRole = currentUserC.role || '';
+  var canUseSalesFilterC = ['admin', 'manager', 'channel_manager'].indexOf(curRole) >= 0;
 
 
 
@@ -5401,8 +5404,19 @@ function CustomerListPage() {
 
 
   var _s_sales_c = useState([]), salesUsersC = _s_sales_c[0], setSalesUsersC = _s_sales_c[1];
-  function fetchSalesUsersC() { api("GET", "/leads/sales/list").then(function(d) { setSalesUsersC((d || []).filter(function(u) { return u.role !== 'admin'; })); }).catch(function(){}); }
-  useEffect(function() { if (curRole === "admin") fetchSalesUsersC(); }, []);
+  function fetchSalesUsersC() {
+    api("GET", "/leads/sales/list").then(function(d) {
+      var currentId = Number(currentUserC.id);
+      var visibleUsers = (d || []).filter(function(u) {
+        if (u.role === 'admin' || u.role === 'presales') return false;
+        if (curRole === 'admin') return true;
+        if (curRole === 'manager') return Number(u.id) === currentId || Number(u.manager_id) === currentId;
+        return Number(u.id) === currentId;
+      });
+      setSalesUsersC(visibleUsers);
+    }).catch(function(){});
+  }
+  useEffect(function() { if (canUseSalesFilterC) fetchSalesUsersC(); }, []);
 
 
 
@@ -5712,7 +5726,7 @@ function CustomerListPage() {
 
 
 
-  var salesFilterC = curRole === 'admin' ? e(Col, null, e(Select, { placeholder: '销售筛选', allowClear: true, style: { width: 100 }, value: ownerId, onChange: setOwnerId }, (salesUsersC||[]).map(function(su) { return e(Option, { key: su.id, value: su.id }, su.real_name||su.username); }))) : null;
+  var salesFilterC = canUseSalesFilterC ? e(Col, null, e(Select, { placeholder: '销售筛选', allowClear: true, style: { width: 100 }, value: ownerId, onChange: setOwnerId }, (salesUsersC||[]).map(function(su) { return e(Option, { key: su.id, value: su.id }, su.real_name||su.username); }))) : null;
 
 
 
@@ -7651,10 +7665,23 @@ function OppListPage(props) {
 
 
 
-  var _s_sales = useState([]), salesUsers = _s_sales[0], setSalesUsers = _s_sales[1];
-  var curRoleO = JSON.parse(localStorage.getItem("aq2_user")||"{}").role || "";
-  function fetchSalesUsers() { api("GET", "/leads/sales/list").then(function(d) { setSalesUsers((d || []).filter(function(u) { return u.role !== 'admin'; })); }).catch(function(){}); }
-  useEffect(function() { if (curRoleO === "admin") fetchSalesUsers(); }, []);
+  var _s_sales = useState([]), salesUsers = _s_sales[0], setSalesUsers = _s_sales[1];
+  var currentUserO = JSON.parse(localStorage.getItem("aq2_user")||"{}");
+  var curRoleO = currentUserO.role || "";
+  var canUseSalesFilterO = ['admin', 'manager', 'channel_manager'].indexOf(curRoleO) >= 0;
+  function fetchSalesUsers() {
+    api("GET", "/leads/sales/list").then(function(d) {
+      var currentId = Number(currentUserO.id);
+      var visibleUsers = (d || []).filter(function(u) {
+        if (u.role === 'admin' || u.role === 'presales') return false;
+        if (curRoleO === 'admin') return true;
+        if (curRoleO === 'manager') return Number(u.id) === currentId || Number(u.manager_id) === currentId;
+        return Number(u.id) === currentId;
+      });
+      setSalesUsers(visibleUsers);
+    }).catch(function(){});
+  }
+  useEffect(function() { if (canUseSalesFilterO) fetchSalesUsers(); }, []);
 
 
 
@@ -8123,7 +8150,7 @@ function OppListPage(props) {
 
 
 
-  var salesFilterO = curRoleO === "admin" ? e(Col, null, e(Select, { placeholder: "销售筛选", allowClear: true, style: { width: 100 }, value: f.sales_rep_id, onChange: function(v) { setF(function(p) { return Object.assign({}, p, { sales_rep_id: v }); }); } }, (salesUsers||[]).map(function(su) { return e(Option, { key: su.id, value: su.id }, su.real_name||su.username); }))) : null;
+  var salesFilterO = canUseSalesFilterO ? e(Col, null, e(Select, { placeholder: "销售筛选", allowClear: true, style: { width: 100 }, value: f.sales_rep_id, onChange: function(v) { setF(function(p) { return Object.assign({}, p, { sales_rep_id: v }); }); } }, (salesUsers||[]).map(function(su) { return e(Option, { key: su.id, value: su.id }, su.real_name||su.username); }))) : null;
 
 
 

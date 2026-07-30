@@ -81,7 +81,16 @@ def sales_list(db: Session = Depends(get_db), user=Depends(require_user)):
         .order_by(User.id)
         .all()
     )
-    return [{"id": u.id, "username": u.username, "real_name": u.real_name, "role": u.role} for u in users]
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "real_name": u.real_name,
+            "role": u.role,
+            "manager_id": u.manager_id,
+        }
+        for u in users
+    ]
 
 
 @router.get("/{lid}")
