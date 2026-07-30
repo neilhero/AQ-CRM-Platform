@@ -2837,15 +2837,125 @@ function AppLayout(props) {
 
 
 
-// ===================== DASHBOARD PAGE =====================
-
-
-
-
-
-
-
-function DashboardPage() {
+// ===================== DASHBOARD PAGE =====================
+
+
+
+
+
+
+
+function PresalesBoard(props) {
+  var scope = (props && props.scope) || 'all';
+  var compact = props && props.compact;
+  var _period = useState('week'), period = _period[0], setPeriod = _period[1];
+  var _data = useState(null), data = _data[0], setData = _data[1];
+  var _loading = useState(true), loading = _loading[0], setLoading = _loading[1];
+  var reqTypeText = { presales_support: '售前支持', poc: 'POC申请', test_resource: '测试资源排期', solution_review: '方案评审', bid_support: '标书支持', demo: '演示记录' };
+  var statusText = { pending: '待处理', in_progress: '进行中', done: '已完成' };
+  var statusColor = { pending: 'gold', in_progress: 'cyan', done: 'green' };
+  var periodText = { week: '本周', month: '本月', year: '本年' };
+
+  useEffect(function() {
+    setLoading(true);
+    api('GET', '/dashboard/presales-board?period=' + period + '&scope=' + scope)
+      .then(function(result) { setData(result || null); })
+      .catch(function(err) { message.error(err.message || '售前看板加载失败'); setData(null); })
+      .finally(function() { setLoading(false); });
+  }, [period, scope]);
+
+  var summary = (data && data.summary) || { total: 0, completed: 0, in_progress: 0, pending: 0 };
+  var buckets = (data && data.buckets) || [];
+  var items = (data && data.items) || [];
+  var maxBucket = buckets.reduce(function(max, item) { return Math.max(max, item.total || 0); }, 1);
+  var metrics = [
+    { label: '支持总量', value: summary.total || 0, color: '#2563eb', bg: '#eff6ff', icon: '📋' },
+    { label: '完成支持', value: summary.completed || 0, color: '#16a34a', bg: '#f0fdf4', icon: '✓' },
+    { label: '正在支持', value: summary.in_progress || 0, color: '#0891b2', bg: '#ecfeff', icon: '↻' },
+    { label: '待处理', value: summary.pending || 0, color: '#d97706', bg: '#fffbeb', icon: '◷' }
+  ];
+
+  return e(Card, {
+    className: 'presales-board-card',
+    style: { marginTop: scope === 'all' ? 20 : 0, marginBottom: 20, borderColor: '#dbe5f2' },
+    title: e('div', { style: { display: 'flex', alignItems: 'center', gap: 9 } },
+      e('span', { style: { width: 30, height: 30, borderRadius: 6, background: '#eef2ff', color: '#4f46e5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' } }, IC('CalendarOutlined')),
+      e('div', null,
+        e('div', { style: { fontSize: 16, fontWeight: 700, color: '#0f2747' } }, scope === 'mine' ? '我的售前看板' : '售前协同日历'),
+        e('div', { style: { marginTop: 2, fontSize: 12, color: '#8292aa', fontWeight: 400 } }, scope === 'mine' ? '个人售前支持排期与完成情况' : '全公司售前协同排期与支持进展')
+      )
+    ),
+    extra: e(Space, { size: 4 },
+      ['week', 'month', 'year'].map(function(key) {
+        return e(Button, {
+          key: key,
+          size: 'small',
+          type: period === key ? 'primary' : 'text',
+          onClick: function() { setPeriod(key); },
+          style: period === key ? { minWidth: 54 } : { minWidth: 54, color: '#64748b' }
+        }, key === 'week' ? '本周' : (key === 'month' ? '本月' : '本年'));
+      })
+    )
+  },
+    e(Spin, { spinning: loading },
+      e(Row, { gutter: [12, 12], style: { marginBottom: 18 } },
+        metrics.map(function(metric) {
+          return e(Col, { key: metric.label, xs: 12, md: 6 },
+            e('div', { style: { minHeight: 78, padding: '14px 16px', border: '1px solid ' + metric.color + '26', borderRadius: 6, background: metric.bg, display: 'flex', alignItems: 'center', gap: 12 } },
+              e('span', { style: { width: 34, height: 34, borderRadius: 6, background: '#fff', color: metric.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, boxShadow: '0 2px 8px rgba(15,39,71,.06)' } }, metric.icon),
+              e('div', null,
+                e('div', { style: { color: '#0f2747', fontSize: 23, lineHeight: 1.1, fontWeight: 750 } }, metric.value),
+                e('div', { style: { marginTop: 5, color: '#667892', fontSize: 12 } }, periodText[period] + metric.label)
+              )
+            )
+          );
+        })
+      ),
+      e(Row, { gutter: [18, 18], align: 'stretch' },
+        e(Col, { xs: 24, lg: compact ? 24 : 15 },
+          e('div', { style: { height: '100%', minHeight: 190, padding: '14px 16px', border: '1px solid #e6edf5', borderRadius: 6, background: '#fbfdff' } },
+            e('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 } },
+              e('span', { style: { color: '#183153', fontWeight: 650 } }, '售前排期分布'),
+              e('span', { style: { color: '#94a3b8', fontSize: 12 } }, data ? data.start_date + ' 至 ' + data.end_date : '-')
+            ),
+            buckets.length ? e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(' + buckets.length + ', minmax(34px, 1fr))', gap: period === 'year' ? 6 : 9, alignItems: 'end', height: 125 } },
+              buckets.map(function(bucket) {
+                var height = bucket.total ? Math.max(18, Math.round((bucket.total || 0) / maxBucket * 88)) : 6;
+                return e('div', { key: bucket.key, style: { minWidth: 0, textAlign: 'center', alignSelf: 'end' } },
+                  e(Tooltip, { title: '共 ' + bucket.total + ' 项，完成 ' + bucket.completed + ' 项，进行中 ' + bucket.active + ' 项' },
+                    e('div', { style: { height: 92, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' } },
+                      e('div', { style: { width: period === 'year' ? 18 : 28, maxWidth: '78%', height: height, borderRadius: '4px 4px 2px 2px', background: bucket.total ? 'linear-gradient(180deg,#6366f1,#3b82f6)' : '#e8eef6', position: 'relative' } },
+                        bucket.total ? e('span', { style: { position: 'absolute', top: -20, left: '50%', transform: 'translateX(-50%)', color: '#334155', fontSize: 11, fontWeight: 650 } }, bucket.total) : null
+                      )
+                    )
+                  ),
+                  e('div', { style: { marginTop: 7, color: '#718198', fontSize: period === 'year' ? 10 : 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, bucket.label)
+                );
+              })
+            ) : e(Empty, { image: Empty.PRESENTED_IMAGE_SIMPLE, description: '暂无售前排期' })
+          )
+        ),
+        compact ? null : e(Col, { xs: 24, lg: 9 },
+          e('div', { style: { minHeight: 190, padding: '14px 16px', border: '1px solid #e6edf5', borderRadius: 6, background: '#fff' } },
+            e('div', { style: { marginBottom: 10, color: '#183153', fontWeight: 650 } }, '近期售前工作'),
+            items.length ? e('div', null, items.slice(0, 5).map(function(item) {
+              return e('div', { key: item.id, style: { display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '8px 0', borderBottom: '1px solid #eef2f7' } },
+                e('div', { style: { minWidth: 0 } },
+                  e('div', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1e293b', fontWeight: 600 } }, item.opportunity_name || item.title || '-'),
+                  e('div', { style: { marginTop: 3, color: '#8796aa', fontSize: 11 } }, (reqTypeText[item.request_type] || item.request_type || '售前协同') + ' · ' + item.owner_name + ' · ' + dayjs(item.scheduled_date).format('MM-DD HH:mm'))
+                ),
+                e(Tag, { color: statusColor[item.status] || 'default', style: { marginRight: 0, alignSelf: 'center' } }, statusText[item.status] || item.status)
+              );
+            })) : e(Empty, { image: Empty.PRESENTED_IMAGE_SIMPLE, description: '当前周期暂无售前工作' })
+          )
+        )
+      )
+    )
+  );
+}
+
+
+function DashboardPage() {
 
 
 
@@ -3371,23 +3481,23 @@ function DashboardPage() {
 
 
 
-      e('div', { className: 'kpi-card opp-touch' }, e('div', { className: 'kpi-icon orange' }, '🔄'), e('div', null, e('div', { className: 'kpi-value' }, stats.weekly_updated), e('div', { className: 'kpi-label' }, '本周动态商机')))
-
-
-
-
-
-
-
-    ),
-
-
-
-
-
-
-
-    e('div', { className: 'grid-2', style: { marginBottom: 20 } },
+      e('div', { className: 'kpi-card opp-touch' }, e('div', { className: 'kpi-icon orange' }, '🔄'), e('div', null, e('div', { className: 'kpi-value' }, stats.weekly_updated), e('div', { className: 'kpi-label' }, '本周动态商机')))
+
+
+
+
+
+
+
+    ),
+
+
+
+
+
+
+
+    e('div', { className: 'grid-2', style: { marginBottom: 20 } },
 
 
 
@@ -4665,15 +4775,11 @@ function DashboardPage() {
 
 
 
-    ),
-
-
-
-
-
-
-
-    e('div', { style: { marginTop: 20 } },
+    ),
+
+    e(PresalesBoard, { scope: 'all' }),
+
+    e('div', { style: { marginTop: 20 } },
 
 
 
@@ -19192,7 +19298,8 @@ function SecurityBusinessPage(props) {
         e('h1', { className: 'page-title' }, '售前协同'),
         e('p', { className: 'page-desc' }, '统一管理 POC、方案评审、标书支持、测试资源排期等售前请求')
       ),
-      presalesTab
+      user.role === 'presales' ? e(PresalesBoard, { scope: 'mine' }) : null,
+      presalesTab
     );
   }
   if (radarOnly) {

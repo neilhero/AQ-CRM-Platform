@@ -1,12 +1,13 @@
+import calendar
 from datetime import date, datetime, timezone, timedelta
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import ChannelPartner, Customer, FollowUp, Lead, Opportunity, OpportunityType, User
-from app.permissions import ROLE_ADMIN
+from app.models import ChannelPartner, Customer, FollowUp, Lead, Opportunity, OpportunityType, PresalesRequest, User
+from app.permissions import ROLE_ADMIN, ROLE_PRESALES
 from app.permissions import scoped_channel_partner_query, scoped_customer_query, scoped_lead_query, scoped_opportunity_query
 from app.routers.utils import require_user
 
@@ -24,6 +25,141 @@ def _customer_count(db: Session, user):
 
 def _lead_count(db: Session, user):
     return scoped_lead_query(db.query(Lead), db, user).count()
+
+
+def _presales_period(period: str):
+    today = date.today()
+    if period == "week":
+        start = today - timedelta(days=today.weekday())
+        end = start + timedelta(days=7)
+        buckets = [
+            {
+                "key": (start + timedelta(days=offset)).isoformat(),
+                "label": f"{start + timedelta(days=offset):%m-%d}",
+            }
+            for offset in range(7)
+        ]
+    elif period == "year":
+        start = date(today.year, 1, 1)
+        end = date(today.year + 1, 1, 1)
+        buckets = [{"key": f"{today.year}-{month:02d}", "label": f"{month}月"} for month in range(1, 13)]
+    else:
+        period = "month"
+        start = date(today.year, today.month, 1)
+        end = date(today.year + (today.month == 12), (today.month % 12) + 1, 1)
+        days = calendar.monthrange(today.year, today.month)[1]
+        bucket_count = (days + 6) // 7
+        buckets = []
+        for index in range(bucket_count):
+            first_day = index * 7 + 1
+            last_day = min(first_day + 6, days)
+            buckets.append(
+                {
+                    "key": str(index),
+                    "label": f"{first_day}-{last_day}日",
+                    "first_day": first_day,
+                    "last_day": last_day,
+                }
+            )
+    return period, start, end, buckets
+
+
+@router.get("/presales-board")
+def presales_board(
+    period: str = Query("week", pattern="^(week|month|year)$"),
+    scope: str = Query("all", pattern="^(all|mine)$"),
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    if scope == "mine" and user.role != ROLE_PRESALES:
+        raise HTTPException(403, "仅售前角色可查看个人售前看板")
+
+    period, start, end, buckets = _presales_period(period)
+    event_time_expr = func.coalesce(PresalesRequest.scheduled_date, PresalesRequest.created_at)
+    start_time = datetime.combine(start, datetime.min.time())
+    end_time = datetime.combine(end, datetime.min.time())
+    query = (
+        db.query(PresalesRequest, Opportunity, User)
+        .join(Opportunity, Opportunity.id == PresalesRequest.opportunity_id)
+        .outerjoin(User, User.id == PresalesRequest.owner_id)
+        .filter(event_time_expr >= start_time, event_time_expr < end_time)
+    )
+    if scope == "mine":
+        query = query.filter(PresalesRequest.owner_id == user.id)
+
+    rows = query.order_by(event_time_expr.desc()).all()
+    selected = []
+    for row, opportunity, owner in rows:
+        event_time = row.scheduled_date or row.created_at
+        if not event_time:
+            continue
+        selected.append((row, event_time, opportunity, owner))
+
+    bucket_map = {
+        bucket["key"]: {
+            "key": bucket["key"],
+            "label": bucket["label"],
+            "total": 0,
+            "completed": 0,
+            "active": 0,
+            "pending": 0,
+        }
+        for bucket in buckets
+    }
+    status_counts = {"done": 0, "in_progress": 0, "pending": 0}
+    request_type_counts = {}
+    item_rows = []
+
+    for row, event_time, opportunity, owner in selected:
+        status = row.status or "pending"
+        if status in status_counts:
+            status_counts[status] += 1
+        request_type_counts[row.request_type] = request_type_counts.get(row.request_type, 0) + 1
+
+        if period == "week":
+            bucket_key = event_time.date().isoformat()
+        elif period == "year":
+            bucket_key = f"{event_time.year}-{event_time.month:02d}"
+        else:
+            bucket_key = str((event_time.day - 1) // 7)
+        bucket = bucket_map.get(bucket_key)
+        if bucket:
+            bucket["total"] += 1
+            if status == "done":
+                bucket["completed"] += 1
+            elif status == "in_progress":
+                bucket["active"] += 1
+            elif status == "pending":
+                bucket["pending"] += 1
+
+        item_rows.append(
+            {
+                "id": row.id,
+                "title": row.title,
+                "request_type": row.request_type,
+                "status": status,
+                "scheduled_date": event_time.isoformat(),
+                "opportunity_name": opportunity.name if opportunity else "-",
+                "owner_name": (owner.real_name or owner.username) if owner else "-",
+            }
+        )
+
+    item_rows.sort(key=lambda item: item["scheduled_date"], reverse=True)
+    return {
+        "period": period,
+        "scope": scope,
+        "start_date": start.isoformat(),
+        "end_date": (end - timedelta(days=1)).isoformat(),
+        "summary": {
+            "total": len(selected),
+            "completed": status_counts["done"],
+            "in_progress": status_counts["in_progress"],
+            "pending": status_counts["pending"],
+        },
+        "buckets": list(bucket_map.values()),
+        "request_types": request_type_counts,
+        "items": item_rows[:8],
+    }
 
 
 @router.get("/stats")
