@@ -17,6 +17,7 @@ from app.models import (
     CustomerSecurityProfile,
     Lead,
     Opportunity,
+    PocRecord,
     PresalesRequest,
     User,
 )
@@ -427,6 +428,23 @@ def update_presales_request(request_id: int, data: PresalesRequestUpdate, db: Se
     db.commit()
     db.refresh(row)
     return _enrich_presales_request(db, row)
+
+
+@router.delete("/presales-requests/{request_id}", status_code=204)
+def delete_presales_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin),
+):
+    row = db.query(PresalesRequest).filter_by(id=request_id).first()
+    if not row:
+        raise HTTPException(404, "售前申请不存在")
+    db.query(PocRecord).filter(PocRecord.presales_request_id == request_id).update(
+        {PocRecord.presales_request_id: None},
+        synchronize_session=False,
+    )
+    db.delete(row)
+    db.commit()
 
 
 @router.get("/bid-radar/subscriptions")

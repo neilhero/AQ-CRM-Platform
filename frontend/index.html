@@ -12718,7 +12718,7 @@ function PartnerArchivePage() {
 
 
 
-    { title: '等级', dataIndex: 'level', key: 'level', width: 80, render: function(v) { return e(Tag, { color: levelColors[v] || '#64748b' }, levelLabels[v] || v || '注册'); } },
+    { title: '等级', dataIndex: 'level', key: 'level', width: 80, sorter: function(a, b) { var order = { '金牌': 1, '银牌': 2, '铜牌': 3, '注册': 4, 'Register': 4, 'register': 4 }; return (order[a.level] || 99) - (order[b.level] || 99); }, render: function(v) { return e(Tag, { color: levelColors[v] || '#64748b' }, levelLabels[v] || v || '注册'); } },
 
 
 
@@ -13739,7 +13739,7 @@ function PartnerPerformancePage() {
   var columns = [
     { title: 'ID', key: 'row_index', width: 80, fixed: 'left', render: function(_, __, idx) { return e('span', { style: { color: '#64748b', fontWeight: 600 } }, idx + 1); } },
     { title: '渠道名称', dataIndex: 'partner_name', key: 'partner_name', width: 220, fixed: 'left', render: function(v) { return e('span', { style: { fontWeight: 700, color: '#0f172a' } }, v || '-'); } },
-    { title: '等级', dataIndex: 'level', key: 'level', width: 110, render: function(v) { return v ? e(Tag, { color: levelColor[v] || '#64748b' }, levelText[v] || v) : '-'; } },
+    { title: '等级', dataIndex: 'level', key: 'level', width: 110, sorter: function(a, b) { var order = { '金牌': 1, '银牌': 2, '铜牌': 3, '注册': 4, 'Register': 4, 'register': 4 }; return (order[a.level] || 99) - (order[b.level] || 99); }, render: function(v) { return v ? e(Tag, { color: levelColor[v] || '#64748b' }, levelText[v] || v) : '-'; } },
     { title: '区域', dataIndex: 'region', key: 'region', width: 110, render: function(v) { return v ? e(Tag, { color: 'blue' }, v) : '-'; } },
     { title: e('span', { style: { whiteSpace: 'nowrap' } }, '已完成业绩（万）'), dataIndex: 'completed_amount', key: 'completed_amount', width: 170, sorter: function(a, b) { return (a.completed_amount || 0) - (b.completed_amount || 0); }, defaultSortOrder: 'descend', render: function(v) { return e('span', { style: { fontWeight: 700, color: '#059669' } }, (v || 0).toFixed ? (v || 0).toFixed(1) : v); } },
     { title: '商机数（个）', dataIndex: 'opp_count', key: 'opp_count', width: 120, render: function(v, r) { return e(Button, { type: 'link', style: { padding: 0, fontWeight: 700 }, onClick: function() { goChannelOpps(r.partner_id); } }, String(v || 0)); } },
@@ -19018,9 +19018,12 @@ function SecurityBusinessPage(props) {
   function submitPresales() {
     presalesForm.validateFields().then(function(v) { if (v.scheduled_date) v.scheduled_date = fmtDateTime(v.scheduled_date); return api('POST', '/security-business/presales-requests', v); }).then(function() { message.success('售前申请已创建'); presalesForm.resetFields(); setPresalesCustomerId(null); loadOperational(); }).catch(function(err) { message.error(err.message || '创建失败'); });
   }
-  function updatePresales(row, status) {
-    api('PUT', '/security-business/presales-requests/' + row.id, { status: status }).then(function() { message.success('售前状态已更新'); loadOperational(); }).catch(function(err) { message.error(err.message || '更新失败'); });
-  }
+  function updatePresales(row, status) {
+    api('PUT', '/security-business/presales-requests/' + row.id, { status: status }).then(function() { message.success('售前状态已更新'); loadOperational(); }).catch(function(err) { message.error(err.message || '更新失败'); });
+  }
+  function deletePresales(row) {
+    api('DELETE', '/security-business/presales-requests/' + row.id).then(function() { message.success('售前申请已删除'); loadOperational(); }).catch(function(err) { message.error(err.message || '删除失败'); });
+  }
   function submitSubscription() {
     subForm.validateFields().then(function(v) { return api('POST', '/security-business/bid-radar/subscriptions', v); }).then(function() { message.success('关键词订阅已创建'); subForm.resetFields(); loadOperational(); }).catch(function(err) { message.error(err.message || '创建失败'); });
   }
@@ -19143,7 +19146,7 @@ function SecurityBusinessPage(props) {
       e(Button, { type: 'primary', onClick: submitPresales }, '创建申请')
     )),
     e(Table, { rowKey: 'id', loading: loading, dataSource: presales, pagination: { pageSize: 8 }, columns: [
-      { title: '客户', dataIndex: 'customer_name', width: 180, ellipsis: true, render: function(v){return v || '-';} }, { title: '商机', dataIndex: 'opportunity_name', width: 220, ellipsis: true }, { title: '类型', dataIndex: 'request_type', width: 120, render: function(v){return reqTypeText[v] || v;} }, { title: '负责人', dataIndex: 'requester_name', width: 100, render: function(v){return v || '-';} }, { title: '售前支持', dataIndex: 'owner_name', width: 110, render: function(v){return v || '-';} }, { title: '排期', dataIndex: 'scheduled_date', width: 130, render: function(v){return v ? dayjs(v).format('MM-DD HH:mm') : '-';} }, { title: '状态', dataIndex: 'status', width: 110, render: function(v){return e(Tag,{color:statusColor[v]||'default'},statusText[v] || v || '-');} }, { title: '操作', width: 180, render: function(_, r){return e(Space, null, e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'in_progress'); } }, '进行中'), e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'done'); } }, '完成'));} }
+      { title: '客户', dataIndex: 'customer_name', width: 180, ellipsis: true, render: function(v){return v || '-';} }, { title: '商机', dataIndex: 'opportunity_name', width: 220, ellipsis: true }, { title: '类型', dataIndex: 'request_type', width: 120, render: function(v){return reqTypeText[v] || v;} }, { title: '负责人', dataIndex: 'requester_name', width: 100, render: function(v){return v || '-';} }, { title: '售前支持', dataIndex: 'owner_name', width: 110, render: function(v){return v || '-';} }, { title: '排期', dataIndex: 'scheduled_date', width: 130, render: function(v){return v ? dayjs(v).format('MM-DD HH:mm') : '-';} }, { title: '状态', dataIndex: 'status', width: 110, render: function(v){return e(Tag,{color:statusColor[v]||'default'},statusText[v] || v || '-');} }, { title: '操作', width: user.role === 'admin' ? 250 : 180, render: function(_, r){return e(Space, null, e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'in_progress'); } }, '进行中'), e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'done'); } }, '完成'), user.role === 'admin' ? e(Popconfirm, { title: '确认删除此售前申请？', description: '删除后不可恢复', onConfirm: function(){ deletePresales(r); } }, e(Button, { size: 'small', danger: true }, '删除')) : null);} }
     ] })
   );
   var radarTab = e('div', null,
@@ -19442,7 +19445,7 @@ function SalesGrowthPage(props) {
         e(Button, { type: 'primary', onClick: savePartnerRecord }, '保存记录')
       )
     ),
-    e(Table, { rowKey: 'partner_id', loading: loading, dataSource: partnerSummary, pagination: false, tableLayout: 'fixed', style: { marginBottom: 16 }, columns: [
+    e(Table, { rowKey: 'partner_id', loading: loading, dataSource: partnerSummary, pagination: { pageSize: 5, showSizeChanger: false, showTotal: function(total){ return '共 ' + total + ' 个渠道'; } }, tableLayout: 'fixed', style: { marginBottom: 16 }, columns: [
       { title: '渠道', dataIndex: 'partner_name', width: 360, ellipsis: true, render: function(v){ return e('span', { title: v || '-', style: { display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, v || '-'); } },
       { title: '等级', dataIndex: 'level', width: 90, render: function(v){ var text = { '金牌': '金牌', '银牌': '银牌', '铜牌': '铜牌', '注册': '注册', 'Register': '注册', 'register': '注册' }[v] || v || '-'; return text; } },
       { title: '授权区域', dataIndex: 'authorized_region', width: 100 },
