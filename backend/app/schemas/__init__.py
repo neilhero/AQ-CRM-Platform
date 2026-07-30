@@ -20,15 +20,18 @@ class OpportunityCreate(BaseModel):
     name: str; opp_type: str="direct"; sales_rep_id: int; customer_id: Optional[int]=None
     channel_partner_id: Optional[int]=None; end_customer_name: Optional[str]=None
     industry: str; amount: float; stage: str
-    probability: str; key_person: Optional[str]=None; brief: Optional[str]=None
+    probability: str; key_person: Optional[str]=None; handler_person: Optional[str]=None
+    brief: Optional[str]=None
     expected_close_date: Optional[date]=None; required_product: Optional[str]=None
     next_follow_up_date: Optional[date]=None
 
 class OpportunityUpdate(BaseModel):
     name: Optional[str]=None; stage: Optional[str]=None; probability: Optional[str]=None
-    amount: Optional[float]=None; key_person: Optional[str]=None; brief: Optional[str]=None
+    amount: Optional[float]=None; key_person: Optional[str]=None; handler_person: Optional[str]=None
+    brief: Optional[str]=None
     expected_close_date: Optional[date]=None; next_follow_up_date: Optional[date]=None; required_product: Optional[str]=None
     is_closed: Optional[bool]=None; industry: Optional[str]=None
+    channel_partner_id: Optional[int]=None
 
 class OpportunityOut(BaseModel):
     id: int; name: str; opp_type: Optional[str]=None; sales_rep_id: Optional[int]=None

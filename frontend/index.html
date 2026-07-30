@@ -7432,15 +7432,7 @@ function OppListPage(props) {
 
 
 
-  var _fuContactVal = ''; // module-level contact value
-
-
-
-
-
-
-
-  var _skp = useState([{name:'',position:'',phone:'',email:''}]), kpList = _skp[0], setKpList = _skp[1];
+  var _skp = useState([{name:'',position:'',phone:'',email:''}]), kpList = _skp[0], setKpList = _skp[1];
 
 
 
@@ -10462,7 +10454,7 @@ function OppDetailPage(props) {
 
 
 
-  function addFu() {
+  function addFu() {
 
 
 
@@ -10470,7 +10462,9 @@ function OppDetailPage(props) {
 
 
 
-    if (!fuText.trim()) return message.warning('请输入跟进内容');
+    if (!fuText.trim()) return message.warning('请输入跟进内容');
+
+    if (!fuContact) return message.warning('请选择接触人');
 
 
 
@@ -10486,7 +10480,8 @@ function OppDetailPage(props) {
 
 
 
-    console.log('SAVE_V2', _fuContactVal, typeof _fuContactVal); api('POST', '/follow-ups/' + id + '/quick-log', { content: fuText, contact_person: _fuContactVal || undefined })
+    var selectedContact = fuContact;
+    api('POST', '/follow-ups/' + id + '/quick-log', { content: fuText, contact_person: selectedContact })
 
 
 
@@ -10494,7 +10489,7 @@ function OppDetailPage(props) {
 
 
 
-      .then(function(r) { message.success('已记录'); setFuText(''); setFuContact(''); setFus(function(p) { var u=JSON.parse(localStorage.getItem('aq2_user')||'{}'); var now=new Date(); var local=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,19).replace('T',' '); var item={id: r.follow_up_id, content: fuText, contact_person: _fuContactVal || undefined, creator_name: u.real_name||'', created_at: local}; var items=[item].concat(p); try{ localStorage.setItem('aq_fus_'+id, JSON.stringify(items)); _fuContactVal=''; }catch(e){} return items; }); })
+      .then(function(r) { message.success('已记录'); setFuText(''); setFuContact(''); setFus(function(p) { var u=JSON.parse(localStorage.getItem('aq2_user')||'{}'); var now=new Date(); var local=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,19).replace('T',' '); var item={id: r.follow_up_id, content: fuText, contact_person: selectedContact, creator_name: u.real_name||'', created_at: local}; var items=[item].concat(p); try{ localStorage.setItem('aq_fus_'+id, JSON.stringify(items)); }catch(e){} return items; }); })
 
 
 
@@ -10686,11 +10681,48 @@ function OppDetailPage(props) {
     }).filter(function(p) { return p.name || p.position || p.phone || p.email; });
   }
 
-  var detailCustomerContacts = opp.customer_contacts || [];
-  var detailKeyContacts = detailCustomerContacts.filter(function(c) { return c.role_type === 'key_person'; });
-  var detailHandlerContacts = detailCustomerContacts.filter(function(c) { return c.role_type === 'handler'; });
-  var detailKeyRows = detailKeyContacts.length ? detailKeyContacts : parseDetailPersons(opp.key_person, 'key_person');
-  var detailHandlerRows = detailHandlerContacts.length ? detailHandlerContacts : parseDetailPersons(opp.handler_person, 'handler');
+  var detailCustomerContacts = opp.customer_contacts || [];
+  var detailKeyContacts = detailCustomerContacts.filter(function(c) { return c.role_type === 'key_person'; });
+  var detailHandlerContacts = detailCustomerContacts.filter(function(c) { return c.role_type === 'handler'; });
+  function mergeDetailContacts(customerContacts, storedContacts) {
+    var seen = {};
+    return customerContacts.concat(storedContacts).filter(function(contact) {
+      var contactKey = [
+        contact.name || '',
+        contact.position || '',
+        contact.phone || '',
+        contact.email || ''
+      ].join('|');
+      if (!contactKey.replace(/\|/g, '') || seen[contactKey]) return false;
+      seen[contactKey] = true;
+      return true;
+    });
+  }
+  var detailKeyRows = mergeDetailContacts(
+    detailKeyContacts,
+    parseDetailPersons(opp.key_person, 'key_person')
+  );
+  var detailHandlerRows = mergeDetailContacts(
+    detailHandlerContacts,
+    parseDetailPersons(opp.handler_person, 'handler')
+  );
+  var followUpContactOptions = [];
+  var seenFollowUpContacts = {};
+  detailCustomerContacts
+    .filter(function(contact) {
+      return contact.role_type === 'key_person' || contact.role_type === 'handler';
+    })
+    .concat(parseDetailPersons(opp.key_person, 'key_person'))
+    .concat(parseDetailPersons(opp.handler_person, 'handler'))
+    .forEach(function(contact) {
+    var contactName = (contact.name || '').trim();
+    if (!contactName || seenFollowUpContacts[contactName]) return;
+    seenFollowUpContacts[contactName] = true;
+    followUpContactOptions.push({
+      value: contactName,
+      label: contactName
+    });
+  });
 
   function renderContactRows(title, tagColor, rows, emptyText) {
     return e('div', { style: { marginTop: 12 } },
@@ -10818,7 +10850,7 @@ function OppDetailPage(props) {
 
 
 
-    e('div', { className: 'section-card', style: { marginBottom: 20 } },
+    e('div', { className: 'section-card', style: { marginBottom: 20 } },
 
 
 
@@ -11066,7 +11098,7 @@ function OppDetailPage(props) {
 
 
 
-          opp.channel_partner_name ? e(Descriptions.Item, { label: '渠道伙伴' }, opp.channel_partner_name) : null,
+          opp.channel_partner_name ? e(Descriptions.Item, { label: '关联渠道' }, opp.channel_partner_name) : null,
 
 
 
@@ -11502,7 +11534,21 @@ function OppDetailPage(props) {
 
 
 
-          e(Input, { id: 'aq_fu_contact', placeholder: '接触人（选填）', value: fuContact, onChange: function(ev) { var v=typeof ev==='string'?ev:(ev&&ev.target?ev.target.value:''); console.log('ONCHANGE_V2', v, typeof v); _fuContactVal=v; setFuContact(v); }, style: { marginBottom: 12 } }),
+          e('div', { style: { marginBottom: 6, fontWeight: 600 } },
+            e('span', { style: { color: '#ff4d4f', marginRight: 4 } }, '*'),
+            '接触人'
+          ),
+          e(Select, {
+            id: 'aq_fu_contact',
+            placeholder: followUpContactOptions.length ? '请选择接触人' : '请先添加关键人或经办人',
+            value: fuContact || undefined,
+            onChange: setFuContact,
+            options: followUpContactOptions,
+            showSearch: true,
+            optionFilterProp: 'label',
+            notFoundContent: '暂无关键人或经办人',
+            style: { width: '100%', marginBottom: 12 }
+          }),
 
 
 
@@ -11550,8 +11596,8 @@ function OppDetailPage(props) {
 
 
 
-    e('div', { className: 'section-card', style: { marginBottom: 20 } },
-      e('div', { className: 'card-header' }, e('h3', null, IC('ToolOutlined'), ' 售前协同')),
+    e('div', { className: 'section-card', style: { marginTop: 20, marginBottom: 20 } },
+      e('div', { className: 'card-header' }, e('h3', null, IC('ToolOutlined'), ' 售前协同')),
       e('div', { className: 'card-body' },
         e(Form, { form: detailPresalesForm, layout: 'vertical' },
           e(Row, { gutter: 12 },
@@ -11792,7 +11838,7 @@ function OppDetailPage(props) {
 
 
 
-        e(Button, { type: 'dashed', block: true, icon: IC('PlusOutlined'), onClick: function() { setKpList2(kpList2.concat([{name:'',position:'',phone:'',email:''}])); }, style: { marginBottom: 16 } }, '添加关键人'),
+        e(Button, { type: 'dashed', block: true, icon: IC('PlusOutlined'), title: '增加关键人', 'aria-label': '增加关键人', onClick: function() { setKpList2(kpList2.concat([{name:'',position:'',phone:'',email:''}])); }, style: { marginBottom: 16 } }),
 
 
 

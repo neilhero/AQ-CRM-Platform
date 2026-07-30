@@ -19,6 +19,7 @@ from app.permissions import (
     ROLE_SALES,
     can_edit_business_record,
     managed_user_ids,
+    scoped_channel_partner_query,
     scoped_opportunity_query,
 )
 from app.routers.utils import require_user
@@ -113,6 +114,60 @@ def _contact_person_text(contacts):
         "|".join([c.name or "", c.position or "", c.phone or "", c.email or ""])
         for c in contacts
     )
+
+
+def _parse_contact_people(value):
+    people = []
+    for raw_person in (value or "").split(";;"):
+        fields = [field.strip() for field in raw_person.split("|")]
+        fields += [""] * (4 - len(fields))
+        name, position, phone, email = fields[:4]
+        if name:
+            people.append({
+                "name": name,
+                "position": position or None,
+                "phone": phone or None,
+                "email": email or None,
+            })
+    return people
+
+
+def _sync_customer_contacts(db: Session, customer_id, role_type, value):
+    if not customer_id:
+        return
+    for person in _parse_contact_people(value):
+        contact = (
+            db.query(Contact)
+            .filter(
+                Contact.customer_id == customer_id,
+                Contact.role_type == role_type,
+                Contact.name == person["name"],
+            )
+            .first()
+        )
+        if not contact:
+            contact = Contact(
+                customer_id=customer_id,
+                partner_id=None,
+                role_type=role_type,
+                name=person["name"],
+            )
+            db.add(contact)
+        for field in ("position", "phone", "email"):
+            if person[field]:
+                setattr(contact, field, person[field])
+
+
+def _sync_opportunity_contacts(db: Session, opportunity, changed_fields=None):
+    changed_fields = set(changed_fields or ("key_person", "handler_person"))
+    if "key_person" in changed_fields:
+        _sync_customer_contacts(
+            db, opportunity.customer_id, "key_person", opportunity.key_person
+        )
+    if "handler_person" in changed_fields:
+        _sync_customer_contacts(
+            db, opportunity.customer_id, "handler", opportunity.handler_person
+        )
 
 
 @router.get("")
@@ -228,6 +283,7 @@ def create_opp(data: OpportunityCreate, db: Session = Depends(get_db), user=Depe
         raise HTTPException(403, "只能分配给自己或管辖销售")
     o = Opportunity(**kwargs)
     db.add(o)
+    _sync_opportunity_contacts(db, o)
     db.commit()
     db.refresh(o)
     return {"id": o.id, "name": o.name}
@@ -241,6 +297,14 @@ def update_opp(oid: int, data: OpportunityUpdate, db: Session = Depends(get_db),
     _check_access(o, db, user)
     _check_edit_access(o, db, user)
     updates = data.model_dump(exclude_unset=True)
+    if "channel_partner_id" in updates and updates["channel_partner_id"] is not None:
+        partner = (
+            scoped_channel_partner_query(db.query(ChannelPartner), db, user)
+            .filter(ChannelPartner.id == updates["channel_partner_id"])
+            .first()
+        )
+        if not partner:
+            raise HTTPException(403, "无权关联该渠道或渠道不存在")
     final_values = {
         field: updates[field] if field in updates else _raw_value(getattr(o, field))
         for field in REQUIRED_OPPORTUNITY_FIELDS
@@ -249,6 +313,7 @@ def update_opp(oid: int, data: OpportunityUpdate, db: Session = Depends(get_db),
     for k, v in updates.items():
         setattr(o, k, v)
     o.updated_at = date.today()
+    _sync_opportunity_contacts(db, o, updates.keys())
     db.commit()
     db.refresh(o)
     return {"message": "updated"}
