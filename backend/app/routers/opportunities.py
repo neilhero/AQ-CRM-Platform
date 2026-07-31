@@ -20,6 +20,7 @@ from app.permissions import (
     can_edit_business_record,
     managed_user_ids,
     scoped_channel_partner_query,
+    scoped_customer_query,
     scoped_opportunity_query,
 )
 from app.routers.utils import require_user
@@ -78,6 +79,39 @@ def _validate_required_opportunity_fields(values):
         raise HTTPException(400, "阶段不合法")
     if probability not in VALID_PROBABILITIES:
         raise HTTPException(400, "概率不合法")
+
+
+def _validate_create_relationships(values, db: Session, user):
+    opp_type = values.get("opp_type")
+    if opp_type == "channel":
+        partner_id = values.get("channel_partner_id")
+        if not partner_id:
+            raise HTTPException(400, "请选择关联渠道")
+        partner = (
+            scoped_channel_partner_query(db.query(ChannelPartner), db, user)
+            .filter(ChannelPartner.id == partner_id)
+            .first()
+        )
+        if not partner:
+            raise HTTPException(403, "无权关联该渠道或渠道不存在")
+        end_customer_name = (values.get("end_customer_name") or "").strip()
+        if not end_customer_name:
+            raise HTTPException(400, "请输入最终客户")
+        values["end_customer_name"] = end_customer_name
+        values["customer_id"] = None
+        return
+
+    customer_id = values.get("customer_id")
+    if not customer_id:
+        raise HTTPException(400, "请选择最终客户")
+    customer = (
+        scoped_customer_query(db.query(Customer), db, user)
+        .filter(Customer.id == customer_id)
+        .first()
+    )
+    if not customer:
+        raise HTTPException(403, "无权关联该客户或客户不存在")
+    values["channel_partner_id"] = None
 
 
 def _apply_perm_filter(q, db: Session, user):
@@ -309,6 +343,7 @@ def create_opp(data: OpportunityCreate, db: Session = Depends(get_db), user=Depe
         kwargs["sales_rep_id"] = user.id
     elif user.role == ROLE_MANAGER and kwargs.get("sales_rep_id") not in (managed_user_ids(db, user) or []):
         raise HTTPException(403, "只能分配给自己或管辖销售")
+    _validate_create_relationships(kwargs, db, user)
     o = Opportunity(
         **kwargs,
         created_by_id=user.id,

@@ -23,6 +23,9 @@ $requiredMarkers = [ordered]@{
     "unified opportunity detail layout" = "opportunity-detail-unified-layout"
     "opportunity detail created time" = "opp.created_at ? dayjs(opp.created_at).format('YYYY-MM-DD HH:mm')"
     "opportunity detail customer pain point" = "opp.pain_points || '-'"
+    "direct opportunity required final customer" = "name: 'customer_id', label:"
+    "channel opportunity required partner" = "name: 'channel_partner_id', label:"
+    "channel opportunity required final customer" = "name: 'end_customer_name', label:"
 }
 
 foreach ($marker in $requiredMarkers.GetEnumerator()) {

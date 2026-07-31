@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from fastapi import HTTPException
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -26,6 +27,15 @@ def _admin_actor(user):
         real_name=user.real_name,
         username=user.username,
     )
+
+
+def _assert_http_error(detail, callback):
+    try:
+        callback()
+    except HTTPException as exc:
+        assert exc.detail == detail
+        return
+    raise AssertionError(f"Expected HTTPException: {detail}")
 
 
 def _session():
@@ -201,6 +211,9 @@ def test_pain_points_are_saved_on_create_and_update():
         is_active=True,
     )
     db.add(owner)
+    db.flush()
+    customer = Customer(name="Pain Point Customer", owner_id=owner.id)
+    db.add(customer)
     db.commit()
 
     result = create_opp(
@@ -208,6 +221,7 @@ def test_pain_points_are_saved_on_create_and_update():
             name="Pain Point Project",
             opp_type="direct",
             sales_rep_id=owner.id,
+            customer_id=customer.id,
             industry="Education",
             amount=100,
             stage="1",
@@ -232,9 +246,102 @@ def test_pain_points_are_saved_on_create_and_update():
     assert opportunity.pain_points == "Updated customer pain point"
 
 
+def test_create_requires_relationships_for_each_opportunity_type():
+    db = _session()
+    owner = User(
+        username="required-owner",
+        password_hash="unused",
+        real_name="Required Owner",
+        role="sales",
+        is_active=True,
+    )
+    db.add(owner)
+    db.flush()
+    customer = Customer(name="Required Customer", owner_id=owner.id)
+    partner = ChannelPartner(
+        name="Required Partner",
+        creator=owner,
+        owner_id=owner.id,
+    )
+    db.add_all([customer, partner])
+    db.commit()
+    actor = _admin_actor(owner)
+    common = {
+        "sales_rep_id": owner.id,
+        "industry": "Enterprise",
+        "amount": 100,
+        "stage": "1",
+        "probability": "LOW",
+    }
+
+    _assert_http_error(
+        "请选择最终客户",
+        lambda: create_opp(
+            OpportunityCreate(name="Missing Direct Customer", **common),
+            db=db,
+            user=actor,
+        ),
+    )
+
+    _assert_http_error(
+        "请选择关联渠道",
+        lambda: create_opp(
+            OpportunityCreate(
+                name="Missing Channel Partner",
+                opp_type="channel",
+                end_customer_name="End Customer",
+                **common,
+            ),
+            db=db,
+            user=actor,
+        ),
+    )
+
+    _assert_http_error(
+        "请输入最终客户",
+        lambda: create_opp(
+            OpportunityCreate(
+                name="Missing Channel Customer",
+                opp_type="channel",
+                channel_partner_id=partner.id,
+                **common,
+            ),
+            db=db,
+            user=actor,
+        ),
+    )
+
+    direct = create_opp(
+        OpportunityCreate(
+            name="Valid Direct",
+            customer_id=customer.id,
+            **common,
+        ),
+        db=db,
+        user=actor,
+    )
+    channel = create_opp(
+        OpportunityCreate(
+            name="Valid Channel",
+            opp_type="channel",
+            channel_partner_id=partner.id,
+            end_customer_name="  Valid End Customer  ",
+            **common,
+        ),
+        db=db,
+        user=actor,
+    )
+
+    assert db.query(Opportunity).filter_by(id=direct["id"]).one().customer_id == customer.id
+    channel_opp = db.query(Opportunity).filter_by(id=channel["id"]).one()
+    assert channel_opp.channel_partner_id == partner.id
+    assert channel_opp.end_customer_name == "Valid End Customer"
+
+
 if __name__ == "__main__":
     test_channel_partner_can_be_changed_when_updating_opportunity()
     test_handler_person_is_saved_on_create_and_update()
     test_contact_sync_updates_existing_customer_contact_without_duplicates()
     test_pain_points_are_saved_on_create_and_update()
+    test_create_requires_relationships_for_each_opportunity_type()
     print("opportunity contact regression tests passed")

@@ -8701,8 +8701,8 @@ function OppListPage(props) {
 
 
           oppType === 'channel'
-            ? e(Col, { span: 12 }, e(Form.Item, { name: 'channel_partner_id', label: e('span', null, '关联渠道', e('span', { style: { marginLeft: 8, color: '#8aa0bd', fontSize: 12, fontWeight: 400 } }, '如列表没有，请到渠道管理新建')) }, e(Select, { showSearch: true, allowClear: true, placeholder: '搜索渠道...', notFoundContent: '暂无渠道，请到渠道管理新建', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); }))))
-            : e(Col, { span: 12 }, e(Form.Item, { name: 'customer_id', label: '最终客户' }, e(Select, { showSearch: true, allowClear: true, placeholder: '选择客户...', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); })))),
+            ? e(Col, { span: 12 }, e(Form.Item, { name: 'channel_partner_id', label: e('span', null, '关联渠道', e('span', { style: { marginLeft: 8, color: '#8aa0bd', fontSize: 12, fontWeight: 400 } }, '如列表没有，请到渠道管理新建')), rules: [{ required: true, message: '请选择关联渠道' }] }, e(Select, { showSearch: true, allowClear: true, placeholder: '搜索渠道...', notFoundContent: '暂无渠道，请到渠道管理新建', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); }))))
+            : e(Col, { span: 12 }, e(Form.Item, { name: 'customer_id', label: '最终客户', rules: [{ required: true, message: '请选择最终客户' }] }, e(Select, { showSearch: true, allowClear: true, placeholder: '选择客户...', filterOption: function(input, option) { return String(option.children || '').indexOf(input) >= 0; } }, customers.map(function(c) { return e(Option, { key: c.id, value: c.id }, c.name); })))),
 
 
 
@@ -8710,7 +8710,7 @@ function OppListPage(props) {
 
 
 
-          oppType === 'channel' ? e(Col, { span: 12 }, e(Form.Item, { name: 'end_customer_name', label: '最终客户' }, e(Input, { placeholder: '最终使用方' }))) : null,
+          oppType === 'channel' ? e(Col, { span: 12 }, e(Form.Item, { name: 'end_customer_name', label: '最终客户', rules: [{ required: true, whitespace: true, message: '请输入最终客户' }] }, e(Input, { placeholder: '最终使用方' }))) : null,
 
 
 
