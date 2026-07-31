@@ -1,6 +1,7 @@
 # CDN dependencies (not in repo, download with setup script)
 frontend/static/*.js
 frontend/static/*.css
+!frontend/static/version.js
 
 # Database
 *.db

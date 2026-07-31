@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from app.database import engine, Base, SessionLocal
+from app.version import APP_VERSION
 from app.models import User, Customer, ChannelPartner, Contact, Product, ProductSubCategory, Opportunity, FollowUp, CommissionRule, Lead, MenuConfig, StageConfig, IndustryConfig, AuditLog, AuditChange, CustomerSecurityProfile, ChannelRegistration, PresalesRequest, BidRadarSubscription, BidRadarItem, BidRadarFollowTask, BiddingDataSource, SalesTarget, CustomerOperationProfile, CustomerOperationNoticeRead, OpportunityReview, PartnerGrowthRecord, CustomerIdentity, ChannelRegistrationRule, ChannelRegistrationGovernance, PresalesSlaRule, PresalesSlaTracking, BidConversion, CustomerDecisionNode, CustomerDecisionEdge, CustomerCompetitorInstall, IndustryProductRecommendation, PocRecord, ForecastSnapshot, PresalesAsset, BidScoreCriterion
 from datetime import date, datetime, timezone, timedelta
 import hashlib, os, json, re
@@ -14,7 +15,7 @@ CST = timezone(timedelta(hours=8))
 from app.services.auth import hash_password
 from app.services.auth import get_current_user
 
-app = FastAPI(title="AnQuan CRM v3.6", docs_url=None)
+app = FastAPI(title=f"AnQuan CRM v{APP_VERSION}", docs_url=None)
 
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:8097", "http://127.0.0.1:8097", "http://121.41.66.121"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -40,8 +41,8 @@ def favicon_svg():
 def custom_swagger_docs():
     return get_swagger_ui_html(
         openapi_url=app.openapi_url,
-        title="AnQuan CRM v3.6 - API Docs",
-        swagger_favicon_url="/static/favicon.svg?v=3.6",
+        title=f"AnQuan CRM v{APP_VERSION} - API Docs",
+        swagger_favicon_url="/static/favicon.svg",
     )
 
 def ensure_schema_updates():
@@ -260,7 +261,12 @@ async def audit_write_requests(request, call_next):
 
 @app.get("/")
 def root():
-    return {"message": "AnQuan CRM v3.6 API", "status": "running"}
+    return {"message": f"AnQuan CRM v{APP_VERSION} API", "status": "running", "version": APP_VERSION}
+
+
+@app.get("/api/system/version", tags=["system"])
+def system_version():
+    return {"version": APP_VERSION, "release": f"v{APP_VERSION}"}
 
 @app.on_event("startup")
 def seed():

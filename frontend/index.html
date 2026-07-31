@@ -30,11 +30,14 @@
 
 
 
-<title>安泉CRM平台 v3.6</title>
+<title>安泉CRM</title>
 
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=3.6">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
-<link rel="shortcut icon" type="image/svg+xml" href="/static/favicon.svg?v=3.6">
+<link rel="shortcut icon" type="image/svg+xml" href="/static/favicon.svg">
+
+<script src="/static/version.js"></script>
+<script>document.title = '安泉CRM v' + (window.AQ_CRM_VERSION || 'dev');</script>
 
 
 
@@ -1937,7 +1940,7 @@ function LoginPage() {
 
 
 
-        e('h2', null, '\u5B89\u6CC9CRM', e('span', { className: 'login-version' }, 'v3.6')),
+        e('h2', null, '\u5B89\u6CC9CRM', e('span', { className: 'login-version' }, 'v' + (window.AQ_CRM_VERSION || 'dev'))),
 
 
 
@@ -20740,7 +20743,7 @@ try {
 
 
 
-  console.log('安泉CRM v3.6 ready');
+  console.log('安泉CRM v' + (window.AQ_CRM_VERSION || 'dev') + ' ready');
 
 
 
