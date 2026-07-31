@@ -20,6 +20,9 @@ $requiredMarkers = [ordered]@{
     "opportunity presales spacing" = "opportunity-presales-card"
     "required expected close date" = "name: 'expected_close_date'"
     "contact department field" = "department:''"
+    "unified opportunity detail layout" = "opportunity-detail-unified-layout"
+    "opportunity detail created time" = "opp.created_at ? dayjs(opp.created_at).format('YYYY-MM-DD HH:mm')"
+    "opportunity detail customer pain point" = "opp.pain_points || '-'"
 }
 
 foreach ($marker in $requiredMarkers.GetEnumerator()) {

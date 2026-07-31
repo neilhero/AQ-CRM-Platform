@@ -11028,7 +11028,8 @@ function OppDetailPage(props) {
 
 
 
-        e(Descriptions, { column: { xs: 1, sm: 2, lg: 3 }, size: 'small', bordered: true },
+        // opportunity-detail-unified-layout
+        e(Descriptions, { column: { xs: 1, sm: 2, lg: 3 }, size: 'small', bordered: true },
 
 
 
@@ -11036,7 +11037,11 @@ function OppDetailPage(props) {
 
 
 
-          e(Descriptions.Item, { label: '金额' }, opp.amount ? opp.amount + ' 万元' : '-'),
+          e(Descriptions.Item, { label: '最终客户', span: opp.opp_type === 'channel' ? 1 : 2 },
+            e('span', { style: { fontWeight: 700, color: '#0f2747' } },
+              (opp.opp_type === 'channel' ? (opp.end_customer_name || opp.customer_name) : (opp.customer_name || opp.end_customer_name)) || '-'
+            )
+          ),
 
 
 
@@ -11044,7 +11049,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Descriptions.Item, { label: '预计成交' }, opp.expected_close_date || '-'),
+          opp.opp_type === 'channel' ? e(Descriptions.Item, { label: '关联渠道' }, opp.channel_partner_name || '-') : null,
 
 
 
@@ -11052,7 +11057,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Descriptions.Item, { label: '下次跟进' }, opp.next_follow_up_date || '未设置'),
+          e(Descriptions.Item, { label: '销售负责人' }, opp.sales_rep_name || '-'),
 
 
 
@@ -11076,7 +11081,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Descriptions.Item, { label: '所需产品' }, opp.required_product || '-'),
+          e(Descriptions.Item, { label: '金额' }, opp.amount ? opp.amount + ' 万元' : '-'),
 
 
 
@@ -11084,7 +11089,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Descriptions.Item, { label: '销售负责人' }, opp.sales_rep_name || '-'),
+          e(Descriptions.Item, { label: '预计成交' }, opp.expected_close_date || '-'),
 
 
 
@@ -11092,7 +11097,7 @@ function OppDetailPage(props) {
 
 
 
-          opp.customer_name ? e(Descriptions.Item, { label: '关联客户' }, opp.customer_name) : null,
+          e(Descriptions.Item, { label: '下次跟进' }, opp.next_follow_up_date || '未设置'),
 
 
 
@@ -11100,7 +11105,7 @@ function OppDetailPage(props) {
 
 
 
-          opp.end_customer_name ? e(Descriptions.Item, { label: '最终客户' }, opp.end_customer_name) : null,
+          e(Descriptions.Item, { label: '创建时间' }, opp.created_at ? dayjs(opp.created_at).format('YYYY-MM-DD HH:mm') : '-'),
 
 
 
@@ -11108,7 +11113,6 @@ function OppDetailPage(props) {
 
 
 
-          opp.channel_partner_name ? e(Descriptions.Item, { label: '关联渠道' }, opp.channel_partner_name) : null,
 
 
 
@@ -11308,7 +11312,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Descriptions.Item, { label: '痛点', span: 3 }, opp.pain_points || '-'),
+          e(Descriptions.Item, { label: '客户痛点', span: 3 }, opp.pain_points || '-')
 
 
 
@@ -11316,7 +11320,6 @@ function OppDetailPage(props) {
 
 
 
-          e(Descriptions.Item, { label: '简介', span: 3 }, opp.brief || '-')
 
 
 
