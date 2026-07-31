@@ -472,7 +472,13 @@ def convert_bid_item(item_id: int, data: BidConvertIn, db: Session = Depends(get
         if not customer_id and data.create_customer and item.buyer:
             customer = db.query(Customer).filter_by(name=item.buyer).first()
             if not customer:
-                customer = Customer(name=item.buyer, industry=item.matched_product_line or "招投标", owner_id=sales_id)
+                customer = Customer(
+                    name=item.buyer,
+                    industry=item.matched_product_line or "招投标",
+                    owner_id=sales_id,
+                    created_by_id=user.id,
+                    created_by_name=user.real_name or user.username,
+                )
                 db.add(customer)
                 db.flush()
             customer_id = customer.id
@@ -480,6 +486,8 @@ def convert_bid_item(item_id: int, data: BidConvertIn, db: Session = Depends(get
             name=item.title,
             opp_type="direct",
             sales_rep_id=sales_id,
+            created_by_id=user.id,
+            created_by_name=user.real_name or user.username,
             customer_id=customer_id,
             industry=item.matched_product_line or "招投标",
             amount=item.budget or 0,

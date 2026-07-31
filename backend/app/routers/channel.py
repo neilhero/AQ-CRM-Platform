@@ -13,13 +13,13 @@ router = APIRouter()
 def _can_manage_partner(user, partner: ChannelPartner):
     if user.role == ROLE_ADMIN:
         return True
-    return partner.created_by == user.id
+    return partner.owner_id == user.id
 
 
 def _can_view_partner(db: Session, user, partner: ChannelPartner):
     if user.role == ROLE_ADMIN:
         return True
-    return partner.created_by in (managed_user_ids(db, user) or [])
+    return partner.owner_id in (managed_user_ids(db, user) or [])
 
 
 def _check_partner_view_access(db: Session, partner: ChannelPartner, user):
@@ -40,6 +40,7 @@ def _check_partner_manage_access(partner: ChannelPartner, user):
 
 def _partner_dict(db: Session, partner: ChannelPartner):
     creator = db.query(User).filter_by(id=partner.created_by).first() if partner.created_by else None
+    owner = db.query(User).filter_by(id=partner.owner_id).first() if partner.owner_id else None
     return {
         "id": partner.id,
         "name": partner.name,
@@ -51,7 +52,11 @@ def _partner_dict(db: Session, partner: ChannelPartner):
         "status": partner.status,
         "created_at": partner.created_at.isoformat() if partner.created_at else None,
         "created_by": partner.created_by,
-        "created_by_name": (creator.real_name or creator.username) if creator else None,
+        "created_by_name": partner.created_by_name or (
+            (creator.real_name or creator.username) if creator else None
+        ),
+        "owner_id": partner.owner_id,
+        "owner_name": (owner.real_name or owner.username) if owner else None,
         "opp_count": db.query(Opportunity).filter(Opportunity.channel_partner_id == partner.id).count(),
         "contact_count": db.query(Contact).filter(Contact.partner_id == partner.id).count(),
     }
@@ -74,7 +79,12 @@ def get_partner(pid: int, db: Session=Depends(get_db), user=Depends(require_user
 
 @router.post("", status_code=201)
 def create_partner(data: ChannelPartnerCreate, db: Session=Depends(get_db), user=Depends(require_user)):
-    p = ChannelPartner(**data.model_dump(), created_by=user.id)
+    p = ChannelPartner(
+        **data.model_dump(),
+        created_by=user.id,
+        created_by_name=user.real_name or user.username,
+        owner_id=user.id,
+    )
     db.add(p); db.commit(); db.refresh(p); return _partner_dict(db, p)
 
 @router.put("/{pid}")

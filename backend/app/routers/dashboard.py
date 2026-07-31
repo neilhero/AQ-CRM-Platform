@@ -241,12 +241,22 @@ def sales_performance(period: str = Query("month"), db: Session = Depends(get_db
         start = date(today.year, 1, 1)
     result = []
     for u in users:
+        # Pipeline figures describe the seller's current complete opportunity
+        # pool, so older opportunities must not disappear when a month changes.
         opps = (
             db.query(Opportunity)
-            .filter(Opportunity.sales_rep_id == u.id, Opportunity.created_at >= start)
+            .filter(Opportunity.sales_rep_id == u.id)
             .all()
         )
-        won = [o for o in opps if o.stage and str(o.stage.value) == "5"]
+        # The selected period only scopes completed performance.
+        won = [
+            o
+            for o in opps
+            if o.stage
+            and str(o.stage.value) == "5"
+            and o.updated_at
+            and o.updated_at >= start
+        ]
         opp_count = len(opps)
         won_count = len(won)
         total_amt = round(sum(o.amount or 0 for o in opps), 1)

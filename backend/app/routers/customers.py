@@ -20,6 +20,7 @@ from app.models import (
     CustomerSecurityProfile,
     Lead,
     Opportunity,
+    User,
 )
 from app.permissions import can_access_customer, scoped_customer_query, scoped_opportunity_query
 from app.routers.utils import require_user
@@ -28,14 +29,21 @@ from app.schemas import CustomerCreate, CustomerUpdate
 router = APIRouter()
 
 
-def _customer_out(c: Customer):
+def _customer_out(c: Customer, db: Session = None):
     data = {col.name: getattr(c, col.name) for col in c.__table__.columns}
     owner = getattr(c, "owner", None)
     owner_name = None
     if owner:
         owner_name = owner.real_name or owner.username
     data["owner_name"] = owner_name
-    data["created_by_name"] = owner_name
+    creator = (
+        db.query(User).filter_by(id=c.created_by_id).first()
+        if db and c.created_by_id
+        else None
+    )
+    data["created_by_name"] = c.created_by_name or (
+        (creator.real_name or creator.username) if creator else owner_name
+    )
     return data
 
 
@@ -60,7 +68,7 @@ def list_customers(
     if level:
         q = q.filter(Customer.level == level)
     rows = q.order_by(Customer.updated_at.desc()).offset(skip).limit(limit).all()
-    return [_customer_out(c) for c in rows]
+    return [_customer_out(c, db) for c in rows]
 
 
 def _check_cust(cid: int, db: Session, user):
@@ -74,7 +82,7 @@ def _check_cust(cid: int, db: Session, user):
 
 @router.get("/{cid}")
 def get_customer(cid: int, db: Session = Depends(get_db), user=Depends(require_user)):
-    return _customer_out(_check_cust(cid, db, user))
+    return _customer_out(_check_cust(cid, db, user), db)
 
 
 @router.post("", status_code=201)
@@ -90,11 +98,16 @@ def create_customer(data: CustomerCreate, db: Session = Depends(get_db), user=De
     payload = data.model_dump()
     payload["name"] = normalized
     payload["industry"] = data.industry.strip()
-    c = Customer(**payload, owner_id=user.id)
+    c = Customer(
+        **payload,
+        owner_id=user.id,
+        created_by_id=user.id,
+        created_by_name=user.real_name or user.username,
+    )
     db.add(c)
     db.commit()
     db.refresh(c)
-    return _customer_out(c)
+    return _customer_out(c, db)
 
 
 @router.put("/{cid}")
@@ -117,7 +130,7 @@ def update_customer(cid: int, data: CustomerUpdate, db: Session = Depends(get_db
         setattr(c, k, v)
     db.commit()
     db.refresh(c)
-    return _customer_out(c)
+    return _customer_out(c, db)
 
 
 @router.delete("/{cid}", status_code=204)

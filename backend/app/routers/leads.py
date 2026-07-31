@@ -165,13 +165,22 @@ def convert_lead(
         raise HTTPException(403, "只能转给自己或管辖销售")
     if user.role in (ROLE_SALES, ROLE_CHANNEL_MANAGER):
         owner_id = user.id
-    cust = Customer(name=l.company or l.name, industry=l.industry or "", owner_id=owner_id)
+    creator_name = user.real_name or user.username
+    cust = Customer(
+        name=l.company or l.name,
+        industry=l.industry or "",
+        owner_id=owner_id,
+        created_by_id=user.id,
+        created_by_name=creator_name,
+    )
     db.add(cust)
     db.flush()
     opp = Opportunity(
         name=l.name or "Converted lead",
         opp_type="channel" if user.role == ROLE_CHANNEL_MANAGER else "direct",
         sales_rep_id=owner_id,
+        created_by_id=user.id,
+        created_by_name=creator_name,
         customer_id=cust.id,
         industry=l.industry,
         amount=0,

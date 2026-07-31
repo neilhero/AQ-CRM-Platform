@@ -873,7 +873,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 .industry-legend-dot{width:9px;height:9px;border-radius:50%}
 .industry-legend-name{font-size:13px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .industry-legend-meta{font-size:12px;color:#64748b;white-space:nowrap;margin-left:16px;text-align:left;justify-self:start}
-.probability-rings{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;gap:14px;width:100%}
+.probability-card-body{display:flex;align-items:center;min-height:210px}
+.probability-rings{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;gap:14px;width:100%}
 .probability-ring-item{text-align:center;min-width:0}
 .probability-ring{width:116px;height:116px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 13px}
 .probability-ring-center{width:86px;height:86px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(15,23,42,.07)}
@@ -3554,7 +3555,7 @@ function DashboardPage() {
 
 
 
-      e('div', { className: 'section-card' },
+      e('div', { className: 'section-card' },
 
 
 
@@ -3562,7 +3563,7 @@ function DashboardPage() {
 
 
 
-        e('div', { className: 'card-header' }, e('h3', null, '📊  客户行业分布')),
+        e('div', { className: 'card-header' }, e('h3', null, '📊  客户行业分布')),
 
 
 
@@ -3570,7 +3571,7 @@ function DashboardPage() {
 
 
 
-        e('div', { className: 'card-body' },
+        e('div', { className: 'card-body' },
 
 
 
@@ -3725,7 +3726,7 @@ function DashboardPage() {
 
 
 
-      e('div', { className: 'section-card' },
+      e('div', { className: 'section-card' },
 
 
 
@@ -4038,7 +4039,7 @@ function DashboardPage() {
 
 
 
-        e('div', { className: 'card-body' },
+        e('div', { className: 'card-body probability-card-body' },
 
 
 

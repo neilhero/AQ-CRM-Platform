@@ -133,7 +133,7 @@ def scoped_channel_partner_query(q, db, user):
     if user.role == ROLE_ADMIN:
         return q
     owner_ids = managed_user_ids(db, user)
-    return q.filter(ChannelPartner.created_by.in_(owner_ids or [-1]))
+    return q.filter(ChannelPartner.owner_id.in_(owner_ids or [-1]))
 
 
 def can_access_opportunity(db, user, opportunity_id: int) -> bool:

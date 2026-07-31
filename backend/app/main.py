@@ -73,6 +73,38 @@ def ensure_schema_updates():
             partner_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(channel_partners)")).fetchall()]
             if "created_by" not in partner_cols:
                 conn.execute(text("ALTER TABLE channel_partners ADD COLUMN created_by INTEGER"))
+            if "owner_id" not in partner_cols:
+                conn.execute(text("ALTER TABLE channel_partners ADD COLUMN owner_id INTEGER"))
+                conn.execute(text("UPDATE channel_partners SET owner_id = created_by WHERE owner_id IS NULL"))
+            if "created_by_name" not in partner_cols:
+                conn.execute(text("ALTER TABLE channel_partners ADD COLUMN created_by_name VARCHAR(128)"))
+                conn.execute(text(
+                    "UPDATE channel_partners SET created_by_name = "
+                    "(SELECT real_name FROM users WHERE users.id = channel_partners.created_by) "
+                    "WHERE created_by_name IS NULL"
+                ))
+            customer_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(customers)")).fetchall()]
+            if "created_by_id" not in customer_cols:
+                conn.execute(text("ALTER TABLE customers ADD COLUMN created_by_id INTEGER"))
+                conn.execute(text("UPDATE customers SET created_by_id = owner_id WHERE created_by_id IS NULL"))
+            if "created_by_name" not in customer_cols:
+                conn.execute(text("ALTER TABLE customers ADD COLUMN created_by_name VARCHAR(128)"))
+                conn.execute(text(
+                    "UPDATE customers SET created_by_name = "
+                    "(SELECT real_name FROM users WHERE users.id = customers.created_by_id) "
+                    "WHERE created_by_name IS NULL"
+                ))
+            opportunity_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(opportunities)")).fetchall()]
+            if "created_by_id" not in opportunity_cols:
+                conn.execute(text("ALTER TABLE opportunities ADD COLUMN created_by_id INTEGER"))
+                conn.execute(text("UPDATE opportunities SET created_by_id = sales_rep_id WHERE created_by_id IS NULL"))
+            if "created_by_name" not in opportunity_cols:
+                conn.execute(text("ALTER TABLE opportunities ADD COLUMN created_by_name VARCHAR(128)"))
+                conn.execute(text(
+                    "UPDATE opportunities SET created_by_name = "
+                    "(SELECT real_name FROM users WHERE users.id = opportunities.created_by_id) "
+                    "WHERE created_by_name IS NULL"
+                ))
 
 ensure_schema_updates()
 
@@ -86,6 +118,7 @@ AUDIT_ENTITY_MAP = {
     "channel": ChannelPartner,
     "contacts": Contact,
     "leads": Lead,
+    "users": User,
     "commissions": CommissionRule,
     "sales-targets": SalesTarget,
     "channel-registrations": ChannelRegistration,

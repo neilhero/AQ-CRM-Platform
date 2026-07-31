@@ -170,7 +170,7 @@ def _check_partner_record_access(db: Session, record_id: int, user):
         raise HTTPException(404, "记录不存在")
     record, partner = row
     visible_ids = managed_user_ids(db, user)
-    if visible_ids is not None and partner.created_by not in visible_ids:
+    if visible_ids is not None and partner.owner_id not in visible_ids:
         raise HTTPException(403, "无权访问该渠道记录")
     return record
 
@@ -618,7 +618,7 @@ def list_partner_records(partner_id: Optional[int] = None, record_type: Optional
     q = db.query(PartnerGrowthRecord, ChannelPartner).join(ChannelPartner, PartnerGrowthRecord.partner_id == ChannelPartner.id)
     visible_ids = managed_user_ids(db, user)
     if visible_ids is not None:
-        q = q.filter(ChannelPartner.created_by.in_(visible_ids or [-1]))
+        q = q.filter(ChannelPartner.owner_id.in_(visible_ids or [-1]))
     if partner_id:
         q = q.filter(PartnerGrowthRecord.partner_id == partner_id)
     if record_type:

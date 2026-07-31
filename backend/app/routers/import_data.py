@@ -309,6 +309,8 @@ async def confirm_import(
                 level=row.get("level") or "C",
                 description=row.get("description") or None,
                 owner_id=user.id,
+                created_by_id=user.id,
+                created_by_name=user.real_name or user.username,
             ))
         elif type == "leads":
             db.add(Lead(

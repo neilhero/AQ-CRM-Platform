@@ -206,6 +206,13 @@ def list_opps(
         if o.sales_rep_id:
             sr = db.query(User).filter_by(id=o.sales_rep_id).first()
             d["sales_rep_name"] = sr.real_name if sr else None
+        creator = (
+            db.query(User).filter_by(id=o.created_by_id).first()
+            if o.created_by_id else None
+        )
+        d["created_by_name"] = o.created_by_name or (
+            (creator.real_name or creator.username) if creator else None
+        )
         d["opp_type"] = o.opp_type.value if o.opp_type else None
         d["stage"] = o.stage.value if o.stage else None
         d["probability"] = o.probability.value if o.probability else None
@@ -261,6 +268,13 @@ def get_opp(oid: int, db: Session = Depends(get_db), user=Depends(require_user))
     if o.sales_rep_id:
         sr = db.query(User).filter_by(id=o.sales_rep_id).first()
         d["sales_rep_name"] = sr.real_name if sr else None
+    creator = (
+        db.query(User).filter_by(id=o.created_by_id).first()
+        if o.created_by_id else None
+    )
+    d["created_by_name"] = o.created_by_name or (
+        (creator.real_name or creator.username) if creator else None
+    )
     d["opp_type"] = o.opp_type.value if o.opp_type else None
     d["stage"] = o.stage.value if o.stage else None
     d["probability"] = o.probability.value if o.probability else None
@@ -281,7 +295,11 @@ def create_opp(data: OpportunityCreate, db: Session = Depends(get_db), user=Depe
         kwargs["sales_rep_id"] = user.id
     elif user.role == ROLE_MANAGER and kwargs.get("sales_rep_id") not in (managed_user_ids(db, user) or []):
         raise HTTPException(403, "只能分配给自己或管辖销售")
-    o = Opportunity(**kwargs)
+    o = Opportunity(
+        **kwargs,
+        created_by_id=user.id,
+        created_by_name=user.real_name or user.username,
+    )
     db.add(o)
     _sync_opportunity_contacts(db, o)
     db.commit()

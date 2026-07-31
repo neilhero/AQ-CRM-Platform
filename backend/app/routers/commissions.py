@@ -52,7 +52,7 @@ def _partner_query_for_user(db: Session, user):
     q = db.query(ChannelPartner)
     owner_ids = _manageable_owner_ids(db, user)
     if owner_ids is not None:
-        q = q.filter(ChannelPartner.created_by.in_(owner_ids))
+        q = q.filter(ChannelPartner.owner_id.in_(owner_ids))
     return q
 
 
@@ -66,7 +66,7 @@ def _check_partner(pid: int, db: Session):
 def _check_partner_manage_access(pid: int, db: Session, user):
     partner = _check_partner(pid, db)
     owner_ids = _manageable_owner_ids(db, user)
-    if owner_ids is not None and partner.created_by not in owner_ids:
+    if owner_ids is not None and partner.owner_id not in owner_ids:
         raise HTTPException(403, "无权操作该渠道返点规则")
     return partner
 

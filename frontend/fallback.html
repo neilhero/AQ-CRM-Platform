@@ -1598,10 +1598,10 @@ function downloadImportErrors(prev, type) {
   if (!prev || !prev.rows) return;
   var keys = type === 'customers'
     ? ['_row','name','industry','address','website','level','description','_errors']
-    : ['_row','name','company','contact_name','contact_phone','source','quality','industry','notes','_errors'];
+    : ['_row','name','company','contact_name','contact_phone','source','industry','notes','_errors'];
   var labels = type === 'customers'
     ? ['行号','客户名称','行业','地址','网址','客户等级','描述','错误原因']
-    : ['行号','线索名称','公司名称','联系人','联系电话','来源','质量','行业','备注','错误原因'];
+    : ['行号','线索名称','公司名称','联系人','联系电话','来源链接','行业','备注','错误原因'];
   var badRows = prev.rows.filter(function(r) { return !r._valid; });
   if (!badRows.length) {
     message.info('没有错误行');
@@ -14531,14 +14531,6 @@ function LeadListPage() {
 
 
 
-    if (ql) p.push('quality=' + encodeURIComponent(ql));
-
-
-
-
-
-
-
     if (st) p.push('status=' + encodeURIComponent(st));
 
 
@@ -14963,7 +14955,9 @@ function LeadListPage() {
     }).catch(function(err) { message.error(err.message || '删除失败'); });
   }
 
-  var sourceColors = { '官网': 'blue', '展会': 'purple', '伙伴引荐': 'gold', '电话': 'cyan', '招标网站': 'orange', 'bidding': 'orange', '其他': 'default' };
+  var sourceLabels = { website: '官网', exhibition: '展会', partner: '伙伴引荐', phone: '电话', bidding: '招标采集', other: '其他', '官网': '官网', '展会': '展会', '伙伴引荐': '伙伴引荐', '电话': '电话', '招标网站': '招标采集', '其他': '其他' };
+
+  var sourceColors = { website: 'blue', exhibition: 'purple', partner: 'gold', phone: 'cyan', bidding: 'orange', other: 'default', '官网': 'blue', '展会': 'purple', '伙伴引荐': 'gold', '电话': 'cyan', '招标网站': 'orange', '其他': 'default' };
 
 
 
@@ -14971,7 +14965,7 @@ function LeadListPage() {
 
 
 
-  var qualityColors = { '冷': '#94a3b8', '温': '#f59e0b', '热': '#ef4444' };
+  var statusLabels = { new: '新', contacted: '已联系', confirmed: '已确认', converted: '已转化', closed: '已作废', '新': '新', '已联系': '已联系', '已确认需求': '已确认', '已转化商机': '已转化', '已作废': '已作废' };
 
 
 
@@ -14979,7 +14973,23 @@ function LeadListPage() {
 
 
 
-  var statusColors = { '新': '#3b82f6', '已联系': '#f59e0b', '已确认需求': '#8b5cf6', '已转化商机': '#22c55e', '已作废': '#94a3b8' };
+  var statusColors = { new: '#3b82f6', contacted: '#f59e0b', confirmed: '#8b5cf6', converted: '#22c55e', closed: '#94a3b8', '新': '#3b82f6', '已联系': '#f59e0b', '已确认需求': '#8b5cf6', '已转化商机': '#22c55e', '已作废': '#94a3b8' };
+
+  var industryLabels = { Government: '政府', government: '政府' };
+
+  function leadSourceLabel(v) { return sourceLabels[v] || v || '-'; }
+
+  function leadStatusLabel(v) { return statusLabels[v] || v || '-'; }
+
+  function leadIndustryLabel(v) { return industryLabels[v] || v || '-'; }
+
+  function leadSourceUrl(row) {
+    if (!row) return '';
+    if (row.url && /^https?:\/\//i.test(row.url)) return row.url;
+    var text = row.notes || '';
+    var match = String(text).match(/https?:\/\/[^\s；;，,]+/i);
+    return match ? match[0] : '';
+  }
 
 
 
@@ -15123,7 +15133,7 @@ function LeadListPage() {
 
 
 
-    { title: '来源', dataIndex: 'source', width: 80, render: function(v) { return v ? e(Tag, { color: sourceColors[v] || 'default' }, v) : '-'; } },
+    { title: '来源链接', dataIndex: 'source', width: 92, render: function(v, r) { var url = leadSourceUrl(r); return url ? e('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, '来源链接') : (v ? e(Tag, { color: sourceColors[v] || 'default' }, leadSourceLabel(v)) : '-'); } },
 
 
 
@@ -15131,7 +15141,7 @@ function LeadListPage() {
 
 
 
-    { title: '质量', dataIndex: 'quality', width: 56, align: 'center', render: function(v) { return v ? v === '热' ? '🔥' : v === '温' ? '🟡' : '🔵' : '-'; } },
+    { title: '状态', dataIndex: 'status', width: 100, render: function(v) { return v ? e(Tag, { color: statusColors[v] || '#94a3b8' }, leadStatusLabel(v)) : '-'; } },
 
 
 
@@ -15139,15 +15149,7 @@ function LeadListPage() {
 
 
 
-    { title: '状态', dataIndex: 'status', width: 100, render: function(v) { return v ? e(Tag, { color: statusColors[v] || '#94a3b8' }, v) : '-'; } },
-
-
-
-
-
-
-
-    { title: '行业', dataIndex: 'industry', width: 90, ellipsis: true },
+    { title: '行业', dataIndex: 'industry', width: 90, ellipsis: true, render: function(v) { return leadIndustryLabel(v); } },
 
 
 
@@ -15563,31 +15565,7 @@ function LeadListPage() {
 
 
 
-            e(Option, { value: '官网' }, '官网'), e(Option, { value: '展会' }, '展会'), e(Option, { value: '伙伴引荐' }, '伙伴引荐'), e(Option, { value: '电话' }, '电话'), e(Option, { value: '招标网站' }, '🕷️ 招标'), e(Option, { value: '其他' }, '其他')
-
-
-
-
-
-
-
-          )),
-
-
-
-
-
-
-
-          e(Col, null, e(Select, { placeholder: '质量', allowClear: true, style: { width: 80 }, value: ql, onChange: setQl },
-
-
-
-
-
-
-
-            e(Option, { value: '热' }, '🔥 热'), e(Option, { value: '温' }, '🟡 温'), e(Option, { value: '冷' }, '🔵 冷')
+            e(Option, { value: 'website' }, '官网'), e(Option, { value: 'exhibition' }, '展会'), e(Option, { value: 'partner' }, '伙伴引荐'), e(Option, { value: 'phone' }, '电话'), e(Option, { value: 'bidding' }, '招标采集'), e(Option, { value: 'other' }, '其他')
 
 
 
@@ -15611,7 +15589,7 @@ function LeadListPage() {
 
 
 
-            e(Option, { value: '新' }, '新'), e(Option, { value: '已联系' }, '已联系'), e(Option, { value: '已确认需求' }, '已确认'), e(Option, { value: '已转化商机' }, '已转化'), e(Option, { value: '已作废' }, '已作废')
+            e(Option, { value: 'new' }, '新'), e(Option, { value: 'contacted' }, '已联系'), e(Option, { value: 'confirmed' }, '已确认'), e(Option, { value: 'converted' }, '已转化'), e(Option, { value: 'closed' }, '已作废')
 
 
 
@@ -15831,15 +15809,7 @@ function LeadListPage() {
 
 
 
-          e(Col, { span: 8 }, e(Form.Item, { name: 'source', label: '来源' }, e(Select, null, e(Option, { value: '官网' }, '官网'), e(Option, { value: '展会' }, '展会'), e(Option, { value: '伙伴引荐' }, '伙伴引荐'), e(Option, { value: '电话' }, '电话'), e(Option, { value: '其他' }, '其他')))),
-
-
-
-
-
-
-
-          e(Col, { span: 8 }, e(Form.Item, { name: 'quality', label: '质量' }, e(Select, null, e(Option, { value: '热' }, '热'), e(Option, { value: '温' }, '温'), e(Option, { value: '冷' }, '冷')))),
+          e(Col, { span: 8 }, e(Form.Item, { name: 'source', label: '来源链接' }, e(Select, null, e(Option, { value: 'website' }, '官网'), e(Option, { value: 'exhibition' }, '展会'), e(Option, { value: 'partner' }, '伙伴引荐'), e(Option, { value: 'phone' }, '电话'), e(Option, { value: 'bidding' }, '招标采集'), e(Option, { value: 'other' }, '其他')))),
 
 
 
@@ -16087,15 +16057,7 @@ function LeadListPage() {
 
 
 
-            { title: '截止日期', dataIndex: 'deadline', width: 100, render: function(v) { return e(Tag, { color: 'orange' }, v); } },
-
-
-
-
-
-
-
-            { title: '质量', dataIndex: 'quality', width: 60, align: 'center', render: function(v) { return v === '热' ? '🔥' : v === '温' ? '🟡' : '🔵'; } }
+            { title: '截止日期', dataIndex: 'deadline', width: 100, render: function(v) { return e(Tag, { color: 'orange' }, v); } }
 
 
 
@@ -18000,7 +17962,7 @@ function ImportModal(props) {
 
 
 
-    : ['线索名称','公司名称','联系人','联系电话','来源','质量','行业','备注'];
+    : ['线索名称','公司名称','联系人','联系电话','来源链接','行业','备注'];
 
 
 
@@ -18472,7 +18434,7 @@ function ImportModal(props) {
 
 
 
-                    : ['name','company','contact_name','contact_phone','source','quality','industry','notes'][fieldLabels.indexOf(fl)];
+                    : ['name','company','contact_name','contact_phone','source','industry','notes'][fieldLabels.indexOf(fl)];
 
 
 

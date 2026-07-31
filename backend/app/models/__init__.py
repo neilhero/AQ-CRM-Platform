@@ -71,7 +71,10 @@ class User(Base):
     dingtalk_userid = Column(String(128), nullable=True, index=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=now_cst)
-    opportunities = relationship("Opportunity", back_populates="sales_rep")
+    opportunities = relationship(
+        "Opportunity", back_populates="sales_rep",
+        foreign_keys="Opportunity.sales_rep_id",
+    )
     follow_ups = relationship("FollowUp", back_populates="creator")
 
 class Customer(Base):
@@ -86,7 +89,9 @@ class Customer(Base):
     created_at = Column(DateTime, default=now_cst)
     updated_at = Column(DateTime, default=now_cst, onupdate=now_cst)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    owner = relationship("User")
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    created_by_name = Column(String(128), nullable=True)
+    owner = relationship("User", foreign_keys=[owner_id])
     contacts = relationship("Contact", back_populates="customer")
     opportunities = relationship("Opportunity", back_populates="customer")
 
@@ -102,7 +107,9 @@ class ChannelPartner(Base):
     status = Column(String(16), default="active", index=True)
     created_at = Column(DateTime, default=now_cst)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    creator = relationship("User")
+    created_by_name = Column(String(128), nullable=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    creator = relationship("User", foreign_keys=[created_by])
     opportunities = relationship("Opportunity", back_populates="channel_partner")
     contacts = relationship("Contact", back_populates="channel_partner")
 
@@ -148,6 +155,8 @@ class Opportunity(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     opp_type = Column(Enum(OpportunityType), nullable=False, default=OpportunityType.DIRECT)
     sales_rep_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    created_by_name = Column(String(128), nullable=True)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     end_customer_name = Column(String(256))
     channel_partner_id = Column(Integer, ForeignKey("channel_partners.id"), nullable=True)
@@ -168,7 +177,9 @@ class Opportunity(Base):
     update_status = Column(Enum(UpdateStatus), default=UpdateStatus.NEW_THIS_WEEK)
     is_closed = Column(Boolean, default=False)
     closed_reason = Column(String(256))
-    sales_rep = relationship("User", back_populates="opportunities")
+    sales_rep = relationship(
+        "User", back_populates="opportunities", foreign_keys=[sales_rep_id]
+    )
     customer = relationship("Customer", back_populates="opportunities")
     channel_partner = relationship("ChannelPartner", back_populates="opportunities")
     follow_ups = relationship("FollowUp", back_populates="opportunity", order_by="FollowUp.created_at.desc()")
