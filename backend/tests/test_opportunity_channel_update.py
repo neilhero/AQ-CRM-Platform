@@ -191,8 +191,50 @@ def test_contact_sync_updates_existing_customer_contact_without_duplicates():
     assert contacts[0].phone == "13812345678"
 
 
+def test_pain_points_are_saved_on_create_and_update():
+    db = _session()
+    owner = User(
+        username="pain-point-owner",
+        password_hash="unused",
+        real_name="Pain Point Owner",
+        role="sales",
+        is_active=True,
+    )
+    db.add(owner)
+    db.commit()
+
+    result = create_opp(
+        OpportunityCreate(
+            name="Pain Point Project",
+            opp_type="direct",
+            sales_rep_id=owner.id,
+            industry="Education",
+            amount=100,
+            stage="1",
+            probability="LOW",
+            pain_points="Initial customer pain point",
+        ),
+        db=db,
+        user=_admin_actor(owner),
+    )
+
+    opportunity = db.query(Opportunity).filter_by(id=result["id"]).one()
+    assert opportunity.pain_points == "Initial customer pain point"
+
+    update_opp(
+        opportunity.id,
+        OpportunityUpdate(pain_points="Updated customer pain point"),
+        db=db,
+        user=_admin_actor(owner),
+    )
+
+    db.refresh(opportunity)
+    assert opportunity.pain_points == "Updated customer pain point"
+
+
 if __name__ == "__main__":
     test_channel_partner_can_be_changed_when_updating_opportunity()
     test_handler_person_is_saved_on_create_and_update()
     test_contact_sync_updates_existing_customer_contact_without_duplicates()
+    test_pain_points_are_saved_on_create_and_update()
     print("opportunity contact regression tests passed")

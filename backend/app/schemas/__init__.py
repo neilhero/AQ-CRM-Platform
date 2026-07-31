@@ -21,14 +21,14 @@ class OpportunityCreate(BaseModel):
     channel_partner_id: Optional[int]=None; end_customer_name: Optional[str]=None
     industry: str; amount: float; stage: str
     probability: str; key_person: Optional[str]=None; handler_person: Optional[str]=None
-    brief: Optional[str]=None
+    brief: Optional[str]=None; pain_points: Optional[str]=None
     expected_close_date: Optional[date]=None; required_product: Optional[str]=None
     next_follow_up_date: Optional[date]=None
 
 class OpportunityUpdate(BaseModel):
     name: Optional[str]=None; stage: Optional[str]=None; probability: Optional[str]=None
     amount: Optional[float]=None; key_person: Optional[str]=None; handler_person: Optional[str]=None
-    brief: Optional[str]=None
+    brief: Optional[str]=None; pain_points: Optional[str]=None
     expected_close_date: Optional[date]=None; next_follow_up_date: Optional[date]=None; required_product: Optional[str]=None
     is_closed: Optional[bool]=None; industry: Optional[str]=None
     channel_partner_id: Optional[int]=None
