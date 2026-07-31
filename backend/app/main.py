@@ -105,6 +105,9 @@ def ensure_schema_updates():
                     "(SELECT real_name FROM users WHERE users.id = opportunities.created_by_id) "
                     "WHERE created_by_name IS NULL"
                 ))
+            contact_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(contacts)")).fetchall()]
+            if "department" not in contact_cols:
+                conn.execute(text("ALTER TABLE contacts ADD COLUMN department VARCHAR(128)"))
 
 ensure_schema_updates()
 

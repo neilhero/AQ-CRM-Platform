@@ -76,16 +76,16 @@ class ChannelPartnerOut(BaseModel):
 
 class ContactCreate(BaseModel):
     name: str; customer_id: Optional[int]=None; partner_id: Optional[int]=None
-    position: Optional[str]=None; role_type: Optional[str]=None; phone: Optional[str]=None
+    department: Optional[str]=None; position: Optional[str]=None; role_type: Optional[str]=None; phone: Optional[str]=None
     email: Optional[str]=None; wechat: Optional[str]=None; notes: Optional[str]=None
 
 class ContactUpdate(BaseModel):
-    name: Optional[str]=None; position: Optional[str]=None; role_type: Optional[str]=None
+    name: Optional[str]=None; department: Optional[str]=None; position: Optional[str]=None; role_type: Optional[str]=None
     phone: Optional[str]=None; email: Optional[str]=None; wechat: Optional[str]=None; notes: Optional[str]=None
 
 class ContactOut(BaseModel):
     id: int; name: str; customer_id: Optional[int]=None; partner_id: Optional[int]=None
-    position: Optional[str]=None; role_type: Optional[str]=None; phone: Optional[str]=None
+    department: Optional[str]=None; position: Optional[str]=None; role_type: Optional[str]=None; phone: Optional[str]=None
     email: Optional[str]=None; wechat: Optional[str]=None; notes: Optional[str]=None
     created_at: Optional[datetime]=None
     class Config: from_attributes=True

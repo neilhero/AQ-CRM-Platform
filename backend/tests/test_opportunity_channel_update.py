@@ -19,6 +19,15 @@ from app.routers.opportunities import create_opp, update_opp
 from app.schemas import OpportunityCreate, OpportunityUpdate
 
 
+def _admin_actor(user):
+    return SimpleNamespace(
+        id=user.id,
+        role="admin",
+        real_name=user.real_name,
+        username=user.username,
+    )
+
+
 def _session():
     engine = create_engine(
         "sqlite://",
@@ -64,7 +73,7 @@ def test_channel_partner_can_be_changed_when_updating_opportunity():
         opportunity.id,
         OpportunityUpdate(channel_partner_id=second_partner.id),
         db=db,
-        user=SimpleNamespace(id=owner.id, role="admin"),
+        user=_admin_actor(owner),
     )
 
     db.refresh(opportunity)
@@ -96,11 +105,11 @@ def test_handler_person_is_saved_on_create_and_update():
             amount=100,
             stage="1",
             probability="LOW",
-            key_person="Key One|CISO|13700000000|key@example.com",
-            handler_person="Handler One|Manager|13800000000|one@example.com",
+            key_person="Key One|Security|CISO|13700000000|key@example.com",
+            handler_person="Handler One|Procurement|Manager|13800000000|one@example.com",
         ),
         db=db,
-        user=SimpleNamespace(id=owner.id, role="admin"),
+        user=_admin_actor(owner),
     )
 
     opportunity = db.query(Opportunity).filter_by(id=result["id"]).one()
@@ -111,16 +120,18 @@ def test_handler_person_is_saved_on_create_and_update():
     handler_contact = db.query(Contact).filter_by(
         customer_id=customer.id, role_type="handler", name="Handler One"
     ).one()
+    assert key_contact.department == "Security"
     assert key_contact.position == "CISO"
+    assert handler_contact.department == "Procurement"
     assert handler_contact.phone == "13800000000"
 
     update_opp(
         opportunity.id,
         OpportunityUpdate(
-            handler_person="Handler Two|Director|13900000000|two@example.com"
+            handler_person="Handler Two|IT|Director|13900000000|two@example.com"
         ),
         db=db,
-        user=SimpleNamespace(id=owner.id, role="admin"),
+        user=_admin_actor(owner),
     )
 
     db.refresh(opportunity)
@@ -128,6 +139,7 @@ def test_handler_person_is_saved_on_create_and_update():
     updated_handler = db.query(Contact).filter_by(
         customer_id=customer.id, role_type="handler", name="Handler Two"
     ).one()
+    assert updated_handler.department == "IT"
     assert updated_handler.email == "two@example.com"
 
 
@@ -168,7 +180,7 @@ def test_contact_sync_updates_existing_customer_contact_without_duplicates():
             ),
         ),
         db=db,
-        user=SimpleNamespace(id=owner.id, role="admin"),
+        user=_admin_actor(owner),
     )
 
     contacts = db.query(Contact).filter_by(

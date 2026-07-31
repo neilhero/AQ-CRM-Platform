@@ -119,6 +119,7 @@ class Contact(Base):
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     partner_id = Column(Integer, ForeignKey("channel_partners.id"), nullable=True)
     name = Column(String(64), nullable=False)
+    department = Column(String(128))
     position = Column(String(128))
     role_type = Column(String(32))
     phone = Column(String(32))

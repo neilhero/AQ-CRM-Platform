@@ -100,6 +100,7 @@ def _contact_dict(contact):
     return {
         "id": contact.id,
         "name": contact.name,
+        "department": contact.department,
         "position": contact.position,
         "role_type": contact.role_type,
         "phone": contact.phone,
@@ -111,7 +112,13 @@ def _contact_dict(contact):
 
 def _contact_person_text(contacts):
     return ";;".join(
-        "|".join([c.name or "", c.position or "", c.phone or "", c.email or ""])
+        "|".join([
+            c.name or "",
+            c.department or "",
+            c.position or "",
+            c.phone or "",
+            c.email or "",
+        ])
         for c in contacts
     )
 
@@ -120,11 +127,18 @@ def _parse_contact_people(value):
     people = []
     for raw_person in (value or "").split(";;"):
         fields = [field.strip() for field in raw_person.split("|")]
-        fields += [""] * (4 - len(fields))
-        name, position, phone, email = fields[:4]
-        if name:
+        if len(fields) >= 5:
+            name, department, position, phone, email = fields[:5]
+        else:
+            fields += [""] * (4 - len(fields))
+            name, position, phone, email = fields[:4]
+            department = ""
+        if any((name, department, position, phone, email)):
+            if not name or not phone:
+                raise HTTPException(422, "联系人姓名和联系方式为必填项")
             people.append({
                 "name": name,
+                "department": department or None,
                 "position": position or None,
                 "phone": phone or None,
                 "email": email or None,
@@ -153,7 +167,7 @@ def _sync_customer_contacts(db: Session, customer_id, role_type, value):
                 name=person["name"],
             )
             db.add(contact)
-        for field in ("position", "phone", "email"):
+        for field in ("department", "position", "phone", "email"):
             if person[field]:
                 setattr(contact, field, person[field])
 

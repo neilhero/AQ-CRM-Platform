@@ -507,7 +507,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 
 
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.opportunity-presales-card{margin-top:20px;margin-bottom:20px}
 
 
 
@@ -7433,7 +7434,7 @@ function OppListPage(props) {
 
 
 
-  var _skp = useState([{name:'',position:'',phone:'',email:''}]), kpList = _skp[0], setKpList = _skp[1];
+  var _skp = useState([{name:'',department:'',position:'',phone:'',email:''}]), kpList = _skp[0], setKpList = _skp[1];
 
 
 
@@ -7441,7 +7442,7 @@ function OppListPage(props) {
 
 
 
-  var _shp = useState([{name:'',position:'',phone:'',email:''}]), hpList = _shp[0], setHpList = _shp[1];
+  var _shp = useState([{name:'',department:'',position:'',phone:'',email:''}]), hpList = _shp[0], setHpList = _shp[1];
 
 
 
@@ -7743,7 +7744,11 @@ function OppListPage(props) {
 
 
 
-      v.key_person = kpList.map(function(k){return [k.name||'',k.position||'',k.phone||'',k.email||''].join('|')}).join(';;');
+      var activeKeyPeople = kpList.filter(function(k) { return k.name || k.department || k.position || k.phone || k.email; });
+      var activeHandlers = hpList.filter(function(h) { return h.name || h.department || h.position || h.phone || h.email; });
+      if (activeKeyPeople.some(function(k) { return !String(k.name || '').trim() || !String(k.phone || '').trim(); })) throw new Error('关键人的姓名和联系方式为必填项');
+      if (activeHandlers.some(function(h) { return !String(h.name || '').trim() || !String(h.phone || '').trim(); })) throw new Error('经办人的姓名和联系方式为必填项');
+      v.key_person = activeKeyPeople.map(function(k){return [k.name||'',k.department||'',k.position||'',k.phone||'',k.email||''].join('|')}).join(';;');
 
 
 
@@ -7751,7 +7756,7 @@ function OppListPage(props) {
 
 
 
-      v.handler_person = hpList.map(function(h){return [h.name||'',h.position||'',h.phone||'',h.email||''].join('|')}).join(';;');
+      v.handler_person = activeHandlers.map(function(h){return [h.name||'',h.department||'',h.position||'',h.phone||'',h.email||''].join('|')}).join(';;');
 
 
 
@@ -7783,7 +7788,7 @@ function OppListPage(props) {
 
 
 
-    }).then(function() { message.success('已创建'); setOpen(false); form.resetFields(); setKpList([{name:'',position:'',phone:'',email:''}]); setHpList([{name:'',position:'',phone:'',email:''}]); fetchData(); })
+    }).then(function() { message.success('已创建'); setOpen(false); form.resetFields(); setKpList([{name:'',department:'',position:'',phone:'',email:''}]); setHpList([{name:'',department:'',position:'',phone:'',email:''}]); fetchData(); })
 
 
 
@@ -8423,7 +8428,7 @@ function OppListPage(props) {
 
 
 
-            e(Button, { type: 'primary', icon: IC('PlusOutlined'), onClick: function() { setKpList([{name:'',position:'',phone:'',email:''}]); setHpList([{name:'',position:'',phone:'',email:''}]); setOpen(true); } }, '新建商机')
+            e(Button, { type: 'primary', icon: IC('PlusOutlined'), onClick: function() { setKpList([{name:'',department:'',position:'',phone:'',email:''}]); setHpList([{name:'',department:'',position:'',phone:'',email:''}]); setOpen(true); } }, '新建商机')
 
 
 
@@ -8639,7 +8644,7 @@ function OppListPage(props) {
 
 
 
-    e(Modal, { title: '新建' + title, open: open, onOk: create, maskClosable: false, onCancel: function() { setOpen(false); form.resetFields(); setKpList([{name:'',position:'',phone:'',email:''}]); setHpList([{name:'',position:'',phone:'',email:''}]); }, width: 900, destroyOnClose: true },
+    e(Modal, { title: '新建' + title, open: open, onOk: create, maskClosable: false, onCancel: function() { setOpen(false); form.resetFields(); setKpList([{name:'',department:'',position:'',phone:'',email:''}]); setHpList([{name:'',department:'',position:'',phone:'',email:''}]); }, width: 900, destroyOnClose: true },
 
 
 
@@ -8769,7 +8774,7 @@ function OppListPage(props) {
 
 
 
-          e(Col, { span: 12 }, e(Form.Item, { name: 'expected_close_date', label: '预计成交日期' }, e(DatePicker, { style: { width: '100%' } }))),
+          e(Col, { span: 12 }, e(Form.Item, { name: 'expected_close_date', label: '预计成交日期', rules: [{ required: true, message: '请选择预计成交日期' }] }, e(DatePicker, { style: { width: '100%' } }))),
 
 
 
@@ -8793,7 +8798,6 @@ function OppListPage(props) {
 
 
 
-        e(Form.Item, { name: 'required_product', label: '所需产品' }, e(Input, { placeholder: '如：大模型安全防火墙' })),
 
 
 
@@ -8809,15 +8813,7 @@ function OppListPage(props) {
 
 
 
-        e(Form.Item, { name: 'brief', label: '商机简介' }, e(TextArea, { rows: 2 })),
-
-
-
-
-
-
-
-        e('div', { style: { marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#64748b', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 } }, '👤 关键人信息'),
+        e('div', { style: { marginBottom: 8, fontSize: 13, fontWeight: 600, color: '#64748b', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 } }, '👤 关键人信息'),
 
 
 
@@ -8841,7 +8837,7 @@ function OppListPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '姓名', value: kp.name, onChange: function(ev) { var nw = kpList.slice(); nw[idx] = Object.assign({}, nw[idx], {name: ev.target.value}); setKpList(nw); } })),
+            e(Col, { span: 4 }, e(Input, { prefix: e('span', { style: { color: '#ff4d4f' } }, '*'), placeholder: '姓名', value: kp.name, onChange: function(ev) { var nw = kpList.slice(); nw[idx] = Object.assign({}, nw[idx], {name: ev.target.value}); setKpList(nw); } })),
 
 
 
@@ -8849,7 +8845,8 @@ function OppListPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '职位', value: kp.position, onChange: function(ev) { var nw = kpList.slice(); nw[idx] = Object.assign({}, nw[idx], {position: ev.target.value}); setKpList(nw); } })),
+            e(Col, { span: 4 }, e(Input, { placeholder: '部门', value: kp.department, onChange: function(ev) { var nw = kpList.slice(); nw[idx] = Object.assign({}, nw[idx], {department: ev.target.value}); setKpList(nw); } })),
+            e(Col, { span: 4 }, e(Input, { placeholder: '职位', value: kp.position, onChange: function(ev) { var nw = kpList.slice(); nw[idx] = Object.assign({}, nw[idx], {position: ev.target.value}); setKpList(nw); } })),
 
 
 
@@ -8857,7 +8854,7 @@ function OppListPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '联系方式', value: kp.phone, onChange: function(ev) { var nw = kpList.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setKpList(nw); } })),
+            e(Col, { span: 5 }, e(Input, { prefix: e('span', { style: { color: '#ff4d4f' } }, '*'), placeholder: '联系方式', value: kp.phone, onChange: function(ev) { var nw = kpList.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setKpList(nw); } })),
 
 
 
@@ -8873,7 +8870,7 @@ function OppListPage(props) {
 
 
 
-            kpList.length > 1 ? e(Col, { span: 4 }, e(Button, { type: 'text', danger: true, onClick: function() { setKpList(kpList.filter(function(_, i) { return i !== idx; })); } }, '×')) : null
+            kpList.length > 1 ? e(Col, { span: 2 }, e(Button, { type: 'text', danger: true, onClick: function() { setKpList(kpList.filter(function(_, i) { return i !== idx; })); } }, '×')) : null
 
 
 
@@ -8897,7 +8894,7 @@ function OppListPage(props) {
 
 
 
-        e(Button, { type: 'dashed', block: true, icon: IC('PlusOutlined'), onClick: function() { setKpList(kpList.concat([{name:'',position:'',phone:'',email:''}])); }, style: { marginBottom: 16 } }, '添加关键人'),
+        e(Button, { type: 'dashed', block: true, icon: IC('PlusOutlined'), onClick: function() { setKpList(kpList.concat([{name:'',department:'',position:'',phone:'',email:''}])); }, style: { marginBottom: 16 } }, '添加关键人'),
 
 
 
@@ -8929,7 +8926,7 @@ function OppListPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '姓名', value: hp.name, onChange: function(ev) { var nw = hpList.slice(); nw[idx] = Object.assign({}, nw[idx], {name: ev.target.value}); setHpList(nw); } })),
+            e(Col, { span: 4 }, e(Input, { prefix: e('span', { style: { color: '#ff4d4f' } }, '*'), placeholder: '姓名', value: hp.name, onChange: function(ev) { var nw = hpList.slice(); nw[idx] = Object.assign({}, nw[idx], {name: ev.target.value}); setHpList(nw); } })),
 
 
 
@@ -8937,7 +8934,8 @@ function OppListPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '职位', value: hp.position, onChange: function(ev) { var nw = hpList.slice(); nw[idx] = Object.assign({}, nw[idx], {position: ev.target.value}); setHpList(nw); } })),
+            e(Col, { span: 4 }, e(Input, { placeholder: '部门', value: hp.department, onChange: function(ev) { var nw = hpList.slice(); nw[idx] = Object.assign({}, nw[idx], {department: ev.target.value}); setHpList(nw); } })),
+            e(Col, { span: 4 }, e(Input, { placeholder: '职位', value: hp.position, onChange: function(ev) { var nw = hpList.slice(); nw[idx] = Object.assign({}, nw[idx], {position: ev.target.value}); setHpList(nw); } })),
 
 
 
@@ -8945,7 +8943,7 @@ function OppListPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '联系方式', value: hp.phone, onChange: function(ev) { var nw = hpList.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setHpList(nw); } })),
+            e(Col, { span: 5 }, e(Input, { prefix: e('span', { style: { color: '#ff4d4f' } }, '*'), placeholder: '联系方式', value: hp.phone, onChange: function(ev) { var nw = hpList.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setHpList(nw); } })),
 
 
 
@@ -8961,7 +8959,7 @@ function OppListPage(props) {
 
 
 
-            hpList.length > 1 ? e(Col, { span: 4 }, e(Button, { type: 'text', danger: true, onClick: function() { setHpList(hpList.filter(function(_, i) { return i !== idx; })); } }, '×')) : null
+            hpList.length > 1 ? e(Col, { span: 2 }, e(Button, { type: 'text', danger: true, onClick: function() { setHpList(hpList.filter(function(_, i) { return i !== idx; })); } }, '×')) : null
 
 
 
@@ -8985,7 +8983,7 @@ function OppListPage(props) {
 
 
 
-        e(Button, { type: 'dashed', block: true, icon: IC('PlusOutlined'), onClick: function() { setHpList(hpList.concat([{name:'',position:'',phone:'',email:''}])); } }, '添加经办人')
+        e(Button, { type: 'dashed', block: true, icon: IC('PlusOutlined'), onClick: function() { setHpList(hpList.concat([{name:'',department:'',position:'',phone:'',email:''}])); } }, '添加经办人')
 
 
 
@@ -10316,7 +10314,7 @@ function OppDetailPage(props) {
 
 
 
-  var _skp2 = useState([{name:'',position:'',phone:'',email:''}]), kpList2 = _skp2[0], setKpList2 = _skp2[1];
+  var _skp2 = useState([{name:'',department:'',position:'',phone:'',email:''}]), kpList2 = _skp2[0], setKpList2 = _skp2[1];
 
 
 
@@ -10324,7 +10322,7 @@ function OppDetailPage(props) {
 
 
 
-  var _shp2 = useState([{name:'',position:'',phone:'',email:''}]), hpList2 = _shp2[0], setHpList2 = _shp2[1];
+  var _shp2 = useState([{name:'',department:'',position:'',phone:'',email:''}]), hpList2 = _shp2[0], setHpList2 = _shp2[1];
   var _scp = useState([]), channelPartners = _scp[0], setChannelPartners = _scp[1];
 
 
@@ -10587,7 +10585,11 @@ function OppDetailPage(props) {
 
 
 
-      v.key_person = kpList2.map(function(k){return [k.name||'',k.position||'',k.phone||'',k.email||''].join('|')}).join(';;');
+      var activeKeyPeople = kpList2.filter(function(k) { return k.name || k.department || k.position || k.phone || k.email; });
+      var activeHandlers = hpList2.filter(function(h) { return h.name || h.department || h.position || h.phone || h.email; });
+      if (activeKeyPeople.some(function(k) { return !String(k.name || '').trim() || !String(k.phone || '').trim(); })) throw new Error('关键人的姓名和联系方式为必填项');
+      if (activeHandlers.some(function(h) { return !String(h.name || '').trim() || !String(h.phone || '').trim(); })) throw new Error('经办人的姓名和联系方式为必填项');
+      v.key_person = activeKeyPeople.map(function(k){return [k.name||'',k.department||'',k.position||'',k.phone||'',k.email||''].join('|')}).join(';;');
 
 
 
@@ -10595,7 +10597,7 @@ function OppDetailPage(props) {
 
 
 
-      v.handler_person = hpList2.map(function(h){return [h.name||'',h.position||'',h.phone||'',h.email||''].join('|')}).join(';;');
+      v.handler_person = activeHandlers.map(function(h){return [h.name||'',h.department||'',h.position||'',h.phone||'',h.email||''].join('|')}).join(';;');
 
 
 
@@ -10678,8 +10680,10 @@ function OppDetailPage(props) {
     if (!str) return [];
     return str.split(';;').map(function(p) {
       var parts = p.split('|');
-      return { name: parts[0] || '', position: parts[1] || '', phone: parts[2] || '', email: parts[3] || '', role_type: roleType };
-    }).filter(function(p) { return p.name || p.position || p.phone || p.email; });
+      return parts.length >= 5
+        ? { name: parts[0] || '', department: parts[1] || '', position: parts[2] || '', phone: parts[3] || '', email: parts[4] || '', role_type: roleType }
+        : { name: parts[0] || '', department: '', position: parts[1] || '', phone: parts[2] || '', email: parts[3] || '', role_type: roleType };
+    }).filter(function(p) { return p.name || p.department || p.position || p.phone || p.email; });
   }
 
   var detailCustomerContacts = opp.customer_contacts || [];
@@ -10690,6 +10694,7 @@ function OppDetailPage(props) {
     return customerContacts.concat(storedContacts).filter(function(contact) {
       var contactKey = [
         contact.name || '',
+        contact.department || '',
         contact.position || '',
         contact.phone || '',
         contact.email || ''
@@ -10734,15 +10739,17 @@ function OppDetailPage(props) {
       rows.length === 0
         ? e('div', { style: { border: '1px dashed #cbd5e1', borderRadius: 8, padding: '12px 14px', color: '#94a3b8', background: '#fff' } }, emptyText)
         : e('div', null,
-            e('div', { style: { display: 'grid', gridTemplateColumns: 'minmax(120px,1.2fr) minmax(110px,1fr) minmax(120px,1fr) minmax(160px,1.3fr)', gap: 12, padding: '0 12px 7px', color: '#64748b', fontSize: 12, fontWeight: 600 } },
+            e('div', { style: { display: 'grid', gridTemplateColumns: 'minmax(110px,1.1fr) minmax(100px,1fr) minmax(100px,1fr) minmax(120px,1.1fr) minmax(150px,1.3fr)', gap: 12, padding: '0 12px 7px', color: '#64748b', fontSize: 12, fontWeight: 600 } },
               e('div', null, '姓名'),
+              e('div', null, '部门'),
               e('div', null, '职位'),
               e('div', null, '联系方式'),
               e('div', null, '邮箱')
             ),
             rows.map(function(c, idx) {
-              return e('div', { key: title + idx, style: { display: 'grid', gridTemplateColumns: 'minmax(120px,1.2fr) minmax(110px,1fr) minmax(120px,1fr) minmax(160px,1.3fr)', gap: 12, alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', marginBottom: 8, background: '#fff' } },
+              return e('div', { key: title + idx, style: { display: 'grid', gridTemplateColumns: 'minmax(110px,1.1fr) minmax(100px,1fr) minmax(100px,1fr) minmax(120px,1.1fr) minmax(150px,1.3fr)', gap: 12, alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', marginBottom: 8, background: '#fff' } },
                 e('div', { style: { fontWeight: 700, color: '#0f172a' } }, c.name || '-'),
+                e('div', { style: { color: '#475569' } }, c.department || '-'),
                 e('div', { style: { color: '#475569' } }, c.position || '-'),
                 e('div', { style: { color: '#475569' } }, c.phone || '-'),
                 e('div', { style: { color: '#64748b' } }, c.email || '-')
@@ -10915,7 +10922,9 @@ function OppDetailPage(props) {
 
 
 
-              return {name: parts[0]||'', position: parts[1]||'', phone: parts[2]||'', email: parts[3]||''};
+              return parts.length >= 5
+                ? {name: parts[0]||'', department: parts[1]||'', position: parts[2]||'', phone: parts[3]||'', email: parts[4]||''}
+                : {name: parts[0]||'', department: '', position: parts[1]||'', phone: parts[2]||'', email: parts[3]||''};
 
 
 
@@ -11597,7 +11606,7 @@ function OppDetailPage(props) {
 
 
 
-    e('div', { className: 'section-card', style: { marginTop: 20, marginBottom: 20 } },
+    e('div', { className: 'section-card opportunity-presales-card' },
       e('div', { className: 'card-header' }, e('h3', null, IC('ToolOutlined'), ' 售前协同')),
       e('div', { className: 'card-body' },
         e(Form, { form: detailPresalesForm, layout: 'vertical' },
@@ -11727,7 +11736,7 @@ function OppDetailPage(props) {
 
 
 
-          e(Col, { span: 12 }, e(Form.Item, { name: 'expected_close_date', label: '预计成交' }, e(DatePicker, { style: { width: '100%' } }))),
+          e(Col, { span: 12 }, e(Form.Item, { name: 'expected_close_date', label: '预计成交日期', rules: [{ required: true, message: '请选择预计成交日期' }] }, e(DatePicker, { style: { width: '100%' } }))),
 
 
 
@@ -11783,7 +11792,7 @@ function OppDetailPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '姓名', value: kp.name, onChange: function(ev) { var nw = kpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {name: ev.target.value}); setKpList2(nw); } })),
+            e(Col, { span: 4 }, e(Input, { prefix: e('span', { style: { color: '#ff4d4f' } }, '*'), placeholder: '姓名', value: kp.name, onChange: function(ev) { var nw = kpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {name: ev.target.value}); setKpList2(nw); } })),
 
 
 
@@ -11791,7 +11800,8 @@ function OppDetailPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '职位', value: kp.position, onChange: function(ev) { var nw = kpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {position: ev.target.value}); setKpList2(nw); } })),
+            e(Col, { span: 4 }, e(Input, { placeholder: '部门', value: kp.department, onChange: function(ev) { var nw = kpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {department: ev.target.value}); setKpList2(nw); } })),
+            e(Col, { span: 4 }, e(Input, { placeholder: '职位', value: kp.position, onChange: function(ev) { var nw = kpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {position: ev.target.value}); setKpList2(nw); } })),
 
 
 
@@ -11799,7 +11809,7 @@ function OppDetailPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '联系方式', value: kp.phone, onChange: function(ev) { var nw = kpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setKpList2(nw); } })),
+            e(Col, { span: 5 }, e(Input, { prefix: e('span', { style: { color: '#ff4d4f' } }, '*'), placeholder: '联系方式', value: kp.phone, onChange: function(ev) { var nw = kpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setKpList2(nw); } })),
 
 
 
@@ -11815,7 +11825,7 @@ function OppDetailPage(props) {
 
 
 
-            kpList2.length > 1 ? e(Col, { span: 4 }, e(Button, { type: 'text', danger: true, onClick: function() { setKpList2(kpList2.filter(function(_, i) { return i !== idx; })); } }, '×')) : null
+            kpList2.length > 1 ? e(Col, { span: 2 }, e(Button, { type: 'text', danger: true, onClick: function() { setKpList2(kpList2.filter(function(_, i) { return i !== idx; })); } }, '×')) : null
 
 
 
@@ -11839,7 +11849,7 @@ function OppDetailPage(props) {
 
 
 
-        e(Button, { type: 'dashed', block: true, icon: IC('PlusOutlined'), title: '增加关键人', 'aria-label': '增加关键人', onClick: function() { setKpList2(kpList2.concat([{name:'',position:'',phone:'',email:''}])); }, style: { marginBottom: 16 } }),
+        e(Button, { type: 'dashed', block: true, icon: IC('PlusOutlined'), title: '增加关键人', 'aria-label': '增加关键人', onClick: function() { setKpList2(kpList2.concat([{name:'',department:'',position:'',phone:'',email:''}])); }, style: { marginBottom: 16 } }),
 
 
 
@@ -11871,7 +11881,7 @@ function OppDetailPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '姓名', value: hp.name, onChange: function(ev) { var nw = hpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {name: ev.target.value}); setHpList2(nw); } })),
+            e(Col, { span: 4 }, e(Input, { prefix: e('span', { style: { color: '#ff4d4f' } }, '*'), placeholder: '姓名', value: hp.name, onChange: function(ev) { var nw = hpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {name: ev.target.value}); setHpList2(nw); } })),
 
 
 
@@ -11879,7 +11889,8 @@ function OppDetailPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '职位', value: hp.position, onChange: function(ev) { var nw = hpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {position: ev.target.value}); setHpList2(nw); } })),
+            e(Col, { span: 4 }, e(Input, { placeholder: '部门', value: hp.department, onChange: function(ev) { var nw = hpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {department: ev.target.value}); setHpList2(nw); } })),
+            e(Col, { span: 4 }, e(Input, { placeholder: '职位', value: hp.position, onChange: function(ev) { var nw = hpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {position: ev.target.value}); setHpList2(nw); } })),
 
 
 
@@ -11887,7 +11898,7 @@ function OppDetailPage(props) {
 
 
 
-            e(Col, { span: 5 }, e(Input, { placeholder: '联系方式', value: hp.phone, onChange: function(ev) { var nw = hpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setHpList2(nw); } })),
+            e(Col, { span: 5 }, e(Input, { prefix: e('span', { style: { color: '#ff4d4f' } }, '*'), placeholder: '联系方式', value: hp.phone, onChange: function(ev) { var nw = hpList2.slice(); nw[idx] = Object.assign({}, nw[idx], {phone: ev.target.value}); setHpList2(nw); } })),
 
 
 
@@ -11903,7 +11914,7 @@ function OppDetailPage(props) {
 
 
 
-            hpList2.length > 1 ? e(Col, { span: 4 }, e(Button, { type: 'text', danger: true, onClick: function() { setHpList2(hpList2.filter(function(_, i) { return i !== idx; })); } }, '×')) : null
+            hpList2.length > 1 ? e(Col, { span: 2 }, e(Button, { type: 'text', danger: true, onClick: function() { setHpList2(hpList2.filter(function(_, i) { return i !== idx; })); } }, '×')) : null
 
 
 
@@ -11927,7 +11938,7 @@ function OppDetailPage(props) {
 
 
 
-        e(Button, { type: 'dashed', block: true, icon: IC('PlusOutlined'), onClick: function() { setHpList2(hpList2.concat([{name:'',position:'',phone:'',email:''}])); } }),
+        e(Button, { type: 'dashed', block: true, icon: IC('PlusOutlined'), onClick: function() { setHpList2(hpList2.concat([{name:'',department:'',position:'',phone:'',email:''}])); } }),
 
 
 
