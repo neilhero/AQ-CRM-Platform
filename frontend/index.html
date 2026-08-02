@@ -14002,12 +14002,9 @@ function PartnerPerformancePage() {
 
   var levelColor = { '金牌': '#f59e0b', '银牌': '#94a3b8', '铜牌': '#cd7f32', '注册': '#64748b', 'Register': '#64748b' };
   var levelText = { '金牌': '金牌', '银牌': '银牌', '铜牌': '铜牌', '注册': '注册', 'Register': '注册' };
-  function salesNameList(value) {
-    return String(value || '').split(/[、,，]/).map(function(name) { return name.trim(); }).filter(function(name) { return name && name !== '-'; });
-  }
-  var salesFilters = Array.from(new Set(data.reduce(function(names, row) {
-    return names.concat(salesNameList(row.sales_names));
-  }, []))).sort(function(a, b) {
+  var creatorFilters = Array.from(new Set(data.map(function(row) {
+    return String(row.created_by_name || '').trim();
+  }).filter(function(name) { return name && name !== '-'; }))).sort(function(a, b) {
     return a.localeCompare(b, 'zh-CN');
   }).map(function(name) {
     return { text: name, value: name };
@@ -14020,14 +14017,14 @@ function PartnerPerformancePage() {
     { title: e('span', { style: { whiteSpace: 'nowrap' } }, '已完成业绩（万）'), dataIndex: 'completed_amount', key: 'completed_amount', width: 170, sorter: function(a, b) { return (a.completed_amount || 0) - (b.completed_amount || 0); }, defaultSortOrder: 'descend', render: function(v) { return e('span', { style: { fontWeight: 700, color: '#059669' } }, (v || 0).toFixed ? (v || 0).toFixed(1) : v); } },
     { title: '商机数（个）', dataIndex: 'opp_count', key: 'opp_count', width: 120, render: function(v, r) { return e(Button, { type: 'link', style: { padding: 0, fontWeight: 700 }, onClick: function() { goChannelOpps(r.partner_id); } }, String(v || 0)); } },
     { title: '商机总额（万）', dataIndex: 'total_amount', key: 'total_amount', width: 150, sorter: function(a, b) { return (a.total_amount || 0) - (b.total_amount || 0); }, render: function(v) { return e('span', { style: { fontWeight: 700, color: '#4f46e5' } }, (v || 0).toFixed ? (v || 0).toFixed(1) : v); } },
-    { title: '销售', dataIndex: 'sales_names', key: 'sales_names', ellipsis: true,
+    { title: '创建人', dataIndex: 'created_by_name', key: 'created_by_name', ellipsis: true,
       sorter: canManagePerformanceView ? function(a, b) {
-        return String(a.sales_names || '').localeCompare(String(b.sales_names || ''), 'zh-CN');
+        return String(a.created_by_name || '').localeCompare(String(b.created_by_name || ''), 'zh-CN');
       } : undefined,
-      filters: canManagePerformanceView ? salesFilters : undefined,
+      filters: canManagePerformanceView ? creatorFilters : undefined,
       filterSearch: canManagePerformanceView,
       onFilter: canManagePerformanceView ? function(value, record) {
-        return salesNameList(record.sales_names).indexOf(String(value)) >= 0;
+        return String(record.created_by_name || '') === String(value);
       } : undefined,
       render: function(v) { return v || '-'; }
     }

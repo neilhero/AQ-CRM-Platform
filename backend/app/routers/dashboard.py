@@ -302,11 +302,9 @@ def partner_performance(period: str = Query("year"), db: Session = Depends(get_d
         opp_q = _perm_filter(opp_q, db, user)
         opps = opp_q.all()
         won_opps = [o for o in opps if o.stage and str(o.stage.value) == "5"]
-        sales_names = []
-        for uid in sorted({o.sales_rep_id for o in opps if o.sales_rep_id}):
-            sales = db.query(User).filter(User.id == uid).first()
-            if sales:
-                sales_names.append(sales.real_name or sales.username)
+        creator_name = partner.created_by_name
+        if not creator_name and partner.creator:
+            creator_name = partner.creator.real_name or partner.creator.username
         result.append(
             {
                 "partner_id": partner.id,
@@ -316,7 +314,7 @@ def partner_performance(period: str = Query("year"), db: Session = Depends(get_d
                 "completed_amount": round(sum(o.amount or 0 for o in won_opps), 1),
                 "opp_count": len(opps),
                 "total_amount": round(sum(o.amount or 0 for o in opps), 1),
-                "sales_names": "、".join(sales_names) if sales_names else "-",
+                "created_by_name": creator_name or "-",
             }
         )
     return sorted(result, key=lambda x: (x["completed_amount"], x["total_amount"], x["opp_count"]), reverse=True)
