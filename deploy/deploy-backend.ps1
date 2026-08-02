@@ -37,8 +37,11 @@ $version = (Get-Content -LiteralPath $versionPath -Raw).Trim()
 $remoteVersion = ""
 $expectedVersionPattern = ('\"version\"\s*:\s*\"' + [regex]::Escape($version) + '\"')
 for ($attempt = 1; $attempt -le 15; $attempt++) {
-    $remoteVersion = (ssh $Server "curl -fsS http://127.0.0.1:8097/api/system/version" 2>$null | Out-String).Trim()
-    if ($LASTEXITCODE -eq 0 -and $remoteVersion -match $expectedVersionPattern) {
+    # A freshly restarted service can briefly refuse connections. Keep that
+    # expected startup state on the remote side so PowerShell does not turn the
+    # first failed probe into a terminating NativeCommandError.
+    $remoteVersion = (ssh $Server "curl -fsS http://127.0.0.1:8097/api/system/version 2>/dev/null || true" | Out-String).Trim()
+    if ($remoteVersion -match $expectedVersionPattern) {
         break
     }
     Start-Sleep -Seconds 1

@@ -12403,6 +12403,7 @@ function ProductListPage() {
 function PartnerArchivePage() {
 
   var partnerUser = JSON.parse(localStorage.getItem('aq2_user') || '{}');
+  var canManagePartnerView = partnerUser.role === 'admin' || partnerUser.role === 'manager';
 
 
 
@@ -12947,7 +12948,15 @@ function PartnerArchivePage() {
 
 
 
-  var columns = [
+  var creatorFilters = Array.from(new Set(partners.map(function(partner) {
+    return partner.created_by_name || partner.owner_name || '';
+  }).filter(Boolean))).sort(function(a, b) {
+    return a.localeCompare(b, 'zh-CN');
+  }).map(function(name) {
+    return { text: name, value: name };
+  });
+
+  var columns = [
 
 
 
@@ -13011,7 +13020,17 @@ function PartnerArchivePage() {
 
 
 
-    { title: '创建人', dataIndex: 'created_by_name', key: 'created_by_name', width: 90, align: 'center', render: function(v) { return v || '-'; } },
+    { title: '创建人', dataIndex: 'created_by_name', key: 'created_by_name', width: 100, align: 'center',
+      sorter: canManagePartnerView ? function(a, b) {
+        return String(a.created_by_name || a.owner_name || '').localeCompare(String(b.created_by_name || b.owner_name || ''), 'zh-CN');
+      } : undefined,
+      filters: canManagePartnerView ? creatorFilters : undefined,
+      filterSearch: canManagePartnerView,
+      onFilter: canManagePartnerView ? function(value, record) {
+        return String(record.created_by_name || record.owner_name || '') === String(value);
+      } : undefined,
+      render: function(v, record) { return v || record.owner_name || '-'; }
+    },
 
 
 
@@ -13964,8 +13983,10 @@ function PartnerPerformancePageLegacy() {
 
 
 
-function PartnerPerformancePage() {
-  var _s_d = useState([]), data = _s_d[0], setData = _s_d[1];
+function PartnerPerformancePage() {
+  var performanceUser = JSON.parse(localStorage.getItem('aq2_user') || '{}');
+  var canManagePerformanceView = performanceUser.role === 'admin' || performanceUser.role === 'manager';
+  var _s_d = useState([]), data = _s_d[0], setData = _s_d[1];
 
   function fetchData() {
     api('GET', '/dashboard/partner-performance?period=all')
@@ -13979,9 +14000,19 @@ function PartnerPerformancePage() {
     window.location.hash = '#/opportunities/channel?channel_partner_id=' + partnerId;
   }
 
-  var levelColor = { '金牌': '#f59e0b', '银牌': '#94a3b8', '铜牌': '#cd7f32', '注册': '#64748b', 'Register': '#64748b' };
-  var levelText = { '金牌': '金牌', '银牌': '银牌', '铜牌': '铜牌', '注册': '注册', 'Register': '注册' };
-  var columns = [
+  var levelColor = { '金牌': '#f59e0b', '银牌': '#94a3b8', '铜牌': '#cd7f32', '注册': '#64748b', 'Register': '#64748b' };
+  var levelText = { '金牌': '金牌', '银牌': '银牌', '铜牌': '铜牌', '注册': '注册', 'Register': '注册' };
+  function salesNameList(value) {
+    return String(value || '').split(/[、,，]/).map(function(name) { return name.trim(); }).filter(function(name) { return name && name !== '-'; });
+  }
+  var salesFilters = Array.from(new Set(data.reduce(function(names, row) {
+    return names.concat(salesNameList(row.sales_names));
+  }, []))).sort(function(a, b) {
+    return a.localeCompare(b, 'zh-CN');
+  }).map(function(name) {
+    return { text: name, value: name };
+  });
+  var columns = [
     { title: 'ID', key: 'row_index', width: 80, fixed: 'left', render: function(_, __, idx) { return e('span', { style: { color: '#64748b', fontWeight: 600 } }, idx + 1); } },
     { title: '渠道名称', dataIndex: 'partner_name', key: 'partner_name', width: 220, fixed: 'left', render: function(v) { return e('span', { style: { fontWeight: 700, color: '#0f172a' } }, v || '-'); } },
     { title: '等级', dataIndex: 'level', key: 'level', width: 110, sorter: function(a, b) { var order = { '金牌': 1, '银牌': 2, '铜牌': 3, '注册': 4, 'Register': 4, 'register': 4 }; return (order[a.level] || 99) - (order[b.level] || 99); }, render: function(v) { return v ? e(Tag, { color: levelColor[v] || '#64748b' }, levelText[v] || v) : '-'; } },
@@ -13989,7 +14020,17 @@ function PartnerPerformancePage() {
     { title: e('span', { style: { whiteSpace: 'nowrap' } }, '已完成业绩（万）'), dataIndex: 'completed_amount', key: 'completed_amount', width: 170, sorter: function(a, b) { return (a.completed_amount || 0) - (b.completed_amount || 0); }, defaultSortOrder: 'descend', render: function(v) { return e('span', { style: { fontWeight: 700, color: '#059669' } }, (v || 0).toFixed ? (v || 0).toFixed(1) : v); } },
     { title: '商机数（个）', dataIndex: 'opp_count', key: 'opp_count', width: 120, render: function(v, r) { return e(Button, { type: 'link', style: { padding: 0, fontWeight: 700 }, onClick: function() { goChannelOpps(r.partner_id); } }, String(v || 0)); } },
     { title: '商机总额（万）', dataIndex: 'total_amount', key: 'total_amount', width: 150, sorter: function(a, b) { return (a.total_amount || 0) - (b.total_amount || 0); }, render: function(v) { return e('span', { style: { fontWeight: 700, color: '#4f46e5' } }, (v || 0).toFixed ? (v || 0).toFixed(1) : v); } },
-    { title: '销售', dataIndex: 'sales_names', key: 'sales_names', ellipsis: true, render: function(v) { return v || '-'; } }
+    { title: '销售', dataIndex: 'sales_names', key: 'sales_names', ellipsis: true,
+      sorter: canManagePerformanceView ? function(a, b) {
+        return String(a.sales_names || '').localeCompare(String(b.sales_names || ''), 'zh-CN');
+      } : undefined,
+      filters: canManagePerformanceView ? salesFilters : undefined,
+      filterSearch: canManagePerformanceView,
+      onFilter: canManagePerformanceView ? function(value, record) {
+        return salesNameList(record.sales_names).indexOf(String(value)) >= 0;
+      } : undefined,
+      render: function(v) { return v || '-'; }
+    }
   ];
 
   return e('div', { className: 'page-fade-in' },
