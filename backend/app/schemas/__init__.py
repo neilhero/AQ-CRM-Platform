@@ -40,7 +40,7 @@ class OpportunityOut(BaseModel):
     amount: Optional[float]=0.0; stage: Optional[str]=None; probability: Optional[str]=None
     key_person: Optional[str]=None; brief: Optional[str]=None; pain_points: Optional[str]=None
     required_product: Optional[str]=None; handler_person: Optional[str]=None
-    created_at: Optional[date]=None; updated_at: Optional[date]=None
+    created_at: Optional[datetime]=None; updated_at: Optional[datetime]=None
     expected_close_date: Optional[date]=None; next_follow_up_date: Optional[date]=None
     is_closed: Optional[bool]=False; customer_name: Optional[str]=None
     sales_rep_name: Optional[str]=None; channel_partner_name: Optional[str]=None

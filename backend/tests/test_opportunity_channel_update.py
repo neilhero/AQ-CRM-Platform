@@ -1,3 +1,4 @@
+from datetime import datetime
 from types import SimpleNamespace
 
 from fastapi import HTTPException
@@ -244,6 +245,40 @@ def test_pain_points_are_saved_on_create_and_update():
 
     db.refresh(opportunity)
     assert opportunity.pain_points == "Updated customer pain point"
+
+
+def test_new_opportunity_keeps_precise_creation_time():
+    db = _session()
+    owner = User(
+        username="time-owner",
+        password_hash="unused",
+        real_name="Time Owner",
+        role="sales",
+        is_active=True,
+    )
+    db.add(owner)
+    db.flush()
+    customer = Customer(name="Time Customer", owner_id=owner.id)
+    db.add(customer)
+    db.commit()
+
+    result = create_opp(
+        OpportunityCreate(
+            name="Timestamp Project",
+            sales_rep_id=owner.id,
+            customer_id=customer.id,
+            industry="Healthcare",
+            amount=100,
+            stage="1",
+            probability="LOW",
+        ),
+        db=db,
+        user=_admin_actor(owner),
+    )
+
+    opportunity = db.query(Opportunity).filter_by(id=result["id"]).one()
+    assert isinstance(opportunity.created_at, datetime)
+    assert isinstance(opportunity.updated_at, datetime)
 
 
 def test_create_requires_relationships_for_each_opportunity_type():

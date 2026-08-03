@@ -11,6 +11,7 @@ backend/backups/
 *.sql
 
 # Python
+.venv/
 __pycache__/
 *.pyc
 *.pyo

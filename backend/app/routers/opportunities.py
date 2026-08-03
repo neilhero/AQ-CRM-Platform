@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models import (
     BidConversion, ChannelPartner, ChannelRegistration, Contact, Customer,
     FollowUp, Lead, Opportunity, OpportunityReview, PocRecord,
-    PresalesRequest, PresalesSlaTracking, User,
+    PresalesRequest, PresalesSlaTracking, User, now_cst,
 )
 from app.permissions import (
     ROLE_CHANNEL_MANAGER,
@@ -348,6 +348,8 @@ def create_opp(data: OpportunityCreate, db: Session = Depends(get_db), user=Depe
         **kwargs,
         created_by_id=user.id,
         created_by_name=user.real_name or user.username,
+        created_at=now_cst(),
+        updated_at=now_cst(),
     )
     db.add(o)
     _sync_opportunity_contacts(db, o)
@@ -379,7 +381,7 @@ def update_opp(oid: int, data: OpportunityUpdate, db: Session = Depends(get_db),
     _validate_required_opportunity_fields(final_values)
     for k, v in updates.items():
         setattr(o, k, v)
-    o.updated_at = date.today()
+    o.updated_at = now_cst()
     _sync_opportunity_contacts(db, o, updates.keys())
     db.commit()
     db.refresh(o)
