@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -35,6 +35,11 @@ from app.permissions import (
 from app.routers.utils import require_admin, require_user
 
 router = APIRouter()
+
+
+def _to_date(value):
+    """Normalize legacy Date values and current DateTime values for day math."""
+    return value.date() if isinstance(value, datetime) else value
 
 PROBABILITY_WEIGHT = {"HIGH": 0.9, "MID_HIGH": 0.75, "MID": 0.55, "LOW": 0.25}
 PROBABILITY_LABEL = {"HIGH": "高概率", "MID_HIGH": "中高概率", "MID": "中概率", "LOW": "低概率"}
@@ -404,7 +409,7 @@ def customer_operations(db: Session = Depends(get_db), user=Depends(require_user
         stale_opps = []
         for opp in active_opps:
             last_followed_at = latest_follow_by_opp.get(opp.id)
-            last_activity_date = last_followed_at.date() if last_followed_at else opp.created_at
+            last_activity_date = _to_date(last_followed_at or opp.created_at)
             unfollowed_days = max((today - last_activity_date).days, 0) if last_activity_date else 0
             if unfollowed_days >= 30:
                 stale_opps.append((opp, last_followed_at, unfollowed_days))

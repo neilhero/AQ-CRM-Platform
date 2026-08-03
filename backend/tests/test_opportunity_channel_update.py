@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 
 from fastapi import HTTPException
@@ -18,6 +18,7 @@ from app.models import (
     User,
 )
 from app.routers.opportunities import create_opp, update_opp
+from app.routers.sales_growth import customer_operation_notifications, customer_operations
 from app.schemas import OpportunityCreate, OpportunityUpdate
 
 
@@ -52,6 +53,43 @@ def _session():
 
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)()
+
+
+def test_customer_operations_accepts_opportunity_datetime_created_at():
+    db = _session()
+    owner = User(
+        username="operations-owner",
+        password_hash="unused",
+        real_name="Operations Owner",
+        role="sales",
+        is_active=True,
+    )
+    db.add(owner)
+    db.flush()
+    customer = Customer(name="Operations Customer", owner_id=owner.id)
+    db.add(customer)
+    db.flush()
+    opportunity = Opportunity(
+        opp_type=OpportunityType.DIRECT,
+        sales_rep_id=owner.id,
+        customer_id=customer.id,
+        name="Stale Project",
+        industry="Enterprise",
+        amount=100,
+        stage=OpportunityStage.STAGE_1,
+        probability=ProbabilityLevel.LOW,
+        created_at=datetime.now() - timedelta(days=31),
+    )
+    db.add(opportunity)
+    db.commit()
+
+    actor = _admin_actor(owner)
+    result = customer_operations(db=db, user=actor)
+    notices = customer_operation_notifications(db=db, user=actor)
+
+    assert len(result["items"]) == 1
+    assert any(alert["type"] == "stale_opportunity" for alert in result["alerts"])
+    assert isinstance(notices["items"], list)
 
 
 def test_channel_partner_can_be_changed_when_updating_opportunity():
