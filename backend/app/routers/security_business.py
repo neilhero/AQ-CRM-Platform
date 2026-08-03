@@ -413,6 +413,7 @@ def create_presales_request(
         enriched.get("requester_name"),
         row.scheduled_date,
         row.details,
+        user.dingtalk_userid,
     )
     return enriched
 

@@ -4,7 +4,7 @@ import os
 import threading
 import time
 from datetime import datetime
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 
@@ -17,6 +17,17 @@ _token_expires_at = 0
 
 class DingTalkError(RuntimeError):
     pass
+
+
+def _get_crm_public_url():
+    configured_url = os.getenv("CRM_PUBLIC_URL", "https://an-ai.cn").strip().rstrip("/")
+    canonical_url = os.getenv("CRM_CANONICAL_URL", "https://an-ai.cn").strip().rstrip("/")
+    try:
+        if urlsplit(configured_url).hostname == "121.41.66.121":
+            return canonical_url
+    except ValueError:
+        return canonical_url
+    return configured_url or canonical_url
 
 
 def _post_json(url, payload, headers=None, timeout=10):
@@ -107,42 +118,62 @@ def send_presales_notification_safe(
     requester_name,
     scheduled_date,
     details,
+    requester_dingtalk_userid=None,
 ):
-    try:
-        public_url = os.getenv("CRM_PUBLIC_URL", "https://an-ai.cn").rstrip("/")
-        target_url = f"{public_url}/#/presales?request_id={request_id}"
-        schedule_text = (
-            scheduled_date.strftime("%Y-%m-%d %H:%M")
-            if isinstance(scheduled_date, datetime)
-            else str(scheduled_date or "未设置")
-        )
-        summary = (details or "").strip()
-        if len(summary) > 180:
-            summary = summary[:177] + "..."
-        markdown = "\n".join(
-            [
-                "### 售前协同待处理",
-                f"- 客户：{customer_name or '-'}",
-                f"- 商机：{opportunity_name or '-'}",
-                f"- 协同类型：{request_type or '-'}",
-                f"- 申请人：{requester_name or '-'}",
-                f"- 排期：{schedule_text}",
-                f"- 需求：{summary or '-'}",
-            ]
-        )
-        result = send_work_notification(
+    public_url = _get_crm_public_url()
+    target_url = f"{public_url}/#/presales?request_id={request_id}"
+    schedule_text = (
+        scheduled_date.strftime("%Y-%m-%d %H:%M")
+        if isinstance(scheduled_date, datetime)
+        else str(scheduled_date or "未设置")
+    )
+    summary = (details or "").strip()
+    if len(summary) > 180:
+        summary = summary[:177] + "..."
+
+    context_lines = [
+        f"- 客户：{customer_name or '-'}",
+        f"- 商机：{opportunity_name or '-'}",
+        f"- 协同类型：{request_type or '-'}",
+        f"- 申请人：{requester_name or '-'}",
+        f"- 排期：{schedule_text}",
+        f"- 需求：{summary or '-'}",
+    ]
+    notifications = [
+        (
             dingtalk_userid,
             "安泉CRM：新的售前协同申请",
-            markdown,
-            target_url,
+            "### 售前协同待处理",
+            "presales",
         )
-        logger.info(
-            "DingTalk presales notification result request_id=%s status=%s",
-            request_id,
-            result.get("status"),
+    ]
+    if requester_dingtalk_userid and requester_dingtalk_userid != dingtalk_userid:
+        notifications.append(
+            (
+                requester_dingtalk_userid,
+                "安泉CRM：售前协同申请已提交",
+                "### 售前协同已提交",
+                "requester",
+            )
         )
-    except Exception:
-        logger.exception(
-            "DingTalk presales notification failed request_id=%s",
-            request_id,
-        )
+
+    for recipient_id, title, heading, audience in notifications:
+        try:
+            result = send_work_notification(
+                recipient_id,
+                title,
+                "\n".join([heading, *context_lines]),
+                target_url,
+            )
+            logger.info(
+                "DingTalk presales notification result request_id=%s audience=%s status=%s",
+                request_id,
+                audience,
+                result.get("status"),
+            )
+        except Exception:
+            logger.exception(
+                "DingTalk presales notification failed request_id=%s audience=%s",
+                request_id,
+                audience,
+            )
