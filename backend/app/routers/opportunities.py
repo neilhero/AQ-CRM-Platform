@@ -2,14 +2,15 @@ from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import (
     BidConversion, ChannelPartner, ChannelRegistration, Contact, Customer,
-    FollowUp, Lead, Opportunity, OpportunityReview, PocRecord,
+    FollowUp, Lead, Opportunity, OpportunityReview, OpportunityStage,
+    PocRecord, ProbabilityLevel,
     PresalesRequest, PresalesSlaTracking, User, now_cst,
 )
 from app.permissions import (
@@ -222,9 +223,12 @@ def _sync_opportunity_contacts(db: Session, opportunity, changed_fields=None):
 def list_opps(
     keyword: Optional[str] = Query(None),
     stage: Optional[str] = Query(None),
+    probability: Optional[str] = Query(None),
     opp_type: Optional[str] = Query(None),
     sales_rep_id: Optional[int] = Query(None),
     channel_partner_id: Optional[int] = Query(None),
+    sort_by: Optional[str] = Query(None),
+    sort_order: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
@@ -235,13 +239,37 @@ def list_opps(
         q = q.filter(Opportunity.name.contains(keyword))
     if stage:
         q = q.filter(Opportunity.stage == stage)
+    if probability:
+        q = q.filter(Opportunity.probability == probability)
     if opp_type:
         q = q.filter(Opportunity.opp_type == opp_type)
     if sales_rep_id:
         q = q.filter(Opportunity.sales_rep_id == sales_rep_id)
     if channel_partner_id:
         q = q.filter(Opportunity.channel_partner_id == channel_partner_id)
-    results = q.order_by(Opportunity.updated_at.desc()).offset(skip).limit(limit).all()
+    stage_order = case(
+        (Opportunity.stage == OpportunityStage.STAGE_1, 1),
+        (Opportunity.stage == OpportunityStage.STAGE_2, 2),
+        (Opportunity.stage == OpportunityStage.STAGE_3, 3),
+        (Opportunity.stage == OpportunityStage.STAGE_4, 4),
+        (Opportunity.stage == OpportunityStage.STAGE_5, 5),
+        else_=99,
+    )
+    probability_order = case(
+        (Opportunity.probability == ProbabilityLevel.LOW, 1),
+        (Opportunity.probability == ProbabilityLevel.MID, 2),
+        (Opportunity.probability == ProbabilityLevel.MID_HIGH, 3),
+        (Opportunity.probability == ProbabilityLevel.HIGH, 4),
+        else_=99,
+    )
+    sort_columns = {"stage": stage_order, "probability": probability_order}
+    sort_column = sort_columns.get(sort_by)
+    if sort_column is not None:
+        sort_column = sort_column.desc() if sort_order == "descend" else sort_column.asc()
+        q = q.order_by(sort_column, Opportunity.updated_at.desc())
+    else:
+        q = q.order_by(Opportunity.updated_at.desc())
+    results = q.offset(skip).limit(limit).all()
     out = []
     for o in results:
         d = {c.name: getattr(o, c.name) for c in o.__table__.columns}

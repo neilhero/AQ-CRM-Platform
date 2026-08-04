@@ -7405,7 +7405,7 @@ function OppListPage(props) {
 
   var _oppHashParams = new URLSearchParams((window.location.hash.split('?')[1] || ''));
   var _initialChannelPartnerId = _oppHashParams.get('channel_partner_id');
-  var _s5 = useState({ stage: undefined, industry: undefined, keyword: undefined, sales_rep_id: undefined, channel_partner_id: _initialChannelPartnerId ? Number(_initialChannelPartnerId) : undefined });
+  var _s5 = useState({ stage: undefined, probability: undefined, industry: undefined, keyword: undefined, sales_rep_id: undefined, channel_partner_id: _initialChannelPartnerId ? Number(_initialChannelPartnerId) : undefined, sort_by: undefined, sort_order: undefined });
 
 
 
@@ -7549,7 +7549,14 @@ function OppListPage(props) {
 
 
 
-    if (f.stage) params.set('stage', f.stage);
+    if (f.stage) params.set('stage', f.stage);
+
+    if (f.probability) params.set('probability', f.probability);
+
+    if (f.sort_by && f.sort_order) {
+      params.set('sort_by', f.sort_by);
+      params.set('sort_order', f.sort_order);
+    }
 
 
 
@@ -7911,7 +7918,17 @@ function OppListPage(props) {
 
 
 
-    { title: '阶段', dataIndex: 'stage', width: 130,
+    { title: '阶段', dataIndex: 'stage', width: 130,
+
+      sorter: true,
+
+      sortOrder: f.sort_by === 'stage' ? f.sort_order : null,
+
+      filters: Object.keys(STAGE_MAP).map(function(key) { return { text: STAGE_MAP[key].label, value: key }; }),
+
+      filterMultiple: false,
+
+      filteredValue: f.stage ? [f.stage] : null,
 
 
 
@@ -7935,7 +7952,17 @@ function OppListPage(props) {
 
 
 
-    { title: '概率', dataIndex: 'probability', width: 110,
+    { title: '概率', dataIndex: 'probability', width: 110,
+
+      sorter: true,
+
+      sortOrder: f.sort_by === 'probability' ? f.sort_order : null,
+
+      filters: PROBABILITIES.map(function(item) { return { text: item.label, value: item.value }; }),
+
+      filterMultiple: false,
+
+      filteredValue: f.probability ? [f.probability] : null,
 
 
 
@@ -8607,7 +8634,19 @@ function OppListPage(props) {
 
 
 
-            onChange: function(p) { setPg({ current: p.current, pageSize: p.pageSize }); },
+            onChange: function(p, tableFilters, sorter) {
+              var sortField = sorter && (sorter.field === 'stage' || sorter.field === 'probability') ? sorter.field : undefined;
+              var sortOrder = sortField ? sorter.order : undefined;
+              setPg({ current: p.current, pageSize: p.pageSize });
+              setF(function(prev) {
+                return Object.assign({}, prev, {
+                  stage: tableFilters.stage && tableFilters.stage.length ? tableFilters.stage[0] : undefined,
+                  probability: tableFilters.probability && tableFilters.probability.length ? tableFilters.probability[0] : undefined,
+                  sort_by: sortField,
+                  sort_order: sortOrder
+                });
+              });
+            },
 
 
 

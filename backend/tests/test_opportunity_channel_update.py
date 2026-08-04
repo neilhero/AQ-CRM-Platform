@@ -17,7 +17,7 @@ from app.models import (
     ProbabilityLevel,
     User,
 )
-from app.routers.opportunities import create_opp, update_opp
+from app.routers.opportunities import create_opp, list_opps, update_opp
 from app.routers.sales_growth import customer_operation_notifications, customer_operations
 from app.schemas import OpportunityCreate, OpportunityUpdate
 
@@ -127,6 +127,126 @@ def test_channel_partner_can_be_changed_when_updating_opportunity():
 
     db.refresh(opportunity)
     assert opportunity.channel_partner_id == second_partner.id
+
+
+def test_opportunity_list_filters_and_sorts_stage_and_probability():
+    db = _session()
+    owner = User(
+        username="list-owner",
+        password_hash="unused",
+        real_name="List Owner",
+        role="sales",
+        is_active=True,
+    )
+    db.add(owner)
+    db.flush()
+    opportunities = [
+        Opportunity(
+            opp_type=OpportunityType.DIRECT,
+            sales_rep_id=owner.id,
+            name="Direct Low Stage",
+            industry="Enterprise",
+            amount=10,
+            stage=OpportunityStage.STAGE_1,
+            probability=ProbabilityLevel.LOW,
+        ),
+        Opportunity(
+            opp_type=OpportunityType.DIRECT,
+            sales_rep_id=owner.id,
+            name="Direct High Stage",
+            industry="Enterprise",
+            amount=20,
+            stage=OpportunityStage.STAGE_3,
+            probability=ProbabilityLevel.HIGH,
+        ),
+        Opportunity(
+            opp_type=OpportunityType.CHANNEL,
+            sales_rep_id=owner.id,
+            name="Channel Mid Stage",
+            industry="Enterprise",
+            amount=30,
+            stage=OpportunityStage.STAGE_2,
+            probability=ProbabilityLevel.MID,
+        ),
+        Opportunity(
+            opp_type=OpportunityType.CHANNEL,
+            sales_rep_id=owner.id,
+            name="Channel Low Probability",
+            industry="Enterprise",
+            amount=40,
+            stage=OpportunityStage.STAGE_4,
+            probability=ProbabilityLevel.LOW,
+        ),
+    ]
+    db.add_all(opportunities)
+    db.commit()
+    actor = _admin_actor(owner)
+
+    stage_sorted = list_opps(
+        keyword=None,
+        stage=None,
+        probability=None,
+        opp_type=None,
+        sales_rep_id=None,
+        channel_partner_id=None,
+        sort_by="stage",
+        sort_order="ascend",
+        skip=0,
+        limit=100,
+        db=db,
+        user=actor,
+    )
+    assert [item["stage"] for item in stage_sorted] == ["1", "2", "3", "4"]
+
+    probability_sorted = list_opps(
+        keyword=None,
+        stage=None,
+        probability=None,
+        opp_type=None,
+        sales_rep_id=None,
+        channel_partner_id=None,
+        sort_by="probability",
+        sort_order="ascend",
+        skip=0,
+        limit=100,
+        db=db,
+        user=actor,
+    )
+    assert [item["probability"] for item in probability_sorted] == [
+        "LOW", "LOW", "MID", "HIGH"
+    ]
+
+    direct_low = list_opps(
+        keyword=None,
+        stage=None,
+        probability="LOW",
+        opp_type="direct",
+        sales_rep_id=None,
+        channel_partner_id=None,
+        sort_by=None,
+        sort_order=None,
+        skip=0,
+        limit=100,
+        db=db,
+        user=actor,
+    )
+    assert [item["name"] for item in direct_low] == ["Direct Low Stage"]
+
+    channel_stage = list_opps(
+        keyword=None,
+        stage="2",
+        probability=None,
+        opp_type="channel",
+        sales_rep_id=None,
+        channel_partner_id=None,
+        sort_by=None,
+        sort_order=None,
+        skip=0,
+        limit=100,
+        db=db,
+        user=actor,
+    )
+    assert [item["name"] for item in channel_stage] == ["Channel Mid Stage"]
 
 
 def test_handler_person_is_saved_on_create_and_update():
