@@ -17,9 +17,13 @@ from app.models import (
     ProbabilityLevel,
     User,
 )
-from app.routers.opportunities import create_opp, list_opps, update_opp
+from app.routers.opportunities import create_opp, get_opp, list_opps, update_opp
 from app.routers.sales_growth import customer_operation_notifications, customer_operations
 from app.schemas import OpportunityCreate, OpportunityUpdate
+
+
+VALID_KEY_PERSON = "Key Contact|Security|Director|13700000000|key@example.com"
+VALID_HANDLER_PERSON = "Handler Contact|Procurement|Manager|13800000000|handler@example.com"
 
 
 def _admin_actor(user):
@@ -312,6 +316,104 @@ def test_handler_person_is_saved_on_create_and_update():
     assert updated_handler.email == "two@example.com"
 
 
+def test_create_requires_key_person_and_handler_person():
+    db = _session()
+    owner = User(
+        username="required-contact-owner",
+        password_hash="unused",
+        real_name="Required Contact Owner",
+        role="sales",
+        is_active=True,
+    )
+    db.add(owner)
+    db.flush()
+    customer = Customer(name="Required Contact Customer", owner_id=owner.id)
+    db.add(customer)
+    db.commit()
+    actor = _admin_actor(owner)
+    common = {
+        "opp_type": "direct",
+        "sales_rep_id": owner.id,
+        "customer_id": customer.id,
+        "industry": "Enterprise",
+        "amount": 100,
+        "stage": "1",
+        "probability": "LOW",
+    }
+
+    _assert_http_error(
+        "请至少填写一名关键人",
+        lambda: create_opp(
+            OpportunityCreate(
+                name="Missing Key Person",
+                handler_person=VALID_HANDLER_PERSON,
+                **common,
+            ),
+            db=db,
+            user=actor,
+        ),
+    )
+    _assert_http_error(
+        "请至少填写一名经办人",
+        lambda: create_opp(
+            OpportunityCreate(
+                name="Missing Handler Person",
+                key_person=VALID_KEY_PERSON,
+                **common,
+            ),
+            db=db,
+            user=actor,
+        ),
+    )
+
+
+def test_edit_can_clear_key_person_and_handler_person():
+    db = _session()
+    owner = User(
+        username="clear-contact-owner",
+        password_hash="unused",
+        real_name="Clear Contact Owner",
+        role="sales",
+        is_active=True,
+    )
+    db.add(owner)
+    db.flush()
+    customer = Customer(name="Clear Contact Customer", owner_id=owner.id)
+    db.add(customer)
+    db.commit()
+    actor = _admin_actor(owner)
+    result = create_opp(
+        OpportunityCreate(
+            name="Clear Contact Project",
+            opp_type="direct",
+            sales_rep_id=owner.id,
+            customer_id=customer.id,
+            industry="Enterprise",
+            amount=100,
+            stage="1",
+            probability="LOW",
+            key_person=VALID_KEY_PERSON,
+            handler_person=VALID_HANDLER_PERSON,
+        ),
+        db=db,
+        user=actor,
+    )
+
+    update_opp(
+        result["id"],
+        OpportunityUpdate(key_person="", handler_person=""),
+        db=db,
+        user=actor,
+    )
+
+    opportunity = db.query(Opportunity).filter_by(id=result["id"]).one()
+    assert opportunity.key_person == ""
+    assert opportunity.handler_person == ""
+    detail = get_opp(result["id"], db=db, user=actor)
+    assert detail["key_person"] == ""
+    assert detail["handler_person"] == ""
+
+
 def test_contact_sync_updates_existing_customer_contact_without_duplicates():
     db = _session()
     owner = User(
@@ -344,6 +446,7 @@ def test_contact_sync_updates_existing_customer_contact_without_duplicates():
             amount=50,
             stage="1",
             probability="LOW",
+            key_person=VALID_KEY_PERSON,
             handler_person=(
                 "Existing Handler|New Position|13812345678|existing@example.com"
             ),
@@ -385,6 +488,8 @@ def test_pain_points_are_saved_on_create_and_update():
             amount=100,
             stage="1",
             probability="LOW",
+            key_person=VALID_KEY_PERSON,
+            handler_person=VALID_HANDLER_PERSON,
             pain_points="Initial customer pain point",
         ),
         db=db,
@@ -429,6 +534,8 @@ def test_new_opportunity_keeps_precise_creation_time():
             amount=100,
             stage="1",
             probability="LOW",
+            key_person=VALID_KEY_PERSON,
+            handler_person=VALID_HANDLER_PERSON,
         ),
         db=db,
         user=_admin_actor(owner),
@@ -465,6 +572,8 @@ def test_create_requires_relationships_for_each_opportunity_type():
         "amount": 100,
         "stage": "1",
         "probability": "LOW",
+        "key_person": VALID_KEY_PERSON,
+        "handler_person": VALID_HANDLER_PERSON,
     }
 
     _assert_http_error(

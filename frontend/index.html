@@ -7756,6 +7756,8 @@ function OppListPage(props) {
 
       var activeKeyPeople = kpList.filter(function(k) { return k.name || k.department || k.position || k.phone || k.email; });
       var activeHandlers = hpList.filter(function(h) { return h.name || h.department || h.position || h.phone || h.email; });
+      if (!activeKeyPeople.length) throw new Error('请至少填写一名关键人');
+      if (!activeHandlers.length) throw new Error('请至少填写一名经办人');
       if (activeKeyPeople.some(function(k) { return !String(k.name || '').trim() || !String(k.phone || '').trim(); })) throw new Error('关键人的姓名和联系方式为必填项');
       if (activeHandlers.some(function(h) { return !String(h.name || '').trim() || !String(h.phone || '').trim(); })) throw new Error('经办人的姓名和联系方式为必填项');
       v.key_person = activeKeyPeople.map(function(k){return [k.name||'',k.department||'',k.position||'',k.phone||'',k.email||''].join('|')}).join(';;');
@@ -7774,23 +7776,7 @@ function OppListPage(props) {
 
 
 
-      if (!v.key_person.replace(/[|;]/g,'')) v.key_person = undefined;
-
-
-
-
-
-
-
-      if (!v.handler_person.replace(/[|;]/g,'')) v.handler_person = undefined;
-
-
-
-
-
-
-
-      return api('POST', '/opportunities', v);
+      return api('POST', '/opportunities', v);
 
 
 
@@ -10647,23 +10633,7 @@ function OppDetailPage(props) {
 
 
 
-      if (!v.key_person.replace(/[|;]/g,'')) v.key_person = undefined;
-
-
-
-
-
-
-
-      if (!v.handler_person.replace(/[|;]/g,'')) v.handler_person = undefined;
-
-
-
-
-
-
-
-      return api('PUT', '/opportunities/' + id, v);
+      return api('PUT', '/opportunities/' + id, v);
 
 
 
@@ -10728,39 +10698,11 @@ function OppDetailPage(props) {
     }).filter(function(p) { return p.name || p.department || p.position || p.phone || p.email; });
   }
 
-  var detailCustomerContacts = opp.customer_contacts || [];
-  var detailKeyContacts = detailCustomerContacts.filter(function(c) { return c.role_type === 'key_person'; });
-  var detailHandlerContacts = detailCustomerContacts.filter(function(c) { return c.role_type === 'handler'; });
-  function mergeDetailContacts(customerContacts, storedContacts) {
-    var seen = {};
-    return customerContacts.concat(storedContacts).filter(function(contact) {
-      var contactKey = [
-        contact.name || '',
-        contact.department || '',
-        contact.position || '',
-        contact.phone || '',
-        contact.email || ''
-      ].join('|');
-      if (!contactKey.replace(/\|/g, '') || seen[contactKey]) return false;
-      seen[contactKey] = true;
-      return true;
-    });
-  }
-  var detailKeyRows = mergeDetailContacts(
-    detailKeyContacts,
-    parseDetailPersons(opp.key_person, 'key_person')
-  );
-  var detailHandlerRows = mergeDetailContacts(
-    detailHandlerContacts,
-    parseDetailPersons(opp.handler_person, 'handler')
-  );
+  var detailKeyRows = parseDetailPersons(opp.key_person, 'key_person');
+  var detailHandlerRows = parseDetailPersons(opp.handler_person, 'handler');
   var followUpContactOptions = [];
   var seenFollowUpContacts = {};
-  detailCustomerContacts
-    .filter(function(contact) {
-      return contact.role_type === 'key_person' || contact.role_type === 'handler';
-    })
-    .concat(parseDetailPersons(opp.key_person, 'key_person'))
+  parseDetailPersons(opp.key_person, 'key_person')
     .concat(parseDetailPersons(opp.handler_person, 'handler'))
     .forEach(function(contact) {
     var contactName = (contact.name || '').trim();

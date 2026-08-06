@@ -181,6 +181,16 @@ def _parse_contact_people(value):
     return people
 
 
+def _validate_create_contact_people(values):
+    required_groups = (
+        ("key_person", "请至少填写一名关键人"),
+        ("handler_person", "请至少填写一名经办人"),
+    )
+    for field, message in required_groups:
+        if not _parse_contact_people(values.get(field)):
+            raise HTTPException(422, message)
+
+
 def _sync_customer_contacts(db: Session, customer_id, role_type, value):
     if not customer_id:
         return
@@ -328,11 +338,11 @@ def get_opp(oid: int, db: Session = Depends(get_db), user=Depends(require_user))
             .all()
         )
         d["customer_contacts"] = [_contact_dict(c) for c in contacts]
-        if not d.get("key_person"):
+        if d.get("key_person") is None:
             key_contacts = [c for c in contacts if c.role_type == "key_person"]
             if key_contacts:
                 d["key_person"] = _contact_person_text(key_contacts)
-        if not d.get("handler_person"):
+        if d.get("handler_person") is None:
             handler_contacts = [c for c in contacts if c.role_type == "handler"]
             if handler_contacts:
                 d["handler_person"] = _contact_person_text(handler_contacts)
@@ -372,6 +382,7 @@ def create_opp(data: OpportunityCreate, db: Session = Depends(get_db), user=Depe
     elif user.role == ROLE_MANAGER and kwargs.get("sales_rep_id") not in (managed_user_ids(db, user) or []):
         raise HTTPException(403, "只能分配给自己或管辖销售")
     _validate_create_relationships(kwargs, db, user)
+    _validate_create_contact_people(kwargs)
     o = Opportunity(
         **kwargs,
         created_by_id=user.id,
