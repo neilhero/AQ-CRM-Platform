@@ -182,13 +182,10 @@ def _parse_contact_people(value):
 
 
 def _validate_create_contact_people(values):
-    required_groups = (
-        ("key_person", "请至少填写一名关键人"),
-        ("handler_person", "请至少填写一名经办人"),
-    )
-    for field, message in required_groups:
-        if not _parse_contact_people(values.get(field)):
-            raise HTTPException(422, message)
+    key_people = _parse_contact_people(values.get("key_person"))
+    handlers = _parse_contact_people(values.get("handler_person"))
+    if not key_people and not handlers:
+        raise HTTPException(422, "请至少填写一名关键人或一名经办人")
 
 
 def _sync_customer_contacts(db: Session, customer_id, role_type, value):

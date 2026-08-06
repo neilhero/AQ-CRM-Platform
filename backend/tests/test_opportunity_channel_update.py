@@ -316,7 +316,7 @@ def test_handler_person_is_saved_on_create_and_update():
     assert updated_handler.email == "two@example.com"
 
 
-def test_create_requires_key_person_and_handler_person():
+def test_create_requires_at_least_one_contact_person():
     db = _session()
     owner = User(
         username="required-contact-owner",
@@ -342,29 +342,37 @@ def test_create_requires_key_person_and_handler_person():
     }
 
     _assert_http_error(
-        "请至少填写一名关键人",
+        "请至少填写一名关键人或一名经办人",
         lambda: create_opp(
             OpportunityCreate(
-                name="Missing Key Person",
-                handler_person=VALID_HANDLER_PERSON,
+                name="Missing Contact Person",
                 **common,
             ),
             db=db,
             user=actor,
         ),
     )
-    _assert_http_error(
-        "请至少填写一名经办人",
-        lambda: create_opp(
-            OpportunityCreate(
-                name="Missing Handler Person",
-                key_person=VALID_KEY_PERSON,
-                **common,
-            ),
-            db=db,
-            user=actor,
+
+    key_only = create_opp(
+        OpportunityCreate(
+            name="Key Person Only",
+            key_person=VALID_KEY_PERSON,
+            **common,
         ),
+        db=db,
+        user=actor,
     )
+    handler_only = create_opp(
+        OpportunityCreate(
+            name="Handler Person Only",
+            handler_person=VALID_HANDLER_PERSON,
+            **common,
+        ),
+        db=db,
+        user=actor,
+    )
+    assert key_only["id"]
+    assert handler_only["id"]
 
 
 def test_edit_can_clear_key_person_and_handler_person():

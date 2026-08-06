@@ -1126,6 +1126,70 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 .product-empty{padding:26px 0;text-align:center;color:#94a3b8;font-size:13px}
 @media(max-width:960px){.product-page-head{align-items:flex-start;flex-direction:column}.product-category-grid{grid-template-columns:1fr}.product-list-toolbar{align-items:flex-start;flex-wrap:wrap}.product-list-toolbar .ant-btn{margin-left:0}.product-row{grid-template-columns:24px minmax(0,1fr) 78px}.product-row-actions{grid-column:2 / -1;justify-content:flex-start}.product-row-price{font-size:15px}}
 @media(max-width:600px){.product-page-actions{width:100%}.product-page-actions .ant-btn{flex:1;padding:0 10px}.product-list{padding:10px}.product-category-card{min-height:0}.product-row-meta{display:block}.product-row-description{margin-top:4px}}
+
+/* Mobile shell: the navigation becomes a drawer so business content keeps the full viewport. */
+.mobile-sidebar-mask{display:none}
+@media(max-width:768px){
+  html,body,#root{width:100%;max-width:100%;overflow-x:hidden}
+  .sidebar,.sidebar.collapsed{width:min(82vw,280px);transform:translateX(-105%);transition:transform .22s ease;width .2s;z-index:112}
+  .sidebar.mobile-open{transform:translateX(0)}
+  .sidebar.collapsed .logo-text{display:inline}
+  .sidebar.collapsed .sidebar-logo{padding:0 20px;justify-content:flex-start}
+  .sidebar.collapsed .ant-menu-title-content{display:inline}
+  .mobile-sidebar-mask{display:block;position:fixed;inset:0;background:rgba(15,23,42,.46);z-index:111}
+  .header,.sidebar.collapsed~.header{left:0;height:52px;padding:0 10px}
+  .content,.sidebar.collapsed~.header~.content{margin-left:0;margin-top:52px;padding:12px;min-height:calc(100vh - 52px);overflow-x:hidden}
+  .header-left{gap:4px;min-width:0}
+  .header-right{gap:4px;flex-shrink:0}
+  .header-breadcrumb{max-width:calc(100vw - 150px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+  .header-user-name{display:none}
+  .page-header{margin-bottom:14px}
+  .page-header h1{font-size:22px}
+  .stat-row-5{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}
+  .stat-row{grid-template-columns:1fr;gap:10px}
+  .grid-2{grid-template-columns:minmax(0,1fr);gap:12px}
+  .kpi-card{min-width:0;padding:14px 12px;gap:10px;border-radius:8px}
+  .kpi-icon{width:42px;height:42px;flex:0 0 42px;border-radius:9px}
+  .kpi-value{font-size:23px}
+  .kpi-label{font-size:12px;line-height:1.35}
+  .section-card{border-radius:8px;min-width:0;overflow:hidden}
+  .section-card .card-header{padding:13px 14px;gap:8px;flex-wrap:wrap}
+  .card-body{padding:14px!important}
+  .industry-donut-layout{grid-template-columns:1fr;gap:12px;min-height:0}
+  .industry-donut{width:148px;height:148px}
+  .industry-donut-center{width:98px;height:98px}
+  .industry-legend{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px;row-gap:10px;width:100%}
+  .industry-legend-item{grid-template-columns:9px minmax(42px,1fr) auto;column-gap:6px}
+  .probability-card-body{min-height:0}
+  .probability-rings{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 8px}
+  .probability-ring{width:92px;height:92px;margin-bottom:8px}
+  .probability-ring-center{width:68px;height:68px}
+  .probability-ring-value{font-size:22px}
+  .probability-ring-label{font-size:12px;white-space:normal;line-height:1.35}
+  .ant-card{min-width:0;border-radius:8px}
+  .ant-card-head{padding:0 14px}
+  .ant-card-body{padding:14px}
+  .ant-table-wrapper,.ant-table-container,.ant-table-content{max-width:100%;overflow-x:auto!important}
+  .ant-table{min-width:680px}
+  .ant-pagination{flex-wrap:wrap;row-gap:8px}
+  .ant-modal{width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px);margin:10px auto;top:0;padding-bottom:10px}
+  .ant-modal-content{border-radius:8px}
+  .ant-modal-header{padding:16px 16px 10px}
+  .ant-modal-body{max-height:calc(100vh - 142px);padding:12px 16px;overflow-y:auto;overflow-x:hidden}
+  .ant-modal-footer{padding:10px 16px}
+  .ant-modal .ant-row{display:block}
+  .ant-modal .ant-col{max-width:100%!important;flex:0 0 100%!important}
+  .ant-modal .ant-picker,.ant-modal .ant-select,.ant-modal .ant-input-number{width:100%!important;max-width:100%}
+  .ant-drawer-content-wrapper{width:min(94vw,420px)!important}
+  .ant-form-item{margin-bottom:14px}
+  .filter-bar,.toolbar{gap:8px;flex-wrap:wrap}
+}
+@media(max-width:420px){
+  .content{padding:10px}
+  .stat-row-5{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .industry-legend{grid-template-columns:1fr}
+  .probability-rings{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 
 
 
@@ -2091,7 +2155,7 @@ function LoginPage() {
 
 
 
-function AppLayout(props) {
+function AppLayout(props) {
 
 
 
@@ -2099,7 +2163,9 @@ function AppLayout(props) {
 
 
 
-  var _s = useState(false), collapsed = _s[0], setCollapsed = _s[1];
+  var _s = useState(false), collapsed = _s[0], setCollapsed = _s[1];
+  var _mobile = useState(function() { return window.matchMedia && window.matchMedia('(max-width: 768px)').matches; }), isMobile = _mobile[0], setIsMobile = _mobile[1];
+  var _mobileMenu = useState(false), mobileMenuOpen = _mobileMenu[0], setMobileMenuOpen = _mobileMenu[1];
 
 
 
@@ -2123,7 +2189,7 @@ function AppLayout(props) {
 
 
 
-  var _mc = useState([]), menuConfig = _mc[0], setMenuConfig = _mc[1];
+  var _mc = useState([]), menuConfig = _mc[0], setMenuConfig = _mc[1];
   var _ntf = useState({ count: 0, items: [] }), presalesNotice = _ntf[0], setPresalesNotice = _ntf[1];
   var noticeReadKey = 'aq_notice_read_' + (user.id || user.username || 'guest');
   function noticeKey(item) {
@@ -2167,7 +2233,23 @@ function AppLayout(props) {
 
 
 
-  useEffect(function() { api('GET','/menu-config').then(function(d){setMenuConfig(d||[]);}).catch(function(){}); }, []);
+  useEffect(function() { api('GET','/menu-config').then(function(d){setMenuConfig(d||[]);}).catch(function(){}); }, []);
+  useEffect(function() {
+    if (!window.matchMedia) return;
+    var query = window.matchMedia('(max-width: 768px)');
+    function syncMobile(event) {
+      var matches = event && typeof event.matches === 'boolean' ? event.matches : query.matches;
+      setIsMobile(matches);
+      if (!matches) setMobileMenuOpen(false);
+    }
+    syncMobile(query);
+    if (query.addEventListener) query.addEventListener('change', syncMobile);
+    else query.addListener(syncMobile);
+    return function() {
+      if (query.removeEventListener) query.removeEventListener('change', syncMobile);
+      else query.removeListener(syncMobile);
+    };
+  }, []);
   useEffect(function() {
     function loadNotice() {
       Promise.all([
@@ -2228,7 +2310,7 @@ function AppLayout(props) {
 
 
 
-  function nav(p) { window.location.hash = '#' + p; }
+  function nav(p) { window.location.hash = '#' + p; setMobileMenuOpen(false); }
 
 
 
@@ -2644,7 +2726,7 @@ function AppLayout(props) {
 
 
 
-    e('div', { className: 'sidebar' + (collapsed ? ' collapsed' : '') },
+    e('div', { className: 'sidebar' + (!isMobile && collapsed ? ' collapsed' : '') + (isMobile && mobileMenuOpen ? ' mobile-open' : '') },
 
 
 
@@ -2716,7 +2798,9 @@ function AppLayout(props) {
 
 
 
-    e('div', { className: 'header' },
+    isMobile && mobileMenuOpen ? e('div', { className: 'mobile-sidebar-mask', onClick: function() { setMobileMenuOpen(false); } }) : null,
+
+    e('div', { className: 'header' },
 
 
 
@@ -2732,7 +2816,11 @@ function AppLayout(props) {
 
 
 
-        e(Button, { type: 'text', icon: collapsed ? IC('MenuUnfoldOutlined') : IC('MenuFoldOutlined'), onClick: function() { setCollapsed(!collapsed); } }),
+        e(Button, {
+          type: 'text',
+          icon: isMobile ? IC('MenuOutlined') : (collapsed ? IC('MenuUnfoldOutlined') : IC('MenuFoldOutlined')),
+          onClick: function() { if (isMobile) setMobileMenuOpen(!mobileMenuOpen); else setCollapsed(!collapsed); }
+        }),
 
 
 
@@ -2798,7 +2886,7 @@ function AppLayout(props) {
 
 
 
-            e('span', { style: { fontSize: 13, fontWeight: 500 } }, user.real_name || user.username || '用户')
+            e('span', { className: 'header-user-name', style: { fontSize: 13, fontWeight: 500 } }, user.real_name || user.username || '用户')
 
 
 
@@ -7756,8 +7844,7 @@ function OppListPage(props) {
 
       var activeKeyPeople = kpList.filter(function(k) { return k.name || k.department || k.position || k.phone || k.email; });
       var activeHandlers = hpList.filter(function(h) { return h.name || h.department || h.position || h.phone || h.email; });
-      if (!activeKeyPeople.length) throw new Error('请至少填写一名关键人');
-      if (!activeHandlers.length) throw new Error('请至少填写一名经办人');
+      if (!activeKeyPeople.length && !activeHandlers.length) throw new Error('请至少填写一名关键人或一名经办人');
       if (activeKeyPeople.some(function(k) { return !String(k.name || '').trim() || !String(k.phone || '').trim(); })) throw new Error('关键人的姓名和联系方式为必填项');
       if (activeHandlers.some(function(h) { return !String(h.name || '').trim() || !String(h.phone || '').trim(); })) throw new Error('经办人的姓名和联系方式为必填项');
       v.key_person = activeKeyPeople.map(function(k){return [k.name||'',k.department||'',k.position||'',k.phone||'',k.email||''].join('|')}).join(';;');
