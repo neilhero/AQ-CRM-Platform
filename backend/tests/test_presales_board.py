@@ -133,3 +133,18 @@ def test_personal_presales_board_rejects_non_presales_role():
         assert exc.status_code == 403
     else:
         raise AssertionError("Non-presales role should not access the personal presales board")
+
+
+def test_admin_can_view_presales_board_and_receive_opportunity_links():
+    db = _session()
+    _seed(db)
+
+    admin_board = presales_board(
+        period="month",
+        scope="mine",
+        db=db,
+        user=SimpleNamespace(id=999, role="admin"),
+    )
+
+    assert admin_board["summary"]["total"] == 3
+    assert all(item["opportunity_id"] for item in admin_board["items"])

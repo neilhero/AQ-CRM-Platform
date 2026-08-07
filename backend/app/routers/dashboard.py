@@ -71,7 +71,7 @@ def presales_board(
     db: Session = Depends(get_db),
     user=Depends(require_user),
 ):
-    if scope == "mine" and user.role != ROLE_PRESALES:
+    if scope == "mine" and user.role not in {ROLE_PRESALES, ROLE_ADMIN}:
         raise HTTPException(403, "仅售前角色可查看个人售前看板")
 
     period, start, end, buckets = _presales_period(period)
@@ -84,7 +84,7 @@ def presales_board(
         .outerjoin(User, User.id == PresalesRequest.owner_id)
         .filter(event_time_expr >= start_time, event_time_expr < end_time)
     )
-    if scope == "mine":
+    if scope == "mine" and user.role == ROLE_PRESALES:
         query = query.filter(PresalesRequest.owner_id == user.id)
 
     rows = query.order_by(event_time_expr.desc()).all()
@@ -135,6 +135,7 @@ def presales_board(
         item_rows.append(
             {
                 "id": row.id,
+                "opportunity_id": row.opportunity_id,
                 "title": row.title,
                 "request_type": row.request_type,
                 "status": status,

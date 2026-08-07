@@ -3070,7 +3070,7 @@ function PresalesBoard(props) {
             items.length ? e('div', null, items.slice(0, 5).map(function(item) {
               return e('div', { key: item.id, style: { display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '8px 0', borderBottom: '1px solid #eef2f7' } },
                 e('div', { style: { minWidth: 0 } },
-                  e('div', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1e293b', fontWeight: 600 } }, item.opportunity_name || item.title || '-'),
+                  item.opportunity_id ? e('a', { href: '#/opportunities/' + item.opportunity_id, onClick: function(){ window.location.hash = '#/opportunities/' + item.opportunity_id; }, style: { display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1677ff', fontWeight: 600 } }, item.opportunity_name || item.title || '-') : e('div', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1e293b', fontWeight: 600 } }, item.opportunity_name || item.title || '-'),
                   e('div', { style: { marginTop: 3, color: '#8796aa', fontSize: 11 } }, (reqTypeText[item.request_type] || item.request_type || '售前协同') + ' · ' + item.owner_name + ' · ' + dayjs(item.scheduled_date).format('MM-DD HH:mm'))
                 ),
                 e(Tag, { color: statusColor[item.status] || 'default', style: { marginRight: 0, alignSelf: 'center' } }, statusText[item.status] || item.status)
@@ -19497,7 +19497,7 @@ function SecurityBusinessPage(props) {
       e(Button, { type: 'primary', onClick: submitPresales }, '创建申请')
     )),
     e(Table, { rowKey: 'id', loading: loading, dataSource: presales, pagination: { pageSize: 8 }, columns: [
-      { title: '客户', dataIndex: 'customer_name', width: 180, ellipsis: true, render: function(v){return v || '-';} }, { title: '商机', dataIndex: 'opportunity_name', width: 220, ellipsis: true }, { title: '类型', dataIndex: 'request_type', width: 120, render: function(v){return reqTypeText[v] || v;} }, { title: '负责人', dataIndex: 'requester_name', width: 100, render: function(v){return v || '-';} }, { title: '售前支持', dataIndex: 'owner_name', width: 110, render: function(v){return v || '-';} }, { title: '排期', dataIndex: 'scheduled_date', width: 130, render: function(v){return v ? dayjs(v).format('MM-DD HH:mm') : '-';} }, { title: '状态', dataIndex: 'status', width: 110, render: function(v){return e(Tag,{color:statusColor[v]||'default'},statusText[v] || v || '-');} }, { title: '操作', width: user.role === 'admin' ? 250 : 180, render: function(_, r){return e(Space, null, e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'in_progress'); } }, '进行中'), e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'done'); } }, '完成'), user.role === 'admin' ? e(Popconfirm, { title: '确认删除此售前申请？', description: '删除后不可恢复', onConfirm: function(){ deletePresales(r); } }, e(Button, { size: 'small', danger: true }, '删除')) : null);} }
+      { title: '客户', dataIndex: 'customer_name', width: 180, ellipsis: true, render: function(v){return v || '-';} }, { title: '商机', dataIndex: 'opportunity_name', width: 220, ellipsis: true, render: function(v, r){ return r.opportunity_id ? e('a', { href: '#/opportunities/' + r.opportunity_id, onClick: function(){ window.location.hash = '#/opportunities/' + r.opportunity_id; } }, v || '-') : (v || '-'); } }, { title: '类型', dataIndex: 'request_type', width: 120, render: function(v){return reqTypeText[v] || v;} }, { title: '负责人', dataIndex: 'requester_name', width: 100, render: function(v){return v || '-';} }, { title: '售前支持', dataIndex: 'owner_name', width: 110, render: function(v){return v || '-';} }, { title: '排期', dataIndex: 'scheduled_date', width: 130, render: function(v){return v ? dayjs(v).format('MM-DD HH:mm') : '-';} }, { title: '状态', dataIndex: 'status', width: 110, render: function(v){return e(Tag,{color:statusColor[v]||'default'},statusText[v] || v || '-');} }, { title: '操作', width: user.role === 'admin' ? 250 : 180, render: function(_, r){return e(Space, null, e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'in_progress'); } }, '进行中'), e(Button, { size: 'small', onClick: function(){ updatePresales(r, 'done'); } }, '完成'), user.role === 'admin' ? e(Popconfirm, { title: '确认删除此售前申请？', description: '删除后不可恢复', onConfirm: function(){ deletePresales(r); } }, e(Button, { size: 'small', danger: true }, '删除')) : null);} }
     ] })
   );
   var radarTab = e('div', null,
@@ -19543,7 +19543,7 @@ function SecurityBusinessPage(props) {
         e('h1', { className: 'page-title' }, '售前协同'),
         e('p', { className: 'page-desc' }, '统一管理 POC、方案评审、标书支持、测试资源排期等售前请求')
       ),
-      user.role === 'presales' ? e(PresalesBoard, { scope: 'mine' }) : null,
+      (user.role === 'presales' || user.role === 'admin') ? e(PresalesBoard, { scope: 'mine' }) : null,
       presalesTab
     );
   }
