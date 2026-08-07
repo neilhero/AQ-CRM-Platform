@@ -866,17 +866,19 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 
 .prob-card:hover{transform:translateY(-1px)}
 
-.industry-donut-layout{display:grid;grid-template-columns:minmax(170px,210px) minmax(0,1fr);align-items:center;gap:18px;min-height:210px;overflow:hidden}
+.industry-donut-layout{display:grid;grid-template-columns:minmax(150px,172px) minmax(0,1fr);align-items:center;gap:16px;min-height:210px;min-width:0;overflow:hidden}
 .industry-donut-wrap{display:flex;align-items:center;justify-content:center}
 .industry-donut{width:164px;height:164px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(15,23,42,.09)}
 .industry-donut-center{width:108px;height:108px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .industry-donut-value{font-size:30px;line-height:1;font-weight:700;color:#0f172a}
 .industry-donut-label{font-size:12px;color:#64748b;margin-top:8px}
-.industry-legend{display:grid;grid-template-columns:repeat(2,minmax(140px,1fr));column-gap:20px;row-gap:13px;min-width:0}
-.industry-legend-item{display:grid;grid-template-columns:10px minmax(0,1fr) max-content;align-items:center;column-gap:8px;min-width:0;overflow:hidden}
+.industry-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:40px;min-width:0;width:100%}
+.industry-legend-column{display:grid;align-content:center;row-gap:13px;min-width:0}
+.industry-legend-column+.industry-legend-column{padding-left:22px;border-left:1px solid #dbe3ef}
+.industry-legend-item{display:grid;grid-template-columns:10px 68px max-content;align-items:center;justify-content:start;column-gap:8px;min-width:0}
 .industry-legend-dot{width:9px;height:9px;border-radius:50%}
 .industry-legend-name{font-size:13px;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.industry-legend-meta{font-size:12px;color:#64748b;white-space:nowrap;text-align:left;justify-self:start}
+.industry-legend-meta{min-width:60px;font-size:12px;color:#64748b;white-space:nowrap;text-align:left;justify-self:start}
 .probability-card-body{display:flex;align-items:center;min-height:210px}
 .probability-rings{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;gap:14px;width:100%}
 .probability-ring-item{text-align:center;min-width:0}
@@ -888,7 +890,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 .probability-ring-share{font-size:12px;color:#94a3b8;margin-top:4px}
 
 @media(max-width:1280px){
-  .industry-donut-layout{grid-template-columns:170px minmax(0,1fr);gap:14px}
+  .industry-donut-layout{grid-template-columns:142px minmax(0,1fr);gap:12px}
   .industry-donut{width:142px;height:142px}
   .industry-donut-center{width:94px;height:94px}
   .probability-rings{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:18px}
@@ -1158,8 +1160,11 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
   .industry-donut-layout{grid-template-columns:1fr;gap:12px;min-height:0}
   .industry-donut{width:148px;height:148px}
   .industry-donut-center{width:98px;height:98px}
-  .industry-legend{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px;row-gap:10px;width:100%}
-  .industry-legend-item{grid-template-columns:9px minmax(42px,1fr) auto;column-gap:6px}
+  .industry-legend{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px;width:100%}
+  .industry-legend-column{row-gap:10px}
+  .industry-legend-column+.industry-legend-column{padding-left:16px}
+  .industry-legend-item{grid-template-columns:9px 62px max-content;column-gap:6px}
+  .industry-legend-meta{min-width:58px}
   .probability-card-body{min-height:0}
   .probability-rings{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 8px}
   .probability-ring{width:92px;height:92px;margin-bottom:8px}
@@ -1187,7 +1192,8 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang 
 @media(max-width:420px){
   .content{padding:10px}
   .stat-row-5{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .industry-legend{grid-template-columns:1fr}
+  .industry-legend{grid-template-columns:1fr;row-gap:10px}
+  .industry-legend-column+.industry-legend-column{padding-left:0;border-left:0}
   .probability-rings{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
@@ -4072,7 +4078,18 @@ function DashboardPage() {
 
 
 
-                  e('div', { className: 'industry-legend' }, indSegments.map(function(item) { return e('div', { className: 'industry-legend-item', key: item.name }, e('span', { className: 'industry-legend-dot', style: { background: item.color } }), e('span', { className: 'industry-legend-name', title: item.name }, item.name), e('span', { className: 'industry-legend-meta' }, item.count + '个 · ' + Math.round(item.pct) + '%')); }))
+                  e('div', { className: 'industry-legend' }, [
+                    indSegments.slice(0, Math.ceil(indSegments.length / 2)),
+                    indSegments.slice(Math.ceil(indSegments.length / 2))
+                  ].map(function(column, columnIndex) {
+                    return e('div', { className: 'industry-legend-column', key: 'industry-column-' + columnIndex }, column.map(function(item) {
+                      return e('div', { className: 'industry-legend-item', key: item.name },
+                        e('span', { className: 'industry-legend-dot', style: { background: item.color } }),
+                        e('span', { className: 'industry-legend-name', title: item.name }, item.name),
+                        e('span', { className: 'industry-legend-meta' }, item.count + '个 · ' + Math.round(item.pct) + '%')
+                      );
+                    }));
+                  }))
 
 
 
