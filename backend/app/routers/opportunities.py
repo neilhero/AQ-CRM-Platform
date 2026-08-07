@@ -126,6 +126,10 @@ def _check_access(opp, db: Session, user):
 
 
 def _check_edit_access(opp, db: Session, user):
+    # Presales may edit only opportunities already admitted by _check_access
+    # through an assigned presales request, but never owns deletion rights.
+    if user.role == ROLE_PRESALES:
+        return
     is_channel = _raw_value(opp.opp_type) == "channel"
     if not can_edit_business_record(user, owner_id=opp.sales_rep_id, is_channel=is_channel, db=db):
         raise HTTPException(403, "Access denied")
@@ -430,6 +434,8 @@ def delete_opp(oid: int, db: Session = Depends(get_db), user=Depends(require_use
     if not o:
         raise HTTPException(404, "Not found")
     _check_access(o, db, user)
+    if user.role == ROLE_PRESALES:
+        raise HTTPException(403, "售前账号没有删除权限")
     _check_edit_access(o, db, user)
     # Remove or detach dependent records before deleting the opportunity.
     request_ids = [row[0] for row in db.query(PresalesRequest.id).filter(

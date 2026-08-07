@@ -5755,7 +5755,7 @@ function CustomerListPage() {
 
 
 
-          e(Popconfirm, { title: '确认删除？', onConfirm: function() { del(r.id); } },
+          e(Popconfirm, { title: '确认删除？', onConfirm: function() { del(r.id); } },
 
 
 
@@ -5763,7 +5763,7 @@ function CustomerListPage() {
 
 
 
-            e(Button, { size: 'small', type: 'link', danger: true, icon: IC('DeleteOutlined') })
+            e(Button, { size: 'small', type: 'link', danger: true, icon: IC('DeleteOutlined'), style: { display: curRole === 'presales' ? 'none' : undefined } })
 
 
 
@@ -7155,7 +7155,7 @@ function CustomerDrawer(props) {
 
 
 
-                    e(Button, { size: 'small', type: 'text', danger: true, icon: IC('DeleteOutlined') })
+                    e(Button, { size: 'small', type: 'text', danger: true, icon: IC('DeleteOutlined'), style: { display: (JSON.parse(localStorage.getItem('aq2_user')||'{}').role || '') === 'presales' ? 'none' : undefined } })
 
 
 
@@ -8203,7 +8203,7 @@ function OppListPage(props) {
 
 
 
-          e(Button, { size: 'small', type: 'link', danger: true }, '删除')
+          e(Button, { size: 'small', type: 'link', danger: true, style: { display: curRoleO === 'presales' ? 'none' : undefined } }, '删除')
 
 
 
@@ -10827,8 +10827,8 @@ function OppDetailPage(props) {
               );
             })
           )
-    );
-  }
+    );
+  }
 
   function renderOpportunityContacts() {
     return e('div', { style: { marginTop: 16, padding: 16, border: '1px solid #dbeafe', borderRadius: 10, background: 'linear-gradient(135deg,#f8fbff 0%,#f8fafc 100%)' } },

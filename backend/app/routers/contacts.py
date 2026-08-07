@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Contact, Customer
-from app.permissions import can_access_customer, scoped_customer_query
+from app.permissions import ROLE_PRESALES, can_access_customer, scoped_customer_query
 from app.routers.utils import require_user
 from app.schemas import ContactCreate, ContactUpdate
 
@@ -78,5 +78,7 @@ def update_contact(cid: int, data: ContactUpdate, db: Session = Depends(get_db),
 @router.delete("/{cid}", status_code=204)
 def delete_contact(cid: int, db: Session = Depends(get_db), user=Depends(require_user)):
     c = _check_contact_access(cid, db, user)
+    if user.role == ROLE_PRESALES:
+        raise HTTPException(403, "售前账号没有删除权限")
     db.delete(c)
     db.commit()

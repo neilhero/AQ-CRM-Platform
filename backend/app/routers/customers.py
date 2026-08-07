@@ -22,7 +22,7 @@ from app.models import (
     Opportunity,
     User,
 )
-from app.permissions import can_access_customer, scoped_customer_query, scoped_opportunity_query
+from app.permissions import ROLE_PRESALES, can_access_customer, scoped_customer_query, scoped_opportunity_query
 from app.routers.utils import require_user
 from app.schemas import CustomerCreate, CustomerUpdate
 
@@ -136,6 +136,8 @@ def update_customer(cid: int, data: CustomerUpdate, db: Session = Depends(get_db
 @router.delete("/{cid}", status_code=204)
 def delete_customer(cid: int, db: Session = Depends(get_db), user=Depends(require_user)):
     c = _check_cust(cid, db, user)
+    if user.role == ROLE_PRESALES:
+        raise HTTPException(403, "售前账号没有删除权限")
     try:
         contact_ids = [
             row[0]
